@@ -1,0 +1,150 @@
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
+from flask_login import login_required
+from app.extensions import db
+from .models import Membro, JornadaEvento
+from .forms import MembroForm, CadastrarNaoMembroForm
+from config import Config
+from datetime import datetime
+
+membresia_bp = Blueprint('membresia', __name__, url_prefix='/membresia')
+ano=Config.ANO_ATUAL
+versao=Config.VERSAO_APP
+
+@membresia_bp.route('/novo', methods=['GET', 'POST'])
+@login_required
+def novo_membro():
+    form = MembroForm()
+    
+    if form.validate_on_submit():
+        membro = Membro(
+            nome_completo=form.nome_completo.data,
+            data_nascimento=form.data_nascimento.data,
+            data_recepcao=form.data_recepcao.data,
+            status=form.status.data,
+            campus=form.campus.data
+        )
+        db.session.add(membro)
+        db.session.commit()
+
+        descricao_cadastro = f'Chegou à IBAN no Campus {membro.campus}.'
+        membro.registrar_evento_jornada(descricao_cadastro, 'Cadastro')
+
+        flash(f'{membro.nome_completo} registrado com sucesso!', 'success')
+        return redirect(url_for('membresia.index'))
+    return render_template('membresia/cadastro.html',
+                           form=form, ano=ano, versao=versao)
+
+@membresia_bp.route('/')
+@login_required
+def index():
+    busca = request.args.get('busca', '')
+    campus = request.args.get('campus', '')
+    status = request.args.get('status', '')
+
+    query = Membro.query.filter_by(ativo=True)
+    if busca:
+        query = query.filter(Membro.nome_completo.ilike(f'%{busca}%'))
+    if campus:
+        query = query.filter_by(campus=campus)
+    if status:
+        query = query.filter_by(status=status)
+
+    membros = query.order_by(Membro.nome_completo).all()
+
+    return render_template('membresia/lista.html', membros=membros, ano=ano, versao=versao)
+
+@membresia_bp.route('/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def editar_membro(id):
+    membro = Membro.query.get_or_404(id)
+    old_status = membro.status
+    old_campus = membro.campus
+    old_data_recepcao = membro.data_recepcao
+
+    form = MembroForm(obj=membro)
+    if form.validate_on_submit():
+        new_status = form.status.data
+        new_campus = form.campus.data
+        new_data_recepcao = form.data_recepcao.data
+
+        form.populate_obj(membro)
+
+        if old_status != new_status:
+            descricao_status = f'Status alterado de {old_status} para {new_status}'
+            membro.registrar_evento_jornada(descricao_status, 'Status_Mudanca')
+        
+        if old_campus != new_campus:
+            descricao_campus = f'Passou a frequentar o Campus {new_campus}.'
+            membro.registrar_evento_jornada(descricao_campus, 'Campus_Mudanca')
+        
+        if old_data_recepcao != new_data_recepcao:
+            descricao_data_recepcao = f"Data de Recepção alterada de {old_data_recepcao.strftime('%d/%m/%Y') if old_data_recepcao else 'Indefinida'} para {new_data_recepcao.strftime('%d/%m/%Y') if new_data_recepcao else 'Indefinida'}."
+            membro.registrar_evento_jornada(descricao_data_recepcao, 'Data_Recepcao_Mudanca')
+        
+        db.session.commit()
+        flash(f'Registro de {membro.nome_completo} atualizado com sucesso!', 'success')
+        return redirect(url_for('membresia.index'))
+    return render_template('membresia/cadastro.html',
+                           form=form, editar=True, membro=membro, ano=ano, versao=versao)
+
+@membresia_bp.route('/<int:id>/desligar', methods=['POST'])
+@login_required
+def desligar_membro(id):
+    membro = Membro.query.get_or_404(id)
+    current_status = membro.status
+    membro.ativo = False
+    membro.status = 'Desligado'
+    db.session.commit()
+
+    descricao_desligamento = f'Foi desligado(a) da IBAN enquanto era {current_status}.'
+    membro.registrar_evento_jornada(descricao_desligamento, 'Desligamento')
+
+    flash(f"{membro.nome_completo} foi desligado.", 'warning')
+    return redirect(url_for('membresia.index'))
+
+@membresia_bp.route('/cadastro_nao_membro_ctm', methods=['GET', 'POST'])
+def cadastro_nao_membro_ctm():
+    form = CadastrarNaoMembroForm()
+
+    if form.validate_on_submit():
+        membro_existente = Membro.query.filter_by(nome_completo=form.nome_completo.data).first()
+        if membro_existente:
+            flash(f'Já existe uma pessoa com o nome "{form.nome_completo.data}". Por favor, verifique ou selecione o nome na tela anterior.', 'warning')
+            return render_template('membresia/cadastro_nao_membro.html', form=form, ano=ano, versao=versao)
+
+        novo_membro = Membro(
+            nome_completo=form.nome_completo.data,
+            data_nascimento=form.data_nascimento.data,
+            campus=form.campus.data,
+            status='Não-Membro',
+            ativo=True
+        )
+        db.session.add(novo_membro)
+        db.session.commit()
+
+        descricao_cadastro_nao_membro = f'Chegou à IBAN através do CTM no Campus {novo_membro.campus}'
+        novo_membro.registrar_evento_jornada(descricao_cadastro_nao_membro, 'Cadastro_Nao_Membro_CTM')
+
+        # TODO: Adicionar lógica de notificação aqui
+        # Ex: enviar_notificacao_para_gestor(f'Novo Não-Membro: {novo_membro.nome_completo}', novo_membro.id)
+
+        flash(f'{novo_membro.nome_completo} cadastrado(a) com sucesso!', 'success')
+        return redirect(url_for('ctm.registrar_presenca_aluno'))
+
+    return render_template('membresia/cadastro_nao_membro.html',
+                           form=form, ano=ano, versao=versao)
+
+@membresia_bp.route('/nao_membros')
+@login_required
+def listar_nao_membros():
+    nao_membros = Membro.query.filter_by(status='Não-Membro', ativo=True).order_by(Membro.nome_completo).all()
+    return render_template('membresia/lista_nao_membros.html', nao_membros=nao_membros, ano=ano, versao=versao)
+
+@membresia_bp.route('/<int:id>/perfil')
+@login_required
+def perfil(id):
+    membro = Membro.query.get_or_404(id)
+    jornada = JornadaEvento.query.filter_by(membro_id=membro.id).order_by(JornadaEvento.data_evento.desc()).all()
+
+    return render_template('membresia/perfil.html',
+                           membro=membro, jornada=jornada, jornada_config=current_app.config.get('JORNADA', {}), ano=ano, versao=versao)

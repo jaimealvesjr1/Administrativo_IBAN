@@ -1,0 +1,141 @@
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit, danger %}
+{% block title %}Registro Financeiro · IBAN{% endblock %}
+
+{% block content %}
+<div>
+    <div class="text-center mb-5">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
+    </div>
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+        <h2 class="text-center">
+            <strong>Registro de Contribuição</strong>
+        </h2>
+
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            
+            <div class="mb-3">
+                {# Campo de membro com Select2 para busca AJAX #}
+                {{ form.membro_id.label(class="form-label") }}
+                {{ form.membro_id(class="form-select", id="membro_financeiro_select2") }}
+                <small class="form-text text-muted mt-2 d-block">
+                    Não encontrou o contribuinte? <a href="{{ url_for('membresia.novo_membro') }}">Clique aqui para cadastrar</a>.
+                </small>
+                {% if form.membro_id.errors %}
+                    {% for error in form.membro_id.errors %}
+                        <div class="alert alert-danger mt-1">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="mb-3">
+                {{ form.tipo.label(class="form-label") }}
+                {{ form.tipo(class="form-select", id="tipo_select2", data_placeholder="Selecione o Tipo") }}
+                {% if form.tipo.errors %}
+                    {% for error in form.tipo.errors %}
+                        <div class="alert alert-danger mt-1">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.valor.label(class="form-label") }}
+                {# Adicione um ID ao campo valor para facilitar a aplicação da máscara #}
+                {{ form.valor(class="form-control", type="text", id="valor_contribuicao") }} 
+                {% if form.valor.errors %}
+                    {% for error in form.valor.errors %}
+                        <div class="alert alert-danger mt-1">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.data_lanc.label(class="form-label") }}
+                {{ form.data_lanc(class="form-control", type="date") }}
+                {% if form.data_lanc.errors %}
+                    {% for error in form.data_lanc.errors %}
+                        <div class="alert alert-danger mt-1">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.forma.label(class="form-label") }}
+                {{ form.forma(class="form-select", id="forma_select2", data_placeholder='Selecione a Forma') }}
+                {% if form.forma.errors %}
+                    {% for error in form.forma.errors %}
+                        <div class="alert alert-danger mt-1">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.observacoes.label(class="form-label") }}
+                {{ form.observacoes(class="form-control", rows="3") }}
+                {% if form.observacoes.errors %}
+                    {% for error in form.observacoes.errors %}
+                        <div class="alert alert-danger mt-1">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            {{ submit('Lançar Contribuição') }}
+
+            <div class="text-end mt-3">
+                <a href="{{ url_for('financeiro.lancamentos') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# Scripts para Select2 e jQuery #}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{# Adicione o jQuery Mask Plugin AQUI #}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#membro_financeiro_select2').select2({
+            placeholder: "Clique para buscar ou digite o nome do contribuinte",
+            allowClear: true,
+            width: '100%',
+            theme: 'bootstrap-5',
+            ajax: {
+                url: "{{ url_for('financeiro.buscar_membros_financeiro') }}",
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        term: params.term
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: data.items
+                    };
+                },
+                cache: true
+            }
+        });
+
+        $('#tipo_select2, #forma_select2').select2({
+            theme: 'bootstrap-5',
+            minimumResultsForSearch: Infinity,
+            placeholder: function(){
+                return $(this).data('placeholder');
+            },
+            allowClear: true
+        });
+
+        $('#valor_contribuicao').mask('000.000.000.000.000,00', {reverse: true});
+
+        $('form').on('submit', function() {
+            var valorFormatado = $('#valor_contribuicao').val();
+            var valorNumerico = valorFormatado.replace(/\./g, '').replace(',', '.');
+            $('#valor_contribuicao').val(valorNumerico);
+        });
+    });
+</script>
+{% endblock %}

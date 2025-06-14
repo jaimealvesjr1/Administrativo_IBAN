@@ -1,0 +1,68 @@
+{% set show_navbar = true %}
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import primary %}
+{% block title %}Membresia · IBAN{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><strong>Membresia</strong></h2>
+    {{ primary('+ Novo Membro', url_for('membresia.novo_membro')) }}
+  </div>
+
+  <form method="get" class="row g-3 mb-4">
+    <div class="col-md-4">
+      <input type="text" name="busca" placeholder="Buscar por nome" class="form-control">
+    </div>
+    <div class="col-md-3">
+      <select name="status" class="form-select">
+        <option value="">Todos os Status</option>
+        {% for s in config['STATUS'] %}
+          <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select name="campus" class="form-select">
+        <option value="">Todos os Campus</option>
+        {% for c in config['CAMPUS'] %}
+          <option value="{{ c }}">{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped">
+      <thead class="table-light">
+        <tr>
+          <th>Nome</th>
+          <th>Nascimento</th>
+          <th>Recepção</th>
+          <th>Status</th>
+          <th>Campus</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for membro in membros %}
+          <tr>
+            <td>{{ membro.nome_completo }}</td>
+            <td>{{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento }}</td>
+            <td>{{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao }}</td>
+            <td>{{ membro.status }}</td>
+            <td>{{ membro.campus }}</td>
+            <td>
+              <a href="{{ url_for('membresia.perfil', id=membro.id) }}" class="btn btn-sm btn-outline-primary">Perfil</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

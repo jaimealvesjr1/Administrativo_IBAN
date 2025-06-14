@@ -1,0 +1,201 @@
+{% set show_navbar = true %}
+{% extends 'base/layout.html' %}
+{% from 'base/components/buttons.html' import primary %}
+{% block title %}Painel Administrativo - Tesouraria · IBAN{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><strong>Painel Administrativo - Tesouraria</strong></h2>
+        {{ primary('Acessar Lançamentos', url_for('financeiro.lancamentos')) }}
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card text-white bg-primary mb-3 shadow-sm">
+                <div class="card-header">Total Contribuído (Mês Atual)</div>
+                <div class="card-body">
+                    <h5 class="card-title">R$ {{ "%.2f"|format(total_mes_atual) }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card text-white bg-success mb-3 shadow-sm">
+                <div class="card-header">Nº de Contribuições (Mês Atual)</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ num_contribuicoes_mes }}</h5>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row">
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-lg p-4 rounded-4 mb-4">
+                <h3 class="mb-3 text-center">Contribuições por Campus por Mês (Ano Atual)</h3>
+                <div style="height: 400px;"><canvas id="graficoCampusMes"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-lg p-4 rounded-4 mb-4">
+                <h3 class="mb-3 text-center">Contribuições por Status por Mês (Ano Atual)</h3>
+                <div style="height: 400px;"><canvas id="graficoStatusMes"></canvas></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    $(document).ready(function() {
+
+        const estilo = getComputedStyle(document.documentElement);
+
+        const corPrimaria = estilo.getPropertyValue('--cor-primaria').trim() || '#021D40'; 
+        const corSecundaria = estilo.getPropertyValue('--cor-secundaria').trim() || '#BF0B3B';
+        const corDestaque = estilo.getPropertyValue('--cor-destaque').trim() || '#BF0B3B'; 
+        const corBranco = estilo.getPropertyValue('--cor-branco').trim() || '#ffffff';
+        const corTexto = estilo.getPropertyValue('--cor-texto').trim() || '#021D40';
+
+        const bsPrimary = estilo.getPropertyValue('--bs-primary').trim() || '#0d6efd';
+        const bsSecondary = estilo.getPropertyValue('--bs-secondary').trim() || '#6c757d';
+        const bsSuccess = estilo.getPropertyValue('--bs-success').trim() || '#198754';
+        const bsInfo = estilo.getPropertyValue('--bs-info').trim() || '#0dcaf0';
+        const bsWarning = estilo.getPropertyValue('--bs-warning').trim() || '#ffc107';
+        const bsDanger = estilo.getPropertyValue('--bs-danger').trim() || '#dc3545';
+
+        const chartLabelsMeses = JSON.parse('{{ chart_labels_meses | tojson | safe }}');
+        const chartDatasetsCampusMes = JSON.parse('{{ chart_datasets_campus_mes | tojson | safe }}');
+
+        const ctxCampusMes = document.getElementById('graficoCampusMes').getContext('2d');
+        new Chart(ctxCampusMes, {
+            type: 'bar', 
+            data: {
+                labels: chartLabelsMeses,
+                datasets: chartDatasetsCampusMes
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { color: corTexto } 
+                    },
+                    title: {
+                        display: true,
+                        text: 'Total de Contribuições por Campus por Mês',
+                        color: corTexto, 
+                        font: { size: 18, weight: 'bold' }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: corTexto }, 
+                        grid: { color: 'rgba(200, 200, 200, 0.1)' } 
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: corTexto, 
+                            callback: function(value) {
+                                return 'R$ ' + value.toLocaleString('pt-BR');
+                            }
+                        },
+                        grid: { color: 'rgba(200, 200, 200, 0.1)' } 
+                    }
+                }
+            }
+        });
+
+        const chartDatasetsStatusMes = JSON.parse('{{ chart_datasets_status_mes | tojson | safe }}');
+
+        const ctxStatusMes = document.getElementById('graficoStatusMes').getContext('2d');
+        new Chart(ctxStatusMes, {
+            type: 'bar', 
+            data: {
+                labels: chartLabelsMeses, 
+                datasets: chartDatasetsStatusMes
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { color: corTexto } 
+                    },
+                    title: {
+                        display: true,
+                        text: 'Total de Contribuições por Status por Mês',
+                        color: corTexto, 
+                        font: { size: 18, weight: 'bold' }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: corTexto }, 
+                        grid: { color: 'rgba(200, 200, 200, 0.1)' } 
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: corTexto, 
+                            callback: function(value) {
+                                return 'R$ ' + value.toLocaleString('pt-BR');
+                            }
+                        },
+                        grid: { color: 'rgba(200, 200, 200, 0.1)' } 
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

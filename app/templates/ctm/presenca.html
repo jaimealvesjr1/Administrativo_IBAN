@@ -1,0 +1,97 @@
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit %}
+{% block title %}Confirmar Presença · IBAN{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="text-center mb-5">
+    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
+  </div>
+
+  <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+    <h2 class="text-center"><strong>Confirmação de Presença</strong></h2>
+    <form method="POST" action="{{ url_for('ctm.registrar_presenca_aluno') }}">
+      {{ form.hidden_tag() }}
+
+      <div class="mb-3">
+        {# Renderiza o label do campo membro_id do formulário Flask-WTF #}
+        {{ form.membro_id.label(class="form-label") }} 
+        {# Renderiza o SelectField para membro_id. O ID é importante para o Select2. #}
+        {{ form.membro_id(class="form-select", id="nome_aluno_select2") }} 
+        
+        <small class="form-text text-muted mt-2 d-block">
+            Não encontrou seu nome? <a href="{{ url_for('membresia.cadastro_nao_membro_ctm') }}">Clique aqui para cadastrar</a>. 
+        </small>
+        {# Exibe erros de validação do campo membro_id #}
+        {% if form.membro_id.errors %}
+            {% for error in form.membro_id.errors %}
+                <div class="alert alert-danger mt-1">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        {# Campo da palavra-chave da aula - AGORA GERENCIADO PELO FLASK-WTF #}
+        {{ form.palavra_chave_aula.label(class="form-label") }} 
+        {{ form.palavra_chave_aula(class="form-control", placeholder="Digite a palavra-chave") }} 
+        {% if form.palavra_chave_aula.errors %}
+            {% for error in form.palavra_chave_aula.errors %}
+                <div class="alert alert-danger mt-1">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        {# Campo de avaliação - AGORA GERENCIADO PELO FLASK-WTF como SelectField #}
+        {{ form.avaliacao.label(class="form-label") }} 
+        {{ form.avaliacao(class="form-select") }} 
+        {% if form.avaliacao.errors %}
+            {% for error in form.avaliacao.errors %}
+                <div class="alert alert-danger mt-1">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+      </div>
+
+      {{ submit('Confirmar Presença') }}
+    </form>
+  </div>
+</div>
+
+{# Adicionar jQuery e Select2 JS para o funcionamento da busca #}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#nome_aluno_select2').select2({
+            placeholder: "Clique para buscar seu nome:", // Seu placeholder
+            allowClear: true, // Permite limpar a seleção
+            width: '100%',
+            theme: 'bootstrap-5', // ESSENCIAL para a integração com Bootstrap 5 
+            ajax: {
+                url: "{{ url_for('ctm.buscar_membros') }}", // Rota Flask para buscar membros
+                dataType: 'json',
+                delay: 250, // Atraso em milissegundos antes de enviar a requisição
+                data: function (params) {
+                    return {
+                        term: params.term // Parâmetro de busca que será enviado ao Flask
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: data.items // 'items' deve ser a chave da lista de resultados do seu JSON
+                    };
+                },
+                cache: true
+            }
+        });
+
+        // Inicializa Select2 para o campo de avaliação (opcional, se quiser estilizar como Select2)
+        // Isso só é necessário se você quiser o Select2 estilizando o <select> padrão. 
+        $('#avaliacao').select2({
+            theme: 'bootstrap-5',
+            minimumResultsForSearch: Infinity // Esconde a barra de busca para selects simples
+        });
+    });
+</script>
+{% endblock %}

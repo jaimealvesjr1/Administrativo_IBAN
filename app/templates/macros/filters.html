@@ -1,0 +1,4 @@
+{# templates/macros/filters.html #}
+{% macro format_datetime(value, format='short') %}
+  {{ value.strftime('%d/%m/%Y %H:%M') if value else '' }}
+{% endmacro %}

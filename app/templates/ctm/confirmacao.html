@@ -1,0 +1,63 @@
+{# app/templates/ctm/confirmacao.html #}
+{% extends 'base/layout.html' %}
+{% block title %}Confirmação de Presença · IBAN{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* Adicione aqui qualquer CSS específico para esta tela se necessário,
+     ou use as classes Bootstrap diretamente no HTML como você sugeriu. */
+  body.bg-success {
+    background-color: var(--bs-success); /* Usa a cor de sucesso do Bootstrap */
+    color: var(--bs-white); /* Cor do texto branca */
+  }
+  body.bg-danger {
+    background-color: var(--bs-danger); /* Usa a cor de perigo do Bootstrap */
+    color: var(--bs-white); /* Cor do texto branca */
+  }
+  /* Removendo estilos do card, pois o card será removido */
+  /* .confirmation-card {
+    background-color: var(--bs-white);
+    color: var(--bs-body-color);
+  } */
+  .confirmation-link {
+    color: var(--bs-primary); /* Cor do link */
+    text-decoration: underline;
+  }
+  .confirmation-link.text-white {
+    color: var(--bs-white) !important; /* Força branco para links no fundo colorido */
+  }
+  /* Estilo para centralizar o conteúdo verticalmente */
+  html, body, #page-wrapper {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  .d-flex.align-items-center.justify-content-center {
+    min-height: 100vh; /* Garante que o conteúdo ocupe a altura total da viewport */
+    width: 100vw;
+    position: fixed; /* Fixa na tela para cobrir tudo */
+    top: 0;
+    left: 0;
+    padding: 20px; /* Adiciona um padding para não colar nas bordas */
+    box-sizing: border-box; /* Garante que o padding não aumente o tamanho total */
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+  <div id="page-wrapper" class="{{ 'bg-success' if sucesso else 'bg-danger' }} text-white d-flex align-items-center justify-content-center">
+    <div class="container text-center py-4 mx-auto" style="max-width: 500px;">
+      {% if sucesso %}
+        <h1>Obrigado, {{ nome }}!</h1>
+        <p class="lead">Sua presença foi registrada com sucesso 🙌</p>
+      {% else %}
+        <h1>Ops!</h1>
+        {% if nome and nome != "Visitante" %}
+          <p class="lead">Olá, {{ nome }}!</p>
+        {% endif %}
+        <p class="lead">{{ mensagem }}</p>
+        <p>Verifique com o professor e <a href="javascript:history.back()" class="confirmation-link text-white text-decoration-underline">tente novamente</a>.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

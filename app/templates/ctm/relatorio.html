@@ -1,0 +1,71 @@
+{% set show_navbar = true %}
+{% extends 'base/layout.html' %}
+{% block title %}Relatório de Presenças · IBAN{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><strong>Relatório de Presenças</strong></h2>
+    <a href="{{ url_for('ctm.download_excel_relatorio', campus=campus_filtro, status=status_filtro) }}" class="btn btn-success">
+      <i class="bi bi-download"></i> Baixar Excel
+    </a>
+  </div>
+  <form method="get" class="row g-3 mb-4" action="{{ url_for('ctm.relatorio_ctm') }}">
+    <div class="col-md-4">
+      <label for="status" class="form-label">Filtrar por Status:</label>
+      <select name="status" id="status" class="form-select">
+        <option value="">Todos</option>
+        {% for s in lista_funcoes %}
+          <option value="{{ s }}" {% if s == status_filtro %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label for="campus" class="form-label">Filtrar por Campus:</label>
+      <select name="campus" id="campus" class="form-select">
+        <option value="">Todos</option>
+        {% for c in lista_campus %}
+          <option value="{{ c }}" {% if c == campus_filtro %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+      <button type="submit" class="btn btn-primary me-2">Filtrar</button>
+      <a href="{{ url_for('ctm.relatorio_ctm') }}" class="btn btn-outline-secondary">Limpar Filtros</a>
+    </div>
+  </form>
+
+  {% if relatorio %}
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped">
+        <thead class="table-light">
+          <tr>
+            <th>Nome</th>
+            {% for data_formatada in datas_formatadas %}
+              <th>{{ data_formatada }}</th>
+            {% endfor %}
+            <th>Faltas</th>
+            <th>% Presença</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for linha in relatorio %}
+            <tr>
+              <td class="text-start fw-medium">{{ linha['Nome'] }}</td>
+              {% for data_formatada in datas_formatadas %}
+                <td class="{{ 'ok' if linha[mapa_datas[data_formatada]] == '✔️' else 'falta' }}">
+                  {{ linha[mapa_datas[data_formatada]] }}
+                </td>
+              {% endfor %}
+              <td class="fw-bold">{{ linha['Faltas'] }}</td>
+              <td class="fw-bold">{{ linha['% Presença'] }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p>Nenhum relatório de presença disponível com os filtros selecionados.</p>
+  {% endif %}
+</div>
+{% endblock %}

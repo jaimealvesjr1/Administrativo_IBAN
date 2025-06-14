@@ -1,0 +1,82 @@
+:root {
+  --cor-primaria: #021D40;
+  --cor-secundaria: #BF0B3B;
+  --cor-destaque: #BF0B3B;
+  --cor-branco: #ffffff;
+  --cor-texto: #021D40;
+}
+
+body {
+  background: linear-gradient(to bottom right, #f8f9fa, #e2e6ea);
+  color: var(--cor-texto);
+  min-height: 100vh;
+  padding-top: 70px;
+}
+
+main {
+  padding: 40px 20px;
+}
+
+.btn-custom {
+  background-color: var(--cor-primaria);
+  color: var(--cor-branco);
+  border: none;
+  border-radius: 8px;
+  transition: 0.3s;
+}
+
+.btn-custom:hover {
+  background-color: var(--cor-secundaria);
+  color: var(--cor-branco);
+}
+
+.card {
+  background-color: white;
+}
+
+footer {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #6c757d;
+  padding: 1rem;
+}
+
+h2 {
+  text-align: center;
+  color: var(--cor-destaque);
+}
+
+.table-responsive {
+  margin-top: 30px;
+}
+
+.select2-container .select2-selection--single {
+  height: 38px;
+  padding: 5px 12px;
+}
+
+.navbar {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+.navbar-nav .nav-link {
+  color: var(--cor-branco);
+  font-weight: 500;
+  transition: background-color 0.3s, color 0.3s;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+}
+
+.navbar-nav .nav-link:hover:not(.disabled) {
+  background-color: var(--cor-secundaria);
+  color: var(--cor-branco);
+}
+
+.btn-outline-danger:hover {
+  background-color: var(--cor-secundaria);
+  color: var(--cor-branco);
+  border-color: var(--cor-secundaria);
+}

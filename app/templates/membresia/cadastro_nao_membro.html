@@ -1,0 +1,57 @@
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit %}
+{% block title %}Cadastro de Pessoas · IBAN{% endblock %}
+
+{% block content %}
+<div>
+  <div class="text-center mb-5">
+    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
+  </div>
+
+  <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+    <h2 class="text-center">
+      <strong>Cadastro de Pessoas</strong>
+    </h2>
+    <form method="POST">
+      {{ form.hidden_tag() }}
+
+      <div class="mb-3">
+        {{ form.nome_completo.label(class="form-label") }}
+        {{ form.nome_completo(class="form-control") }}
+        {% if form.nome_completo.errors %}
+          {% for error in form.nome_completo.errors %}
+            <div class="alert alert-danger mt-1">{{ error }}</div>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        {{ form.data_nascimento.label(class="form-label") }}
+        {{ form.data_nascimento(class="form-control", type="date") }}
+        {% if form.data_nascimento.errors %}
+          {% for error in form.data_nascimento.errors %}
+            <div class="alert alert-danger mt-1">{{ error }}</div>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        {{ form.campus.label(class="form-label") }}
+        {{ form.campus(class="form-select") }}
+        {% if form.campus.errors %}
+          {% for error in form.campus.errors %}
+            <div class="alert alert-danger mt-1">{{ error }}</div>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      {{ submit('Cadastrar Pessoa') }}
+      
+      <div class="text-end mt-3">
+        <a href="{{ url_for('ctm.registrar_presenca_aluno') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

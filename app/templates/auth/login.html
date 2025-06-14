@@ -1,0 +1,23 @@
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit %}
+{% block title %}Login · IBAN{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="text-center mb-5">
+    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
+  </div>
+
+  <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+    <h2 class="text-center" style="color: var(--cor-destaque);"><strong>Acesso Restrito</strong></h2>
+
+    <form method="POST">
+      {{ form.hidden_tag() }}
+      {{ field(form.username.label, form.username(class="form-control", id="username", placeholder="Insira seu usuário")) }}
+      {{ field(form.password.label, form.password(class="form-control", id="password", placeholder="Insira sua senha")) }}
+      {{ submit('Entrar')}}
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit, danger %}
+{% from 'base/components/modals.html' import confirm_modal, reactivate_modal %}
+{% block title %}Cadastro de Pessoas · IBAN{% endblock %}
+
+{% block content %}
+<div>
+  <div class="text-center mb-5">
+    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
+  </div>
+
+  <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+    <h2 class="text-center">
+      <strong>{{ 'Editar Cadastro' if editar else 'Cadastro de Pessoas' }}</strong>
+    </h2>
+
+    <form method="POST">
+      {{ form.hidden_tag() }}
+
+      <div class="mb-3">
+        {{ form.nome_completo.label(class="form-label") }}
+        {{ form.nome_completo(class="form-control") }}
+      </div>
+
+      <div class="mb-3">
+        {{ form.data_nascimento.label(class="form-label") }}
+        {{ form.data_nascimento(class="form-control") }}
+      </div>
+
+      <div class="mb-3">
+        {{ form.data_recepcao.label(class="form-label") }}
+        {{ form.data_recepcao(class="form-control") }}
+      </div>
+
+      <div class="mb-3">
+        {{ form.status.label(class="form-label") }}
+        {{ form.status(class="form-select") }}
+      </div>
+
+      <div class="mb-3">
+        {{ form.campus.label(class="form-label") }}
+        {{ form.campus(class="form-select") }}
+      </div>
+
+      {{ submit('Salvar Alterações' if editar else 'Adicionar Registro') }}
+      {% if editar and membro.ativo %}
+        {{ danger('Desligar Membro', '#modalDesligar') }}
+      {% endif %}
+
+      <div class="text-end mt-3">
+        <a href="{{ url_for('membresia.index') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{% if editar and membro.ativo %}
+{{ confirm_modal(
+    'modalDesligar',
+    'Confirmar Desligamento',
+    'Tem certeza que deseja desligar este membro?',
+    url_for('membresia.desligar_membro', id=membro.id)
+) }}
+{% endif %}
+{% endblock %}

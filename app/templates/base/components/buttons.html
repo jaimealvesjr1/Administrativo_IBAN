@@ -1,0 +1,28 @@
+{# Macro auxiliar para renderizar atributos HTML de um dicionário #}
+{% macro _render_html_attributes(attributes) %}
+    {% for key, value in attributes.items() %}
+        {{ key }}="{{ value }}"
+    {% endfor %}
+{% endmacro %}
+
+{% macro primary(text, href='#', icon='', attrs={}) %}
+<a href="{{ href }}" class="btn btn-custom" {{ _render_html_attributes(attrs) }}>
+    {% if icon %}<i class="{{ icon }}"></i>{% endif %}{{ text }}
+</a>
+{% endmacro %}
+
+{% macro submit(text='Salvar', attrs={}) %}
+<div class="d-grid mt-4">
+    <button type="submit" class="btn btn-custom" {{ _render_html_attributes(attrs) }}>
+        <strong>{{ text }}</strong>
+    </button>
+</div>
+{% endmacro %}
+
+{% macro danger(text, modal_id, attrs={}) %}
+<div class="d-grid mt-4">
+    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="{{ modal_id }}" {{ _render_html_attributes(attrs) }}>
+        {{ text }}
+    </button>
+</div>
+{% endmacro %}
