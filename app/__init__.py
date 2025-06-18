@@ -28,7 +28,6 @@ def create_app():
 
     from .cli import create_admin
     app.cli.add_command(create_admin)
-    app.cli.add_command(cli.create_anonymous_members)
 
     @app.context_processor
     def inject_config():
