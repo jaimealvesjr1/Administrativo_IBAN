@@ -12,7 +12,7 @@ class Config:
 
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(DATA_FOLDER_PATH, 'iban.db')
     
-    VERSAO_APP = 'Development'
+    VERSAO_APP = 'Beta'
 
     ANO_ATUAL = datetime.now().year
 
