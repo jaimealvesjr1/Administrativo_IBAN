@@ -143,8 +143,7 @@ def index():
 def nova_contribuicao():
     form = ContribuicaoForm()
     form.membro_id.choices = [('', 'Selecione um membro')] + \
-                                [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()
-                                 if m.ativo == True or m.id in Config.IDS_OFERTA_ANONIMA.values()]
+                                [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
 
     if form.validate_on_submit():
         contrib = Contribuicao(
@@ -360,16 +359,8 @@ def editar_contribuicao(id):
 @login_required
 def buscar_membros_financeiro():
     search_term = request.args.get('term', '')
+    membros = Membro.query.filter(Membro.nome_completo.ilike(f'%{search_term}%'), Membro.ativo==True).limit(50).all()
     results = []
-
-    membros_ativos = Membro.query.filter(Membro.nome_completo.ilike(f'%{search_term}%'), Membro.ativo==True).limit(50).all()
-    for membro in membros_ativos:
+    for membro in membros:
         results.append({'id': membro.id, 'text': membro.nome_completo})
-
-    for campus, anon_id in Config.IDS_OFERTA_ANONIMA.items():
-        if search_term.lower() in f'oferta anônima ({campus})'.lower or str(anon_id) == search_term:
-            membro_anonimo = Membro.query.get(anon_id)
-            if membro_anonimo and not any(r['id'] == membro_anonimo.id for r in results):
-                results.insert(0, {'id': membro_anonimo.id, 'text': membro_anonimo.nome_completo})
-    
     return jsonify(items=results)
