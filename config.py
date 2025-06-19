@@ -6,13 +6,8 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'chave-secreta-segura'
 
-    if os.environ.get('PYTHONANYWHERE_DOMAIN'):
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(
-            os.path.abspath(os.path.join(basedir, os.pardir)), 'data', 'iban.db'
-        )
-    else:
-        project_root = os.path.abspath(os.path.join(basedir, os.pardir))
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///D:/Documentos/GitHub/Administrativo_IBAN/data/iban.db'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+        'sqlite:///' + os.path.join(os.path.abspath(os.path.join(basedir, os.pardir)), 'data', 'iban.db')
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
