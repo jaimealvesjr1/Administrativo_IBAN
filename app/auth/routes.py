@@ -20,7 +20,7 @@ def login():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
             login_user(user)
-            return redirect(url_for('membresia.index'))
+            return redirect(url_for('main.index'))
         else:
             flash('Usuário ou senha inválidos.', 'warning')
     return render_template('auth/login.html',

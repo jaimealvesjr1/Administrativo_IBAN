@@ -6,23 +6,17 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'chave-secreta-segura'
 
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'sqlite:///' + os.path.join(os.path.abspath(os.path.join(basedir, os.pardir)), 'data', 'iban.db')
+    PYTHONANYWHERE_PROJECT_PATH = '/home/Ascentia/Administrativo_IBAN'
 
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    DATA_FOLDER_PATH = os.path.join(PYTHONANYWHERE_PROJECT_PATH, 'data')
+
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(DATA_FOLDER_PATH, 'iban.db')
 
     VERSAO_APP = 'Beta'
+
     ANO_ATUAL = datetime.now().year
 
-    IDS_OFERTA_ANONIMA_POR_CAMPUS = {
-        'Central':            90001,
-        'Concesso Elias':     90002,
-        'Capão':              90003,
-        'Cidade Nova':        90004,
-        'Perdigão':           90005,
-        'Pitangui':           90006,
-        'Desconhecido':       90000
-    }
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     CAMPUS = {
         'Central':        '#0d6efd',  # primary
@@ -80,6 +74,7 @@ class Config:
             'label': 'Data Recepção Alterada', 'categoria': 'Atualizações'
         },
 
+        # ----------- CTM -----------
         'Cadastro_Nao_Membro_CTM': JORNADA_CADASTRO_CTM,
 
         'Presenca': {
@@ -87,6 +82,7 @@ class Config:
             'label': 'Presença no CTM', 'categoria': 'Frequência'
         },
 
+        # ----------- TESOURARIA -----------
         'Contribuicao': {
             'class': 'bg-primary', 'icon': 'bi-currency-dollar',
             'label': 'Contribuição', 'categoria': 'Financeiro'

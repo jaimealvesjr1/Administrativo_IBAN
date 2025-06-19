@@ -42,7 +42,7 @@ def index():
     chart_labels_meses_nomes = []
     chart_datasets_campus_mes = []
     chart_datasets_status_mes = []
-
+    
     meses_presentes = set()
 
     contribuicoes_por_campus_mes_query = db.session.query(
@@ -60,7 +60,7 @@ def index():
     ).all()
 
     dados_grafico_campus_mes = {}
-
+    
     for campus, mes, total_valor in contribuicoes_por_campus_mes_query:
         if campus not in dados_grafico_campus_mes:
             dados_grafico_campus_mes[campus] = {}
@@ -71,8 +71,8 @@ def index():
         1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho',
         7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
     }
-
-    chart_labels_meses_numeros = sorted(list(meses_presentes))
+    
+    chart_labels_meses_numeros = sorted(list(meses_presentes)) 
     chart_labels_meses_nomes = [meses_ordenados_nomes_map[m] for m in chart_labels_meses_numeros]
 
     cores_campus = Config.CAMPUS
@@ -80,7 +80,7 @@ def index():
         data_para_campus = []
         for mes_num in chart_labels_meses_numeros:
             data_para_campus.append(dados_grafico_campus_mes[campus].get(mes_num, 0))
-
+        
         chart_datasets_campus_mes.append({
             'label': campus,
             'data': data_para_campus,
@@ -105,7 +105,7 @@ def index():
     ).all()
 
     dados_grafico_status_mes = {}
-
+    
     for status, mes, total_valor in contribuicoes_por_status_mes_query:
         if status not in dados_grafico_status_mes:
             dados_grafico_status_mes[status] = {}
@@ -116,7 +116,7 @@ def index():
         data_para_status = []
         for mes_num in chart_labels_meses_numeros:
             data_para_status.append(dados_grafico_status_mes[status].get(mes_num, 0))
-
+        
         chart_datasets_status_mes.append({
             'label': status,
             'data': data_para_status,
@@ -159,10 +159,8 @@ def nova_contribuicao():
             db.session.add(contrib)
             db.session.commit()
 
-            membro_associado = Membro.query.get(contrib.membro_id)
-            if membro_associado:
-                membro_associado.registrar_evento_jornada(f"Contribuição lançada: {format_currency(contrib.valor)} ({contrib.tipo}/{contrib.forma}).", 'Contribuicao')
-                db.session.commit()
+            contrib.registrar_evento_jornada()
+            db.session.commit()
 
             flash('Contribuição lançada com sucesso!', 'success')
             return redirect(url_for('financeiro.lancamentos'))
@@ -209,7 +207,7 @@ def lancamentos():
                     flash(f"Erro no filtro '{field_label}': {error}", 'danger')
 
     soma_valores_query = query.with_entities(func.sum(Contribuicao.valor)).scalar()
-
+    
     if soma_valores_query is None:
         soma_valores_query = 0.0
     else:
@@ -252,16 +250,16 @@ def download_lancamentos_excel():
             data_inicial = datetime.strptime(data_inicial_str, '%Y-%m-%d').date()
             query = query.filter(Contribuicao.data_lanc >= data_inicial)
         except ValueError:
-            flash("Formato de Data Inicial inválido para o download.", 'danger')
+            flash("Formato de Data Inicial inválido para o download.", 'error')
             return redirect(url_for('financeiro.lancamentos'))
     if data_final_str:
         try:
             data_final = datetime.strptime(data_final_str, '%Y-%m-%d').date()
             query = query.filter(Contribuicao.data_lanc <= data_final)
         except ValueError:
-            flash("Formato de Data Final inválido para o download.", 'danger')
+            flash("Formato de Data Final inválido para o download.", 'error')
             return redirect(url_for('financeiro.lancamentos'))
-
+            
     contribuicoes = query.order_by(Contribuicao.data_lanc.desc(), Membro.nome_completo).all()
 
     relatorio_dados = []
@@ -283,7 +281,7 @@ def download_lancamentos_excel():
         df_final.to_excel(writer, index=False, sheet_name='Lançamentos Financeiros')
         workbook = writer.book
         worksheet = writer.sheets['Lançamentos Financeiros']
-
+        
         for i, col in enumerate(df_final.columns):
             max_len = 0
             if not df_final[col].empty:
@@ -361,19 +359,8 @@ def editar_contribuicao(id):
 @login_required
 def buscar_membros_financeiro():
     search_term = request.args.get('term', '')
+    membros = Membro.query.filter(Membro.nome_completo.ilike(f'%{search_term}%'), Membro.ativo==True).limit(50).all()
     results = []
-    membros_ativos = Membro.query.filter(Membro.nome_completo.ilike(f'%{search_term}%'), Membro.ativo==True).limit(50).all()
-    for membro in membros_ativos:
+    for membro in membros:
         results.append({'id': membro.id, 'text': membro.nome_completo})
-
-    for campus_name, anon_id in Config.IDS_OFERTA_ANONIMA_POR_CAMPUS.items():
-        membro_anonimo = Membro.query.get(anon_id)
-        if membro_anonimo:
-            anonimo_full_name = membro_anonimo.nome_completo.lower()
-            if not search_term or \
-               search_term.lower() in anonimo_full_name or \
-               str(anon_id) == search_term:
-                if not any(r['id'] == membro_anonimo.id for r in results):
-                    results.insert(0, {'id': membro_anonimo.id, 'text': membro_anonimo.nome_completo}) # Adiciona no topo
-
     return jsonify(items=results)

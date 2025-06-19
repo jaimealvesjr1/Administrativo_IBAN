@@ -10,7 +10,7 @@ def create_admin():
         click.echo("⚠️  Usuário 'admin' já existe.")
     else:
         admin = User(username="admin", role="admin")
-        admin.set_password("1234")
+        admin.set_password("2007")
         db.session.add(admin)
         db.session.commit()
         click.echo("✅ Usuário 'admin' criado com sucesso.")
