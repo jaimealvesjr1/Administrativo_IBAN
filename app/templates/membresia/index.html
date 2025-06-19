@@ -1,0 +1,180 @@
+{% set show_navbar = true %}
+{% extends 'base/layout.html' %}
+{% from 'base/components/buttons.html' import primary %}
+{% block title %}Painel Administrativo - Membresia · IBAN{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><strong>Painel Administrativo - Membresia</strong></h2>
+        {{ primary('Acessar Membros', url_for('membresia.listagem')) }}
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary mb-3 shadow-sm">
+                <div class="card-header">Total de Membros Ativos</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ total_membros_ativos }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3 shadow-sm">
+                <div class="card-header">Membros por Status</div>
+                    <ul class="list-group list-group-flush">
+                        {% for status, count in resumo_membros_por_status.items() %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center text-dark">
+                                {{ status }}
+                                <span class="badge bg-secondary rounded-pill">{{ count }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="card text-white bg-danger mb-3 shadow-sm">
+                <div class="card-header">Aniversariantes deste Mês</div>
+                {% if aniversariantes_do_mes %}
+                    <ul class="list-group list-group-flush">
+                        {% for membro in aniversariantes_do_mes %}
+                            <li class="list-group-item">{{ membro.nome_completo }} (Dia {{ membro.data_nascimento.day }})</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-center">Nenhum aniversariante ativo este mês.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-lg p-4 rounded-4 mb-4">
+                <h3 class="mb-3 text-center">Membros por Campus</h3>
+                <div style="height: 300px;"><canvas id="graficoMembrosCampus"></canvas></div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-lg p-4 rounded-4 mb-4">
+                <h3 class="mb-3 text-center">Membros por Status</h3>
+                <div style="height: 300px;"><canvas id="graficoMembrosStatus"></canvas></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    $(document).ready(function() {
+        const estilo = getComputedStyle(document.documentElement);
+        const corTexto = estilo.getPropertyValue('--cor-texto').trim() || '#021D40';
+
+        const campusColorsMap = JSON.parse('{{ campus_colors | tojson | safe }}');
+        const statusColorsMap = JSON.parse('{{ status_colors | tojson | safe }}');
+
+        const chartLabelsCampus = JSON.parse('{{ chart_labels_campus | tojson | safe }}');
+        const chartDataCampus = JSON.parse('{{ chart_data_campus | tojson | safe }}');
+
+        const campusBackgroundColors = chartLabelsCampus.map(label => campusColorsMap[label] || '#CCCCCC');
+
+        const ctxMembrosCampus = document.getElementById('graficoMembrosCampus').getContext('2d');
+        new Chart(ctxMembrosCampus, {
+            type: 'pie',
+            data: {
+                labels: chartLabelsCampus,
+                datasets: [{
+                    data: chartDataCampus,
+                    backgroundColor: campusBackgroundColors,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: corTexto }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Distribuição de Membros por Campus',
+                        color: corTexto,
+                        font: { size: 18, weight: 'bold' }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    const total = context.dataset.data.reduce((sum, value) => sum + value, 0);
+                                    const percentage = (context.parsed / total * 100).toFixed(2);
+                                    label += `${context.parsed} Membros (${percentage}%)`;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const chartLabelsStatus = JSON.parse('{{ chart_labels_status | tojson | safe }}');
+        const chartDataStatus = JSON.parse('{{ chart_data_status | tojson | safe }}');
+
+        const statusBackgroundColors = chartLabelsStatus.map(label => statusColorsMap[label] || '#CCCCCC');
+
+        const ctxMembrosStatus = document.getElementById('graficoMembrosStatus').getContext('2d');
+        new Chart(ctxMembrosStatus, {
+            type: 'pie',
+            data: {
+                labels: chartLabelsStatus,
+                datasets: [{
+                    data: chartDataStatus,
+                    backgroundColor: statusBackgroundColors,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: corTexto }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Distribuição de Membros por Status',
+                        color: corTexto,
+                        font: { size: 18, weight: 'bold' }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    const total = context.dataset.data.reduce((sum, value) => sum + value, 0);
+                                    const percentage = (context.parsed / total * 100).toFixed(2);
+                                    label += `${context.parsed} Membros (${percentage}%)`;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

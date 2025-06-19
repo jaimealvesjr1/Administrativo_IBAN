@@ -1,7 +1,7 @@
 {% set show_navbar = true %}
 {% extends 'base/layout.html' %}
 {% from 'base/components/buttons.html' import primary %}
-{% block title %}Painel Administrativo - Tesouraria · IBAN{% endblock %}
+{% block title %}Painel Administrativo - Financeiro · IBAN{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -9,14 +9,6 @@
         <h2><strong>Painel Administrativo - Financeiro</strong></h2>
         {{ primary('Acessar Lançamentos', url_for('financeiro.lancamentos')) }}
     </div>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
 
     <div class="row mb-4">
         <div class="col-md-6">

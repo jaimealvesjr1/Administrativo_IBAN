@@ -11,7 +11,7 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    VERSAO_APP = 'Beta'
+    VERSAO_APP = 'Beta v1.1'
     ANO_ATUAL = datetime.now().year
 
     IDS_OFERTA_ANONIMA_POR_CAMPUS = {

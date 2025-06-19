@@ -5,10 +5,51 @@ from .models import Membro, JornadaEvento
 from .forms import MembroForm, CadastrarNaoMembroForm
 from config import Config
 from datetime import datetime
+from sqlalchemy import func
 
 membresia_bp = Blueprint('membresia', __name__, url_prefix='/membresia')
 ano=Config.ANO_ATUAL
 versao=Config.VERSAO_APP
+
+@membresia_bp.route('/')
+@membresia_bp.route('/index')
+@login_required
+def index():
+    total_membros_ativos = Membro.query.filter_by(ativo=True).count()
+    membros_por_status = db.session.query(Membro.status, func.count(Membro.id)).filter_by(ativo=True).group_by(Membro.status).all()
+    resumo_membros_por_status = {status: count for status, count in membros_por_status}
+
+    mes_atual = datetime.now().month
+    aniversariantes_do_mes = Membro.query.filter(
+        Membro.ativo == True,
+        func.strftime('%m', Membro.data_nascimento) == str(mes_atual).zfill(2)
+    ).order_by(func.strftime('%d', Membro.data_nascimento)).all()
+
+    membros_por_campus_data = db.session.query(Membro.campus, func.count(Membro.id)).filter_by(ativo=True).group_by(Membro.campus).all()
+    chart_labels_campus = [campus for campus, _ in membros_por_campus_data]
+    chart_data_campus = [count for _, count in membros_por_campus_data]
+
+    membros_por_status_chart_data = db.session.query(Membro.status, func.count(Membro.id)).filter_by(ativo=True).group_by(Membro.status).all()
+    chart_labels_status = [status for status, _ in membros_por_status_chart_data]
+    chart_data_status = [count for _, count in membros_por_status_chart_data]
+
+    campus_colors = Config.CAMPUS
+    status_colors = Config.STATUS
+
+    return render_template(
+        'membresia/index.html',
+        ano=ano,
+        versao=versao,
+        total_membros_ativos=total_membros_ativos,
+        resumo_membros_por_status=resumo_membros_por_status,
+        aniversariantes_do_mes=aniversariantes_do_mes,
+        chart_labels_campus=chart_labels_campus,
+        chart_data_campus=chart_data_campus,
+        chart_labels_status=chart_labels_status,
+        chart_data_status=chart_data_status,
+        campus_colors=campus_colors,
+        status_colors=status_colors
+    )
 
 @membresia_bp.route('/novo', methods=['GET', 'POST'])
 @login_required
@@ -34,20 +75,20 @@ def novo_membro():
     return render_template('membresia/cadastro.html',
                            form=form, ano=ano, versao=versao)
 
-@membresia_bp.route('/')
+@membresia_bp.route('/listagem')
 @login_required
-def index():
+def listagem():
     busca = request.args.get('busca', '')
-    campus = request.args.get('campus', '')
-    status = request.args.get('status', '')
+    campus_filtro = request.args.get('campus', '')
+    status_filtro = request.args.get('status', '')
 
     query = Membro.query.filter_by(ativo=True)
     if busca:
         query = query.filter(Membro.nome_completo.ilike(f'%{busca}%'))
-    if campus:
-        query = query.filter_by(campus=campus)
-    if status:
-        query = query.filter_by(status=status)
+    if campus_filtro:
+        query = query.filter_by(campus=campus_filtro)
+    if status_filtro:
+        query = query.filter_by(status=status_filtro)
 
     membros = query.order_by(Membro.nome_completo).all()
 
