@@ -15,7 +15,7 @@
             <div class="card text-white bg-primary mb-3 shadow-sm">
                 <div class="card-header">Total Contribuído (Mês Atual)</div>
                 <div class="card-body">
-                    <h5 class="card-title">R$ {{ "%.2f"|format(total_mes_atual) }}</h5>
+                    <h5 class="card-title">{{ total_mes_atual | currency  }}</h5>
                 </div>
             </div>
         </div>
