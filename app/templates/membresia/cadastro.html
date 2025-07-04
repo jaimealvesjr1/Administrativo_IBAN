@@ -19,6 +19,22 @@
       {{ form.hidden_tag() }}
 
       <div class="mb-3">
+        {% if editar and membro.foto_perfil %}
+            <div class="text-center">
+                <small class="form-text text-muted mt-2">Foto atual:</small><br>
+                <img src="{{ membro.get_foto_perfil_url() }}" alt="Foto de Perfil" class="img-thumbnail mt-2" style="width: 100px; height: 100px; object-fit: cover;">
+                <p class="small text-muted mt-1">Selecione uma nova foto para substituir a atual.</p>
+            </div>
+        {% endif %}
+
+        {{ form.foto_perfil.label(class="form-label") }}
+        {{ form.foto_perfil(class="form-control") }}
+        {% if form.foto_perfil.errors %}
+            {% for error in form.foto_perfil.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
         {{ form.nome_completo.label(class="form-label") }}
         {{ form.nome_completo(class="form-control") }}
         {% if form.nome_completo.errors %}
@@ -60,20 +76,6 @@
               {% for error in form.campus.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
           {% endif %}
         </div>
-      </div>
-
-      <div class="mb-3">
-        {{ form.foto_perfil.label(class="form-label") }}
-        {{ form.foto_perfil(class="form-control") }}
-        {% if form.foto_perfil.errors %}
-            {% for error in form.foto_perfil.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-        {% endif %}
-        {# Exibir a foto atual se o membro existir (modo edição) #}
-        {% if editar and membro.foto_perfil %}
-            <small class="form-text text-muted mt-2">Foto atual:</small><br>
-            <img src="{{ membro.get_foto_perfil_url() }}" alt="Foto de Perfil" class="img-thumbnail mt-2" style="width: 150px; height: 150px; object-fit: cover;">
-            <p class="small text-muted mt-1">Selecione uma nova foto para substituir a atual.</p>
-        {% endif %}
       </div>
 
       {{ submit('Salvar Alterações' if editar else 'Adicionar Registro') }}
