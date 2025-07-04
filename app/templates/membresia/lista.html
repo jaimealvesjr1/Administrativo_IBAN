@@ -13,7 +13,7 @@
 
   <form method="get" class="row g-3 mb-4">
     <div class="col-md-4">
-      <input type="text" name="busca" placeholder="Buscar por nome" class="form-control">
+      <input type="text" name="busca" placeholder="Buscar por nome" class="form-control" value="{{ busca }}">
     </div>
     <div class="col-md-3">
       <select name="status" class="form-select">
@@ -31,15 +31,20 @@
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-2">
+    <div class="col-md-1">
       <button type="submit" class="btn btn-primary w-100">Filtrar</button>
     </div>
+    <div class="col-md-1 d-flex align-items-end">
+      <a href="{{ url_for('membresia.listagem') }}" class="btn btn-outline-secondary w-100">Limpar</a>
+    </div>
+
   </form>
 
   <div class="table-responsive">
     <table class="table table-bordered table-striped">
       <thead class="table-light">
         <tr>
+          <th class="text-center">Foto</th>
           <th>Nome</th>
           <th>Nascimento</th>
           <th>Recepção</th>
@@ -51,6 +56,9 @@
       <tbody>
         {% for membro in membros %}
           <tr>
+            <td class="text-center align-middle">
+              <img src="{{ membro.get_foto_perfil_url() }}" alt="Foto" class="img-thumbnail rounded-circle" style="width: 50px; height: 50px; object-fit: cover;">
+            </td>
             <td>{{ membro.nome_completo }}</td>
             <td>{{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento }}</td>
             <td>{{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao }}</td>

@@ -6,10 +6,36 @@ from .forms import MembroForm, CadastrarNaoMembroForm
 from config import Config
 from datetime import datetime
 from sqlalchemy import func
+import os
+import uuid
+from PIL import Image
 
 membresia_bp = Blueprint('membresia', __name__, url_prefix='/membresia')
 ano=Config.ANO_ATUAL
 versao=Config.VERSAO_APP
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+PROFILE_PIC_SIZE = (150, 150)
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def save_profile_picture(file_data):
+    upload_folder = current_app.config['UPLOAD_FOLDER']
+    if file_data and allowed_file(file_data.filename):
+        unique_filename = str(uuid.uuid4()) + os.path.splitext(file_data.filename)[1]
+        filepath = os.path.join(upload_folder, unique_filename)
+
+        img = Image.open(file_data)
+        img.thumbnail(PROFILE_PIC_SIZE, Image.Resampling.LANCZOS)
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+        
+        img.save(filepath)
+
+        return unique_filename
+    return None
 
 @membresia_bp.route('/')
 @membresia_bp.route('/index')
@@ -62,8 +88,18 @@ def novo_membro():
             data_nascimento=form.data_nascimento.data,
             data_recepcao=form.data_recepcao.data,
             status=form.status.data,
-            campus=form.campus.data
+            campus=form.campus.data,
+            ativo=True
         )
+
+        if form.foto_perfil.data:
+            filename = save_profile_picture(form.foto_perfil.data)
+            if filename:
+                membro.foto_perfil = filename
+            else:
+                flash('Tipo de arquivo de imagem não permitido ou inválido!', 'danger')
+                return render_template('membresia/cadastro.html', form=form, ano=ano, versao=versao)
+
         db.session.add(membro)
         db.session.commit()
 
@@ -102,13 +138,38 @@ def editar_membro(id):
     old_campus = membro.campus
     old_data_recepcao = membro.data_recepcao
 
-    form = MembroForm(obj=membro)
+    form = MembroForm()
+
+    if request.method == 'GET':
+        form.nome_completo.data = membro.nome_completo
+        form.data_nascimento.data = membro.data_nascimento
+        form.data_recepcao.data = membro.data_recepcao
+        form.status.data = membro.status
+        form.campus.data = membro.campus
+
     if form.validate_on_submit():
+        membro.nome_completo = form.nome_completo.data
+        membro.data_nascimento = form.data_nascimento.data
+        membro.data_recepcao = form.data_recepcao.data
+        membro.status = form.status.data
+        membro.campus = form.campus.data
+
+        if form.foto_perfil.data and form.foto_perfil.data.filename:
+            if membro.foto_perfil and membro.foto_perfil != 'default.jpg':
+                old_filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], membro.foto_perfil)
+                if os.path.exists(old_filepath):
+                    os.remove(old_filepath)
+
+            filename = save_profile_picture(form.foto_perfil.data)
+            if filename:
+                membro.foto_perfil = filename
+            else:
+                flash('Tipo de arquivo de imagem não permitido ou inválido!', 'danger')
+                return render_template('membresia/cadastro.html', form=form, editar=True, membro=membro, ano=ano, versao=versao)
+
         new_status = form.status.data
         new_campus = form.campus.data
         new_data_recepcao = form.data_recepcao.data
-
-        form.populate_obj(membro)
 
         if old_status != new_status:
             descricao_status = f'Status alterado de {old_status} para {new_status}'
@@ -125,6 +186,7 @@ def editar_membro(id):
         db.session.commit()
         flash(f'Registro de {membro.nome_completo} atualizado com sucesso!', 'success')
         return redirect(url_for('membresia.index'))
+        
     return render_template('membresia/cadastro.html',
                            form=form, editar=True, membro=membro, ano=ano, versao=versao)
 
@@ -160,14 +222,20 @@ def cadastro_nao_membro_ctm():
             status='Não-Membro',
             ativo=True
         )
+
+        if form.foto_perfil.data and form.foto_perfil.data.filename:
+            filename = save_profile_picture(form.foto_perfil.data)
+            if filename:
+                novo_membro.foto_perfil = filename
+            else:
+                flash('Tipo de arquivo de imagem não permitido ou inválido!', 'danger')
+                return render_template('membresia/cadastro_nao_membro.html', form=form, ano=ano, versao=versao)
+
         db.session.add(novo_membro)
         db.session.commit()
 
         descricao_cadastro_nao_membro = f'Chegou à IBAN através do CTM no Campus {novo_membro.campus}'
         novo_membro.registrar_evento_jornada(descricao_cadastro_nao_membro, 'Cadastro_Nao_Membro_CTM')
-
-        # TODO: Adicionar lógica de notificação aqui
-        # Ex: enviar_notificacao_para_gestor(f'Novo Não-Membro: {novo_membro.nome_completo}', novo_membro.id)
 
         flash(f'{novo_membro.nome_completo} cadastrado(a) com sucesso!', 'success')
         return redirect(url_for('ctm.registrar_presenca_aluno'))

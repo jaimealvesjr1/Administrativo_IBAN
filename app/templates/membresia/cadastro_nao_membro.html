@@ -13,7 +13,7 @@
     <h2 class="text-center">
       <strong>Cadastro de Pessoas</strong>
     </h2>
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
       {{ form.hidden_tag() }}
 
       <div class="mb-3">
@@ -21,28 +21,38 @@
         {{ form.nome_completo(class="form-control") }}
         {% if form.nome_completo.errors %}
           {% for error in form.nome_completo.errors %}
-            <div class="alert alert-danger mt-1">{{ error }}</div>
+            <div class="text-danger small mt-1">{{ error }}</div>
           {% endfor %}
         {% endif %}
       </div>
 
-      <div class="mb-3">
-        {{ form.data_nascimento.label(class="form-label") }}
-        {{ form.data_nascimento(class="form-control", type="date") }}
-        {% if form.data_nascimento.errors %}
-          {% for error in form.data_nascimento.errors %}
-            <div class="alert alert-danger mt-1">{{ error }}</div>
-          {% endfor %}
-        {% endif %}
-      </div>
+      <div class="row mb-4">
+        <div class="col-md-6">
+          {{ form.data_nascimento.label(class="form-label") }}
+          {{ form.data_nascimento(class="form-control", type="date") }}
+          {% if form.data_nascimento.errors %}
+            {% for error in form.data_nascimento.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          {% endif %}
+        </div>
 
+        <div class="col-md-6">
+          {{ form.campus.label(class="form-label") }}
+          {{ form.campus(class="form-select") }}
+          {% if form.campus.errors %}
+            {% for error in form.campus.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+      
       <div class="mb-3">
-        {{ form.campus.label(class="form-label") }}
-        {{ form.campus(class="form-select") }}
-        {% if form.campus.errors %}
-          {% for error in form.campus.errors %}
-            <div class="alert alert-danger mt-1">{{ error }}</div>
-          {% endfor %}
+        {{ form.foto_perfil.label(class="form-label") }}
+        {{ form.foto_perfil(class="form-control") }}
+        {% if form.foto_perfil.errors %}
+            {% for error in form.foto_perfil.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
         {% endif %}
       </div>
 

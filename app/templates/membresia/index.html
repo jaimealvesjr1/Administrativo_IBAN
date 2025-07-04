@@ -11,6 +11,21 @@
     </div>
 
     <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-lg p-4 rounded-4 mb-4">
+                <h3 class="mb-3 text-center">Membros por Campus</h3>
+                <div style="height: 300px;"><canvas id="graficoMembrosCampus"></canvas></div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-lg p-4 rounded-4 mb-4">
+                <h3 class="mb-3 text-center">Membros por Status</h3>
+                <div style="height: 300px;"><canvas id="graficoMembrosStatus"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
         <div class="col-md-4">
             <div class="card text-white bg-primary mb-3 shadow-sm">
                 <div class="card-header">Total de Membros Ativos</div>
@@ -44,21 +59,6 @@
                 {% else %}
                     <p class="text-center">Nenhum aniversariante ativo este mês.</p>
                 {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card shadow-lg p-4 rounded-4 mb-4">
-                <h3 class="mb-3 text-center">Membros por Campus</h3>
-                <div style="height: 300px;"><canvas id="graficoMembrosCampus"></canvas></div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card shadow-lg p-4 rounded-4 mb-4">
-                <h3 class="mb-3 text-center">Membros por Status</h3>
-                <div style="height: 300px;"><canvas id="graficoMembrosStatus"></canvas></div>
             </div>
         </div>
     </div>

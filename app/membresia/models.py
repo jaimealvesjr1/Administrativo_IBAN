@@ -1,9 +1,12 @@
 from app.extensions import db
 from datetime import datetime
 from flask_login import UserMixin
+from sqlalchemy import String
+from flask import url_for
 
 class Membro(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
+    foto_perfil = db.Column(db.String(255), nullable=True, default='default.jpg')
     nome_completo = db.Column(db.String(120), nullable=False)
     data_nascimento = db.Column(db.Date, nullable=True)
     data_recepcao = db.Column(db.Date, nullable=True)
@@ -15,8 +18,11 @@ class Membro(db.Model, UserMixin):
     jornada_evento = db.relationship('JornadaEvento', backref='membro', lazy=True)
 
     def __repr__(self):
-        return f'<Membro {self.nome}>'
+        return f'<Membro {self.nome_completo}>'
     
+    def get_foto_perfil_url(self):
+        return url_for('static', filename=f'uploads/profile_pics/{self.foto_perfil}')
+
     def registrar_evento_jornada(self, descricao, tipo_evento):
         evento = JornadaEvento(membro_id=self.id, descricao=descricao, tipo_evento=tipo_evento)
         db.session.add(evento)

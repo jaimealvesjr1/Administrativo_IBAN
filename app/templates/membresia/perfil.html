@@ -7,7 +7,7 @@
         <h2><strong>{{ membro.nome_completo }}</strong></h2>
         <div class="btn-group">
             <a href="{{ url_for('membresia.editar_membro', id=membro.id) }}" class="btn btn-primary">Editar Cadastro</a>
-            <a href="{{ url_for('membresia.index') }}" class="btn btn-outline-secondary">Voltar à Lista</a>
+            <a href="{{ url_for('membresia.listagem') }}" class="btn btn-outline-secondary">Voltar à Lista</a>
         </div>
     </div>
 
@@ -17,13 +17,14 @@
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">Cadastro</h5>
                 </div>
-                <div class="card-body">
-                    <p><strong>Nome Completo:</strong> {{ membro.nome_completo }}</p>
-                    <p><strong>Data de Nascimento:</strong> {{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento else 'Não informado' }}</p>
-                    <p><strong>Data de Recepção:</strong> {{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao else 'Não informado' }}</p>
-                    <p><strong>Status:</strong> {{ membro.status }}</p>
-                    <p><strong>Campus:</strong> {{ membro.campus }}</p>
-                    <p><strong>Ativo:</strong> {{ 'Sim' if membro.ativo else 'Não' }}</p>
+                <div class="card-body text-center">
+                    <img src="{{ membro.get_foto_perfil_url() }}" alt="Foto de Perfil de {{ membro.nome_completo }}" class="img-thumbnail rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                    <p class="text-start"><strong>Nome Completo:</strong> {{ membro.nome_completo }}</p>
+                    <p class="text-start"><strong>Data de Nascimento:</strong> {{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento else 'Não informado' }}</p>
+                    <p class="text-start"><strong>Data de Recepção:</strong> {{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao else 'Não informado' }}</p>
+                    <p class="text-start"><strong>Status:</strong> {{ membro.status }}</p>
+                    <p class="text-start"><strong>Campus:</strong> {{ membro.campus }}</p>
+                    <p class="text-start"><strong>Ativo:</strong> {{ 'Sim' if membro.ativo else 'Não' }}</p>
                 </div>
             </div>
         </div>

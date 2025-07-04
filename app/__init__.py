@@ -7,10 +7,14 @@ from .ctm.routes import ctm_bp
 from app.filters import to_brasilia, format_datetime, format_currency
 from config import Config
 from .routes import main_bp
+import os
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads', 'profile_pics')
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
     app.jinja_env.filters['brasilia'] = to_brasilia
     app.jinja_env.filters['strftime'] = format_datetime
