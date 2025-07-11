@@ -15,9 +15,7 @@
       {{ form.hidden_tag() }}
 
       <div class="mb-3">
-        {# Renderiza o label do campo membro_id do formulário Flask-WTF #}
         {{ form.membro_id.label(class="form-label") }} 
-        {# Renderiza o SelectField para membro_id. O ID é importante para o Select2. #}
         {{ form.membro_id(class="form-select", id="nome_aluno_select2") }} 
         
         <small class="form-text text-muted mt-2 d-block">
@@ -32,7 +30,6 @@
       </div>
 
       <div class="mb-3">
-        {# Campo da palavra-chave da aula - AGORA GERENCIADO PELO FLASK-WTF #}
         {{ form.palavra_chave_aula.label(class="form-label") }} 
         {{ form.palavra_chave_aula(class="form-control", placeholder="Digite a palavra-chave") }} 
         {% if form.palavra_chave_aula.errors %}
@@ -43,7 +40,6 @@
       </div>
 
       <div class="mb-3">
-        {# Campo de avaliação - AGORA GERENCIADO PELO FLASK-WTF como SelectField #}
         {{ form.avaliacao.label(class="form-label") }} 
         {{ form.avaliacao(class="form-select") }} 
         {% if form.avaliacao.errors %}
@@ -58,7 +54,6 @@
   </div>
 </div>
 
-{# Adicionar jQuery e Select2 JS para o funcionamento da busca #}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
@@ -86,8 +81,6 @@
             }
         });
 
-        // Inicializa Select2 para o campo de avaliação (opcional, se quiser estilizar como Select2)
-        // Isso só é necessário se você quiser o Select2 estilizando o <select> padrão. 
         $('#avaliacao').select2({
             theme: 'bootstrap-5',
             minimumResultsForSearch: Infinity // Esconde a barra de busca para selects simples

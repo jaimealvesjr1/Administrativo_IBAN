@@ -4,8 +4,10 @@ from .auth.routes import auth_bp
 from .membresia.routes import membresia_bp
 from .financeiro.routes import financeiro_bp
 from .ctm.routes import ctm_bp
+from .admin_users.routes import admin_users_bp
 from app.filters import to_brasilia, format_datetime, format_currency
 from config import Config
+from flask_migrate import Migrate
 from .routes import main_bp
 import os
 
@@ -29,6 +31,7 @@ def create_app():
     app.register_blueprint(membresia_bp)
     app.register_blueprint(financeiro_bp)
     app.register_blueprint(ctm_bp)
+    app.register_blueprint(admin_users_bp)
 
     from .cli import create_admin
     app.cli.add_command(create_admin)

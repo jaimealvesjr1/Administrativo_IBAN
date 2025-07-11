@@ -1,0 +1,90 @@
+{% set show_navbar = true %}
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import primary %}
+{% block title %}Gerenciar Usuários · IBAN{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-4"><strong>Gerenciamento de Usuários</strong></h2>
+        {{ primary('+ Novo Acesso', url_for('auth.registrar_membro')) }}
+    </div>
+
+
+    {% if users %}
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Permissões</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.membro.nome_completo if user.membro else 'N/A' }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.permissions }}</td>
+                    <td>
+                        <a href="{{ url_for('admin_users.edit_user_permissions', user_id=user.id) }}" class="btn btn-sm btn-outline-primary me-2">Editar</a>
+                        <a href="{{ url_for('admin_users.admin_reset_password', user_id=user.id) }}" class="btn btn-sm btn-outline-warning">Redefinir Senha</a>
+                        {% if user.id != current_user.id %}
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" data-user-id="{{ user.id }}" data-user-email="{{ user.email }}">
+                            Excluir
+                        </button>
+                        {% else %}
+                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Sua Conta</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p>Nenhum usuário cadastrado ainda.</p>
+    {% endif %}
+</div>
+
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body align-middle">
+                Tem certeza que deseja excluir o usuário <strong id="modalUserEmail"></strong>?<br>Os dados de membresia não serão excluídos.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="deleteUserForm" method="POST" action="">
+                    <button type="submit" class="btn btn-danger">Excluir</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var confirmDeleteModal = document.getElementById('confirmDeleteModal');
+        confirmDeleteModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var userId = button.getAttribute('data-user-id');
+            var userEmail = button.getAttribute('data-user-email');
+
+            var modalUserEmail = confirmDeleteModal.querySelector('#modalUserEmail');
+            var deleteUserForm = confirmDeleteModal.querySelector('#deleteUserForm');
+
+            modalUserEmail.textContent = userEmail;
+            deleteUserForm.action = "{{ url_for('admin_users.delete_user', user_id=0) }}".replace('0', userId);
+        });
+    });
+</script>
+{% endblock %}

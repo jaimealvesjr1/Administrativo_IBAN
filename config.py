@@ -24,6 +24,11 @@ class Config:
         'Desconhecido':       90000
     }
 
+    AVAILABLE_PERMISSIONS = [
+        'admin',        # Acesso total a áreas administrativas e gerenciamento de usuários
+        'membro',       # Permissão padrão para membros registrados
+    ]
+
     CAMPUS = {
         'Central':        '#0d6efd',  # primary
         'Concesso Elias': '#6c757d',  # secondary
@@ -89,10 +94,5 @@ class Config:
         'Contribuicao': {
             'class': 'bg-primary', 'icon': 'bi-currency-dollar',
             'label': 'Contribuição', 'categoria': 'Financeiro'
-        },
-
-        'Edicao_Contribuicao': {
-            'class': 'bg-primary', 'icon': 'bi-pencil-square',
-            'label': 'Edição Contribuição', 'categoria': 'Financeiro'
         },
     }

@@ -161,7 +161,7 @@ def nova_contribuicao():
 
             membro_associado = Membro.query.get(contrib.membro_id)
             if membro_associado:
-                membro_associado.registrar_evento_jornada(f"Contribuição lançada: {format_currency(contrib.valor)} ({contrib.tipo}/{contrib.forma}).", 'Contribuicao')
+                membro_associado.registrar_evento_jornada(f"Contribuiu com {contrib.tipo} no dia {contrib.data_lanc.strftime('%d/%m/%Y')}.", 'Contribuicao')
                 db.session.commit()
 
             flash('Contribuição lançada com sucesso!', 'success')
@@ -340,11 +340,7 @@ def editar_contribuicao(id):
 
             if old_valor != contribuicao.valor or old_tipo != contribuicao.tipo or old_forma != contribuicao.forma:
                 membro = Membro.query.get(contribuicao.membro_id)
-                if membro:
-                    descricao_edicao = (f"Contribuição editada: de {format_currency(old_valor)} ({old_tipo}/{old_forma}) "
-                                        f"para {format_currency(contribuicao.valor)} ({contribuicao.tipo}/{contribuicao.forma}).")
-                    membro.registrar_evento_jornada(descricao_edicao, 'Edicao_Contribuicao')
-                    db.session.commit()
+                db.session.commit()
 
             flash(f'Contribuição de {contribuicao.membro.nome_completo} atualizada com sucesso!', 'success')
             return redirect(url_for('financeiro.lancamentos'))
