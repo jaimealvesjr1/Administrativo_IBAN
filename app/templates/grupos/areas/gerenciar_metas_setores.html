@@ -1,0 +1,111 @@
+{% extends "base/layout.html" %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit %}
+
+{% block title %}Gerenciar Metas · IBAN{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2><strong>Metas dos Setores da Área {{ area.nome }}</strong></h2>
+    <p class="text-muted text-center">Defina as metas individuais para cada Setor.</p>
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-warning text-white">
+            <h5 class="mb-0">Metas da Área</h5>
+        </div>
+        <div class="card-body">
+            <div class="row row-cols-1 row-cols-md-6 g-2">
+                {% macro render_meta_card(label, meta, atual, icon_class) %}
+                <div class="col">
+                    <div class="card h-100 border-{% if atual >= meta %}success{% else %}danger{% endif %}">
+                        <div class="card-body p-2 d-flex align-items-center">
+                            <p class="mb-0 me-2 ms-2"><strong>{{ meta }}</strong></p>
+                            <small class="text-muted d-block">{{ label }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endmacro %}
+
+                {{ render_meta_card('Facilitadores em Treinamento', area.meta_facilitadores_treinamento, area.num_facilitadores_treinamento_atuais_agregado, 'bi-person-badge') }}
+                {{ render_meta_card('Anfitriões em Treinamento', area.meta_anfitrioes_treinamento, area.num_anfitrioes_treinamento_atuais_agregado, 'bi-house-heart') }}
+                {{ render_meta_card('Participantes frequentes no CTM', area.meta_ctm_participantes, area.num_ctm_participantes_atuais_agregado, 'bi-book') }}
+                {{ render_meta_card('Participantes no Encontro', area.meta_encontro_deus_participantes, area.num_encontro_deus_participantes_atuais_agregado, 'bi-people') }}
+                {{ render_meta_card('Batizados/ Aclamados', area.meta_batizados_aclamados, area.num_batizados_aclamados_atuais_agregado, 'bi-award') }}
+                {{ render_meta_card('Multiplicações de PG', area.meta_multiplicacoes_pg, area.num_multiplicacoes_pg_atuais_agregado, 'bi-arrow-repeat') }}
+            </div>
+        </div>
+    </div>
+    <form method="POST">
+        {% for setor in setores %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Setor {{ setor.nome }}</h5>
+                <small>Supervisor {{ setor.supervisor.nome_completo }}</small>
+            </div>
+            <div class="card-body">
+                {{ forms[setor.id].hidden_tag() }}
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                    <div class="col">
+                        <label for="meta_fac_treinamento_{{ setor.id }}" class="form-label">{{ forms[setor.id].meta_facilitadores_treinamento.label.text }}</label>
+                        <input type="range" class="form-range" id="meta_fac_treinamento_{{ setor.id }}" 
+                                name="{{ forms[setor.id].meta_facilitadores_treinamento.name }}" 
+                                min="0" max="{{ area.meta_facilitadores_treinamento if area.meta_facilitadores_treinamento > 0 else 20 }}" 
+                                value="{{ forms[setor.id].meta_facilitadores_treinamento.data }}"
+                                oninput="this.nextElementSibling.value = this.value">
+                        <output class="float-end mt-2">{{ forms[setor.id].meta_facilitadores_treinamento.data }}</output>
+                    </div>
+                    <div class="col">
+                        <label for="meta_anf_treinamento_{{ setor.id }}" class="form-label">{{ forms[setor.id].meta_anfitrioes_treinamento.label.text }}</label>
+                        <input type="range" class="form-range" id="meta_anf_treinamento_{{ setor.id }}" 
+                                name="{{ forms[setor.id].meta_anfitrioes_treinamento.name }}" 
+                                min="0" max="{{ area.meta_anfitrioes_treinamento if area.meta_anfitrioes_treinamento > 0 else 20 }}" 
+                                value="{{ forms[setor.id].meta_anfitrioes_treinamento.data }}"
+                                oninput="this.nextElementSibling.value = this.value">
+                        <output class="float-end mt-2">{{ forms[setor.id].meta_anfitrioes_treinamento.data }}</output>
+                    </div>
+                    <div class="col">
+                        <label for="meta_ctm_{{ setor.id }}" class="form-label">{{ forms[setor.id].meta_ctm_participantes.label.text }}</label>
+                        <input type="range" class="form-range" id="meta_ctm_{{ setor.id }}" 
+                                name="{{ forms[setor.id].meta_ctm_participantes.name }}" 
+                                min="0" max="{{ area.meta_ctm_participantes if area.meta_ctm_participantes > 0 else 50 }}" 
+                                value="{{ forms[setor.id].meta_ctm_participantes.data }}"
+                                oninput="this.nextElementSibling.value = this.value">
+                        <output class="float-end mt-2">{{ forms[setor.id].meta_ctm_participantes.data }}</output>
+                    </div>
+                    <div class="col">
+                        <label for="meta_encontro_{{ setor.id }}" class="form-label">{{ forms[setor.id].meta_encontro_deus_participantes.label.text }}</label>
+                        <input type="range" class="form-range" id="meta_encontro_{{ setor.id }}" 
+                                name="{{ forms[setor.id].meta_encontro_deus_participantes.name }}" 
+                                min="0" max="{{ area.meta_encontro_deus_participantes if area.meta_encontro_deus_participantes > 0 else 50 }}" 
+                                value="{{ forms[setor.id].meta_encontro_deus_participantes.data }}"
+                                oninput="this.nextElementSibling.value = this.value">
+                        <output class="float-end mt-2">{{ forms[setor.id].meta_encontro_deus_participantes.data }}</output>
+                    </div>
+                    <div class="col">
+                        <label for="meta_batizados_{{ setor.id }}" class="form-label">{{ forms[setor.id].meta_batizados_aclamados.label.text }}</label>
+                        <input type="range" class="form-range" id="meta_batizados_{{ setor.id }}" 
+                                name="{{ forms[setor.id].meta_batizados_aclamados.name }}" 
+                                min="0" max="{{ area.meta_batizados_aclamados if area.meta_batizados_aclamados > 0 else 50 }}" 
+                                value="{{ forms[setor.id].meta_batizados_aclamados.data }}"
+                                oninput="this.nextElementSibling.value = this.value">
+                        <output class="float-end mt-2">{{ forms[setor.id].meta_batizados_aclamados.data }}</output>
+                    </div>
+                    <div class="col">
+                        <label for="meta_multiplicacoes_{{ setor.id }}" class="form-label">{{ forms[setor.id].meta_multiplicacoes_pg.label.text }}</label>
+                        <input type="range" class="form-range" id="meta_multiplicacoes_{{ setor.id }}" 
+                                name="{{ forms[setor.id].meta_multiplicacoes_pg.name }}" 
+                                min="0" max="{{ area.meta_multiplicacoes_pg if area.meta_multiplicacoes_pg > 0 else 10 }}" 
+                                value="{{ forms[setor.id].meta_multiplicacoes_pg.data }}"
+                                oninput="this.nextElementSibling.value = this.value">
+                        <output class="float-end mt-2">{{ forms[setor.id].meta_multiplicacoes_pg.data }}</output>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {{ submit('Salvar Distribuição') }}
+        <div class="text-end mt-3">
+            <a href="{{ url_for('grupos.detalhes_area', area_id=area.id) }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,4 +1,37 @@
-{# templates/macros/filters.html #}
 {% macro format_datetime(value, format='short') %}
   {{ value.strftime('%d/%m/%Y %H:%M') if value else '' }}
+{% endmacro %}
+
+{% macro render_meta_card(label, meta, atual, icon_class) %}
+<div class="col">
+    {% set progresso_percent = 0 %}
+    {% if meta > 0 %}
+        {% set progresso_percent = (atual / meta) * 100 %}
+        {% if progresso_percent > 100 %}
+            {% set progresso_percent = 100 %}
+        {% endif %}
+    {% endif %}
+    
+    {% set status_class = 'danger' %}
+    {% if progresso_percent >= 99 %}
+        {% set status_class = 'success' %}
+    {% elif progresso_percent >= 41 %}
+        {% set status_class = 'warning' %}
+    {% else %}
+        {% set status_class = 'danger' %}
+    {% endif %}
+
+    <div class="card h-100 border-{{ status_class }} position-relative overflow-hidden" style="background-color: #ffffff;">
+        <div class="position-absolute top-0 start-0 h-100 bg-{{ status_class }} opacity-25" style="width: {{ progresso_percent }}%;"></div>
+        <div class="card-body p-2 d-flex align-items-center position-relative">
+            <i class="bi {{ icon_class }} icon-small me-2 fs-4 text-{{ status_class }}"></i>
+            <div>
+                <small class="text-muted d-block">{{ label }}</small>
+                <p class="mb-0">
+                    <strong class="text-{{ status_class }}">{{ atual }} / {{ meta }}</strong>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
 {% endmacro %}

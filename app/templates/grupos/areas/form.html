@@ -1,0 +1,65 @@
+{% extends "base/layout.html" %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit, danger %}
+
+{% block title %}{% if area %}Editar Área{% else %}Criar Área{% endif %} · IBAN{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="text-center mb-4">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
+    </div>
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 800px;">
+        <h2 class="text-center mb-4">
+            <strong>{% if area %}Editar Área: {{ area.nome }}{% else %}Criar Nova Área{% endif %}</strong>
+        </h2>
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    {{ form.nome.label (class="form-label") }}
+                    {{ form.nome (class="form-control") }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.coordenador.label (class="form-label") }}
+                    {{ form.coordenador (class="form-select") }}
+                </div>
+            </div>
+
+            <fieldset class="mb-4 p-3 border rounded">
+                <legend class="float-none w-auto px-2 fs-5">Metas</legend>
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                    <div>
+                        {{ form.meta_facilitadores_treinamento.label (class="form-label") }}
+                        {{ form.meta_facilitadores_treinamento (class="form-control") }}
+                    </div>
+                    <div>
+                        {{ form.meta_anfitrioes_treinamento.label (class="form-label") }}
+                        {{ form.meta_anfitrioes_treinamento (class="form-control") }}
+                    </div>
+                    <div>
+                        {{ form.meta_ctm_participantes.label (class="form-label") }}
+                        {{ form.meta_ctm_participantes (class="form-control") }}
+                    </div>
+                    <div>
+                        {{ form.meta_encontro_deus_participantes.label (class="form-label") }}
+                        {{ form.meta_encontro_deus_participantes (class="form-control") }}
+                    </div>
+                    <div>
+                        {{ form.meta_batizados_aclamados.label (class="form-label") }}
+                        {{ form.meta_batizados_aclamados (class="form-control") }}
+                    </div>
+                    <div>
+                        {{ form.meta_multiplicacoes_pg.label (class="form-label") }}
+                        {{ form.meta_multiplicacoes_pg (class="form-control") }}
+                    </div>
+                </div>
+            </fieldset>
+            {{ submit('Salvar Alterações' if editar else 'Criar Área') }}
+            <div class="text-end mt-3">
+                <a href="{{ url_for('grupos.listar_areas') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

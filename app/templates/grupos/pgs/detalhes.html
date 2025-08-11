@@ -1,0 +1,134 @@
+{% set show_navbar = true %}
+{% extends "base/layout.html" %}
+{% from 'base/components/modals.html' import confirm_modal %}
+{% from 'base/components/jornada_timeline.html' import render_jornada_timeline %}
+{% from 'macros/filters.html' import render_meta_card %}
+
+{% block title %}PG {{ pg.nome }} · IBAN{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><strong>PG {{ pg.nome }} > <a href="{{ url_for('grupos.detalhes_setor', setor_id=pg.setor.id) }}">Setor {{ pg.setor.nome if pg.setor else 'N/A' }}</a> > <a href="{{ url_for('grupos.detalhes_area', area_id=pg.setor.area.id) }}">Área {{ pg.setor.area.nome if pg.setor and pg.setor.area else 'N/A' }}</a></strong></h2>
+        <div class="btn-group">
+            <a href="{{ url_for('grupos.editar_pg', pg_id=pg.id) }}" class="btn btn-primary">Editar Cadastro</a>
+            <a href="{{ url_for('grupos.listar_pgs') }}" class="btn btn-outline-secondary">Voltar à Lista</a>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0 text-center">Metas do PG</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row row-cols-1 row-cols-md-5 g-2">
+                        {{ render_meta_card('Facilitadores em Treinamento', pg.meta_facilitadores_treinamento, pg.num_facilitadores_treinamento_atuais, 'bi-person-badge') }} 
+                        {{ render_meta_card('Anfitriões em Treinamento', pg.meta_anfitrioes_treinamento, pg.num_anfitrioes_treinamento_atuais, 'bi-house-heart') }} 
+                        {{ render_meta_card('Participantes frequentes no CTM', pg.meta_ctm_participantes, pg.num_ctm_participantes_atuais, 'bi-book') }} 
+                        {{ render_meta_card('Participantes no Encontro', pg.meta_encontro_deus_participantes, pg.num_encontro_deus_participantes_atuais, 'bi-fire') }} 
+                        {{ render_meta_card('Batizados/Aclamados', pg.meta_batizados_aclamados, pg.num_batizados_aclamados_atuais, 'bi-calendar-heart') }} 
+                    </div>
+                </div>
+            </div>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Participantes</h5>
+                </div>
+                <div class="card-body">
+                    {% if membros_disponiveis %}
+                        <form action="{{ url_for('grupos.adicionar_participante', pg_id=pg.id) }}" method="POST" class="d-flex mb-4">
+                            <label class="col-md-2">Adicionar Participante:</label>
+                            <select name="membro_id" id="membro_select" class="form-select me-2">
+                                <option value="">Selecione um Membro</option>
+                                {% for membro in membros_disponiveis %}
+                                    <option value="{{ membro.id }}">{{ membro.nome_completo }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-success col-md-2">Adicionar</button>
+                        </form>
+                        <script>
+                            $(document).ready(function() {
+                                $('#membro_select').select2({
+                                    theme: 'bootstrap-5',
+                                    placeholder: 'Selecione um Membro',
+                                    allowClear: true
+                                });
+                            });
+                        </script>
+                    {% else %}
+                        <p>Não há membros disponíveis para adicionar a este PG.</p>
+                    {% endif %}
+                {% if pg.participantes.count() > 0 %}
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col">Nome do Participante</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Checklist</th>
+                                <th scope="col">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for participante in pg.participantes.all() %}
+                            <tr>
+                                <td><a href="{{ url_for('membresia.detalhes_membro', membro_id=participante.id) }}">{{ participante.nome_completo }}</a></td>
+                                <td>
+                                    <form action="{{ url_for('grupos.atualizar_indicadores', pg_id=pg.id, membro_id=participante.id) }}" method="POST" class="d-inline-flex align-items-center">
+                                        <select name="status_treinamento_pg_{{ participante.id }}" class="form-select form-select-sm">
+                                            <option value="Nenhum" {% if participante.status_treinamento_pg == 'Nenhum' %}selected{% endif %}>Nenhum</option>
+                                            <option value="Facilitador em Treinamento" {% if participante.status_treinamento_pg == 'Facilitador em Treinamento' %}selected{% endif %}>Facilitador em Treinamento</option>
+                                            <option value="Anfitrião em Treinamento" {% if participante.status_treinamento_pg == 'Anfitrião em Treinamento' %}selected{% endif %}>Anfitrião em Treinamento</option>
+                                        </select>
+                                </td>
+                                <td>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="participou_ctm_{{ participante.id }}" name="participou_ctm" value="true" {% if participante.participou_ctm %}checked{% endif %}>
+                                        <label class="form-check-label" for="participou_ctm_{{ participante.id }}">CTM</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="participou_encontro_deus_{{ participante.id }}" name="participou_encontro_deus" value="true" {% if participante.participou_encontro_deus %}checked{% endif %}>
+                                        <label class="form-check-label" for="participou_encontro_deus_{{ participante.id }}">Encontro</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="batizado_aclamado_{{ participante.id }}" name="batizado_aclamado" value="true" {% if participante.batizado_aclamado %}checked{% endif %}>
+                                        <label class="form-check-label" for="batizado_aclamado_{{ participante.id }}">Bat./Aclam.</label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button type="submit" class="btn btn-sm btn-success">Atualizar</button>
+                                    </form>
+                                    <form action="{{ url_for('grupos.remover_participante', pg_id=pg.id, membro_id=participante.id) }}" method="POST" class="d-inline" >
+                                        <button type="submit" class="btn btn-sm btn-danger text-white" onclick="return confirm('Tem certeza que deseja remover {{ participante.nome_completo }} deste PG? Os indicadores serão resetados.');">Remover</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>Nenhum participante neste Pequeno Grupo ainda.</p>
+                {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Dados do PG</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text"><strong>Facilitador:</strong> {{ pg.facilitador.nome_completo if pg.facilitador else 'N/A' }}</p>
+                    <p class="card-text"><strong>Anfitrião:</strong> {{ pg.anfitriao.nome_completo if pg.anfitriao else 'N/A' }}</p>
+                    <p class="card-text"><strong>Dia da Reunião:</strong> {{ pg.dia_reuniao }}</p>
+                    <p class="card-text"><strong>Horário da Reunião:</strong> {{ pg.horario_reuniao }}</p>
+                    <p class="card-text"><strong>Data de Multiplicação:</strong> {{ pg.data_multiplicacao|strftime('%d/%m/%Y') if pg.data_multiplicacao else 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            {{ render_jornada_timeline(jornada_eventos) }}
+        </div>
+    </div>
+</div>
+{% endblock %}

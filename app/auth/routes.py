@@ -15,15 +15,25 @@ def load_user(user_id):
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and user.check_password(form.password.data):
-            login_user(user)
-            next_page = request.args.get('next')
-            return redirect(next_page or url_for('membresia.index'))
-        else:
-            flash('Usuário ou senha inválidos.', 'warning')
+        if user is None or not user.check_password(form.password.data):
+            flash('Email ou senha inválidos.', 'danger')
+            return redirect(url_for('auth.login'))
+        
+        login_user(user)
+        
+        next_page = request.args.get('next')
+        if not next_page or not next_page.startswith('/'):
+            next_page = url_for('main.index')
+        
+        flash(f'Bem-vindo!', 'success')
+        return redirect(next_page)
+    
     return render_template('auth/login.html', form=form, ano=Config.ANO_ATUAL, versao=Config.VERSAO_APP)
 
 @auth_bp.route('/logout')
@@ -45,6 +55,6 @@ def registrar_membro():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
-        flash('Conta foi criada com sucesso! Agora você pode fazer login.', 'success')
+        flash('Conta criada com sucesso! Agora você pode fazer login.', 'success')
         return redirect(url_for('auth.login'))
     return render_template('auth/registrar_membro.html', form=form, ano=Config.ANO_ATUAL, versao=Config.VERSAO_APP)

@@ -1,11 +1,13 @@
 {% extends "base/base.html" %}
 {% block body %}
-  {% if show_navbar %}
-    {% include 'base/components/navbar.html' %}
-  {% endif %}
-  <main class="container">
-    {% include 'base/components/alerts.html' %}
-    {% block content %}{% endblock %}
-    {% include 'base/components/footer.html' %}
-  </main>
+    {% if show_navbar %}
+        {% include 'base/components/navbar.html' %}
+    {% endif %}
+
+    {% include 'base/components/alerts.html' %} 
+
+    <main class="container">
+        {% block content %}{% endblock %}
+        {% include 'base/components/footer.html' %}
+    </main>
 {% endblock %}

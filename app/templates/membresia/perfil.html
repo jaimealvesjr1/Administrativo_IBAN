@@ -1,16 +1,21 @@
+{% set show_navbar = true %}
 {% extends 'base/layout.html' %}
-{% block title %}Perfil de {{ membro.nome_completo }} · IBAN{% endblock %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit %}
+{% from 'base/components/jornada_timeline.html' import render_jornada_timeline %}
+{% block title %}{{ membro.nome_completo }} · IBAN{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><strong>{{ membro.nome_completo }}</strong></h2>
+        {% if current_user.has_permission('admin') %}
         <div class="btn-group">
             <a href="{{ url_for('membresia.editar_membro', id=membro.id) }}" class="btn btn-primary">Editar Cadastro</a>
             <a href="{{ url_for('membresia.listagem') }}" class="btn btn-outline-secondary">Voltar à Lista</a>
         </div>
+        {% endif %}
     </div>
-
     <div class="row">
         <div class="col-md-4">
             <div class="card shadow-sm mb-4">
@@ -22,38 +27,53 @@
                     <p class="text-start"><strong>Nome Completo:</strong> {{ membro.nome_completo }}</p>
                     <p class="text-start"><strong>Data de Nascimento:</strong> {{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento else 'Não informado' }}</p>
                     <p class="text-start"><strong>Data de Recepção:</strong> {{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao else 'Não informado' }}</p>
-                    <p class="text-start"><strong>Status:</strong> {{ membro.status }}</p>
+                    <p class="text-start">
+                        <strong>Status:</strong> 
+                        {% set cargo_lideranca = membro.get_cargo_lideranca() %}
+                        {% if cargo_lideranca %}
+                            {{ cargo_lideranca }}
+                        {% else %}
+                            {% if membro.pg_participante %}
+                                {{ membro.status_treinamento_pg }}
+                            {% else %}
+                                {{ membro.status }}
+                            {% endif %}
+                        {% endif %}
+                    </p>
+                    <p class="text-start">
+                        {% if membro.pg_participante %}
+                        <strong>PG:</strong> 
+                            {{ membro.pg_participante.nome }}
+                            {% if membro.pg_participante.setor %}
+                                &gt; Setor {{ membro.pg_participante.setor.nome }}
+                                {% if membro.pg_participante.setor.area %}
+                                    &gt; Área {{ membro.pg_participante.setor.area.nome }}
+                                {% endif %}
+                            {% endif %}
+                        {% endif %}
+                    </p>
                     <p class="text-start"><strong>Campus:</strong> {{ membro.campus }}</p>
-                    <p class="text-start"><strong>Ativo:</strong> {{ 'Sim' if membro.ativo else 'Não' }}</p>
                 </div>
             </div>
-        </div>
-        <div class="col-md-8">
+            {% if membro.pg_participante %}
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-white text-primary">
-                    <h5 class="mb-0">Jornada</h5>
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Indicadores de PG</h5>
                 </div>
                 <div class="card-body">
-                    {% if jornada %}
-                    <ul class="list-group list-group-flush">
-                    {% for evento in jornada %}
-                        {% set estilo = jornada_config.get(evento.tipo_evento, {'class': 'bg-secondary', 'icon': 'bi-info-circle', 'label': 'Desconhecido'}) %}
-                        <li class="list-group-item d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="fw-bold">{{ evento.data_evento | brasilia | strftime('%d/%m/%Y - %H:%M') }}</div>
-                                {{ evento.descricao }}
-                            </div>
-                            <span class="badge {{ estilo.class }} rounded-pill">
-                                <i class="bi {{ estilo.icon }} me-1"></i>{{ estilo.label }}
-                            </span>
-                        </li>
-                    {% endfor %}
+                    <ul class="list-unstyled">
+                        <li><strong>Frequente no CTM:</strong> {{ 'Sim' if membro.participou_ctm else 'Não' }}</li>
+                        <li><strong>Já Participou do Encontro com Deus:</strong> {{ 'Sim' if membro.participou_encontro_deus else 'Não' }}</li>
+                        <li><strong>Batizado/Aclamado:</strong> {{ 'Sim' if membro.batizado_aclamado else 'Não' }}</li>
+                        <li><strong>Dizimista(Últimos 30 dias):</strong> {{ 'Sim' if membro.contribuiu_dizimo_ultimos_30d else 'Não' }}</li>
                     </ul>
-                    {% else %}
-                    <p class="text-muted">Nenhum evento registrado para este membro ainda.</p>
-                    {% endif %}
                 </div>
             </div>
+            {% endif %}
+
+        </div>
+        <div class="col-md-8">
+            {{ render_jornada_timeline(jornada_eventos) }}
         </div>
     </div>
 </div>

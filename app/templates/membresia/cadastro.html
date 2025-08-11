@@ -5,11 +5,10 @@
 {% block title %}Cadastro de Pessoas · IBAN{% endblock %}
 
 {% block content %}
-<div>
-  <div class="text-center mb-5">
+<div class="container mt-4">
+  <div class="text-center mb-4">
     <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
   </div>
-
   <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
     <h2 class="text-center">
       <strong>{{ 'Editar Cadastro' if editar else 'Cadastro de Pessoas' }}</strong>
@@ -52,28 +51,51 @@
         </div>
 
         <div class="col-md-6">
+          {{ form.campus.label(class="form-label") }}
+          {{ form.campus(class="form-select") }}
+          {% if form.campus.errors %}
+              {% for error in form.campus.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="row mb-4">
+        <div class="col-md-6">
           {{ form.data_recepcao.label(class="form-label") }}
           {{ form.data_recepcao(class="form-control", type="date") }}
           {% if form.data_recepcao.errors %}
-              {% for error in form.data_recepcao.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            {% for error in form.data_recepcao.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          {% endif %}
+        </div>
+        <div class="col-md-6">
+          {{ form.tipo_recepcao.label(class="form-label") }}
+          {{ form.tipo_recepcao(class="form-select") }}
+          {% if form.tipo_recepcao.errors %}
+            {% for error in form.tipo_recepcao.errors %}
+              <div class="alert alert-danger mt-1">{{ error }}</div>
+            {% endfor %}
           {% endif %}
         </div>
       </div>
 
       <div class="row mb-4">
-        <div class="col-md-6">
+        <div class="col-md-12">
           {{ form.status.label(class="form-label") }}
           {{ form.status(class="form-select") }}
           {% if form.status.errors %}
-              {% for error in form.status.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            {% for error in form.status.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
           {% endif %}
         </div>
+      </div>
 
-        <div class="col-md-6">
-          {{ form.campus.label(class="form-label") }}
-          {{ form.campus(class="form-select") }}
-          {% if form.campus.errors %}
-              {% for error in form.campus.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+      <div class="row mb-4">
+        <div class="col-md-12">
+          {{ form.obs_recepcao.label(class="form-label") }}
+          {{ form.obs_recepcao(class="form-control") }}
+          {% if form.obs_recepcao.errors %}
+            {% for error in form.obs_recepcao.errors %}
+              <div class="alert alert-danger mt-1">{{ error }}</div>
+            {% endfor %}
           {% endif %}
         </div>
       </div>

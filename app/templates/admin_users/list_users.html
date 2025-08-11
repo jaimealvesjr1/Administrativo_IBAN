@@ -30,7 +30,18 @@
                     <td>{{ user.id }}</td>
                     <td>{{ user.membro.nome_completo if user.membro else 'N/A' }}</td>
                     <td>{{ user.email }}</td>
-                    <td>{{ user.permissions }}</td>
+                    <td>
+                        {% set cargo_lideranca = user.membro.get_cargo_lideranca() if user.membro else None %}
+                        {% if cargo_lideranca %}
+                            <span class="badge bg-success">{{ cargo_lideranca }}</span>
+                        {% else %}
+                            {% if 'admin' in user.permissions %}
+                                <span class="badge bg-danger">Admin</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Membro</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
                     <td>
                         <a href="{{ url_for('admin_users.edit_user_permissions', user_id=user.id) }}" class="btn btn-sm btn-outline-primary me-2">Editar</a>
                         <a href="{{ url_for('admin_users.admin_reset_password', user_id=user.id) }}" class="btn btn-sm btn-outline-warning">Redefinir Senha</a>

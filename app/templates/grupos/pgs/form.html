@@ -1,0 +1,53 @@
+{% extends "base/layout.html" %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit, danger %}
+
+{% block title %}{% if pg %}Editar Pequeno Grupo{% else %}Criar Pequeno Grupo{% endif %} · IBAN{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="text-center mb-4">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
+    </div>
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+        <h2 class="text-center">
+            <strong>{% if pg %}Editar PG: {{ pg.nome }}{% else %}Novo PG{% endif %}</strong>
+        </h2>
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    {{ form.nome.label (class="form-label") }}
+                    {{ form.nome (class="form-control") }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.setor.label (class="form-label") }}
+                    {{ form.setor (class="form-select") }}
+                </div>
+            </div>
+            <div class="mb-3">
+                {{ form.facilitador.label (class="form-label") }}
+                {{ form.facilitador (class="form-select") }}
+            </div>
+            <div class="mb-3">
+                {{ form.anfitriao.label (class="form-label") }}
+                {{ form.anfitriao (class="form-select") }}
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    {{ form.dia_reuniao.label (class="form-label") }}
+                    {{ form.dia_reuniao (class="form-select") }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.horario_reuniao.label (class="form-label") }}
+                    {{ form.horario_reuniao (class="form-control") }}
+                </div>
+            </div>
+            {{ submit('Salvar Alterações' if editar else 'Criar Pequeno Grupo') }}
+            <div class="text-end mt-3">
+                <a href="{{ url_for('grupos.listar_pgs') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

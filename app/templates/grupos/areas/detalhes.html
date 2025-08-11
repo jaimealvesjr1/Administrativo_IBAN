@@ -1,0 +1,174 @@
+{% set show_navbar = true %}
+{% extends "base/layout.html" %}
+{% from 'base/components/jornada_timeline.html' import render_jornada_timeline %}
+{% from 'macros/filters.html' import render_meta_card %}
+
+{% block title %}Área {{ area.nome }} · IBAN{% endblock %}
+
+{% block content %}
+<div class="container mt-4" >
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><strong>Área {{ area.nome }}</strong></h2>
+        <div class="btn-group">
+            <a href="{{ url_for('grupos.editar_area', area_id=area.id) }}" class="btn btn-primary">Editar Cadastro</a>
+            <a href="{{ url_for('grupos.listar_grupos_unificada') }}" class="btn btn-outline-secondary">Voltar à Lista</a>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 text-center ">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0">Metas da Área</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row row-cols-1 row-cols-md-6 g-2">
+                        {{ render_meta_card('Facilitadores em Treinamento', area.meta_facilitadores_treinamento, area.num_facilitadores_treinamento_atuais_agregado, 'bi-person-badge') }}
+                        {{ render_meta_card('Anfitriões em Treinamento', area.meta_anfitrioes_treinamento, area.num_anfitrioes_treinamento_atuais_agregado, 'bi-house-heart') }}
+                        {{ render_meta_card('Participantes frequentes no CTM', area.meta_ctm_participantes, area.num_ctm_participantes_atuais_agregado, 'bi-book') }}
+                        {{ render_meta_card('Participantes no Encontro', area.meta_encontro_deus_participantes, area.num_encontro_deus_participantes_atuais_agregado, 'bi-hands-praying') }}
+                        {{ render_meta_card('Batizados/ Aclamados', area.meta_batizados_aclamados, area.num_batizados_aclamados_atuais_agregado, 'bi-award') }}
+                        {{ render_meta_card('Multiplicações de PG', area.meta_multiplicacoes_pg, area.num_multiplicacoes_pg_atuais_agregado, 'bi-x-lg') }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Dados da Área</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text"><strong>Coordenador:</strong> {{ area.coordenador.nome_completo if area.coordenador else 'N/A' }}</p>
+                </div>
+            </div>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Setores na Área</h5>
+                </div>
+                <div class="card-body">
+                {% if area.setores.count() > 0 %}
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col">Nome</th>
+                                <th scope="col">Supervisor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for setor in area.setores %}
+                            <tr>
+                                <td><a href="{{ url_for('grupos.detalhes_setor', setor_id=setor.id) }}">Setor {{ setor.nome }}</a></td>
+                                <td>{{ setor.supervisor.nome_completo if setor.supervisor else 'N/A' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>Nenhum Setor vinculado a esta Área ainda.</p>
+                {% endif %}
+                <a href="{{ url_for('grupos.gerenciar_metas_setores_da_area', area_id=area.id) }}" class="btn btn-secondary">Distribuir Metas</a>
+                </div>
+            </div>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Membros por Campus</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="campusFrequenciaChart"></canvas>
+                </div>
+            </div>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Dizimistas nos Últimos 30 Dias</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <canvas id="dizimistasChart" style="max-height: 250px;"></canvas>
+                        <p class="mt-2"><strong>Total de Participantes:</strong> {{ area.num_participantes_totais_agregado }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            {{ render_jornada_timeline(jornada_eventos) }}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    $(document).ready(function() {
+        var dizimistasData = {{ area.distribuicao_dizimistas_30d|tojson|safe }}; 
+        var dizimistasLabels = ['Dizimistas', 'Não Dizimistas'];
+        var dizimistasCounts = [dizimistasData.dizimistas, dizimistasData.nao_dizimistas];
+        
+        var ctxDizimistas = document.getElementById('dizimistasChart').getContext('2d');
+        new Chart(ctxDizimistas, {
+            type: 'pie',
+            data: {
+                labels: dizimistasLabels,
+                datasets: [{
+                    data: dizimistasCounts,
+                    backgroundColor: ['#42f56c', '#f54242'],
+                    hoverBackgroundColor: ['#4bc0c0', '#ff6384']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: false,
+                        text: 'Proporção de Dizimistas nos Últimos 30 Dias'
+                    }
+                }
+            }
+        });
+
+        var ctxCampusFrequencia = document.getElementById('campusFrequenciaChart').getContext('2d');
+        var campusLabels = JSON.parse('{{ area.distribuicao_campus_frequencia.keys()|list|tojson|safe }}');
+        var campusData = JSON.parse('{{ area.distribuicao_campus_frequencia.values()|list|tojson|safe }}');
+        var campusConfigColors = {{ config.CAMPUS|tojson|safe }};
+        var backgroundColors = campusLabels.map(label => campusConfigColors[label] || '#cccccc');
+        new Chart(ctxCampusFrequencia, {
+            type: 'bar',
+            data: {
+                labels: campusLabels,
+                datasets: [{
+                    label: 'Membros',
+                    data: campusData,
+                    backgroundColor: backgroundColors,
+                    borderColor: backgroundColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    title: {
+                        display: false,
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: false,
+                        },
+                        ticks: {stepSize: 1}
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -17,7 +17,6 @@ def is_admin():
 @login_required
 def require_admin_permission():
     if not is_admin():
-        flash('Você não tem permissão para acessar esta área.', 'danger')
         return redirect(url_for('membresia.index'))
 
 @admin_users_bp.route('/')
@@ -28,10 +27,8 @@ def list_users():
 @admin_users_bp.route('/<int:user_id>/edit_permissions', methods=['GET', 'POST'])
 def edit_user_permissions(user_id):
     user = User.query.get_or_404(user_id)
-    PERMISSIONS_CHOICES = [(p, p) for p in Config.AVAILABLE_PERMISSIONS]
     
     form = UserPermissionsForm()
-    form.permissions.choices = PERMISSIONS_CHOICES
 
     if form.validate_on_submit():
         user.permissions = ','.join(form.permissions.data)

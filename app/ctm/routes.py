@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_file
 from flask_login import login_required, current_user
+from app.decorators import admin_required
 from app.extensions import db
-from app.membresia.models import Membro, JornadaEvento
+from app.membresia.models import Membro
 from .models import Presenca, Aula
 from .forms import PresencaForm, AulaForm, PresencaManualForm
 from datetime import date, datetime
@@ -15,6 +16,7 @@ versao = Config.VERSAO_APP
 
 @ctm_bp.route('/')
 @login_required
+@admin_required
 def index():
     aulas = Aula.query.order_by(Aula.data.desc()).all()
 
@@ -187,6 +189,7 @@ def confirmacao():
 
 @ctm_bp.route('/admin/cadastrar-aula', methods=['POST'])
 @login_required
+@admin_required
 def cadastrar_aula():
     form = AulaForm()
     if form.validate_on_submit():
@@ -216,6 +219,7 @@ def cadastrar_aula():
 
 @ctm_bp.route('/admin/adicionar-presenca-manual', methods=['POST'])
 @login_required
+@admin_required
 def adicionar_presenca_manual():
     presenca_manual_form = PresencaManualForm()
 
@@ -267,6 +271,7 @@ def adicionar_presenca_manual():
 
 @ctm_bp.route('/relatorio')
 @login_required
+@admin_required
 def relatorio_ctm():
     campus_filtro = request.args.get('campus', '')
     status_filtro = request.args.get('status', '')
@@ -325,6 +330,7 @@ def relatorio_ctm():
 
 @ctm_bp.route('/download_relatorio')
 @login_required
+@admin_required
 def download_excel_relatorio():
     campus_filtro = request.args.get('campus', '')
     status_filtro = request.args.get('status', '')

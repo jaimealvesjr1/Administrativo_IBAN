@@ -1,15 +1,17 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_file
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app.extensions import db
 from datetime import datetime
-from app.membresia.models import Membro, JornadaEvento
+from app.membresia.models import Membro
 from .models import Contribuicao
 from .forms import ContribuicaoForm, ContribuicaoFilterForm
 from config import Config
 from sqlalchemy import func, extract, and_
+from app.jornada.models import registrar_evento_jornada, JornadaEvento
 from app.filters import format_currency
 import pandas as pd
 import io
+from app.decorators import admin_required, financeiro_required, group_permission_required
 
 financeiro_bp = Blueprint('financeiro', __name__, url_prefix='/financeiro')
 ano=Config.ANO_ATUAL
@@ -18,6 +20,7 @@ versao=Config.VERSAO_APP
 @financeiro_bp.route('/')
 @financeiro_bp.route('/index')
 @login_required
+@financeiro_required
 def index():
     mes_atual = datetime.now().month
     ano_atual = datetime.now().year
@@ -140,6 +143,7 @@ def index():
 
 @financeiro_bp.route('/novo', methods=['GET', 'POST'])
 @login_required
+@financeiro_required
 def nova_contribuicao():
     form = ContribuicaoForm()
     form.membro_id.choices = [('', 'Selecione um membro')] + \
@@ -161,8 +165,23 @@ def nova_contribuicao():
 
             membro_associado = Membro.query.get(contrib.membro_id)
             if membro_associado:
-                membro_associado.registrar_evento_jornada(f"Contribuiu com {contrib.tipo} no dia {contrib.data_lanc.strftime('%d/%m/%Y')}.", 'Contribuicao')
-                db.session.commit()
+                descricao_membro = f"Contribuiu com {contrib.tipo}."
+                registrar_evento_jornada(
+                    tipo_acao='CONTRIBUICAO',
+                    descricao_detalhada=descricao_membro,
+                    usuario_executor=current_user,
+                    membros=[membro_associado]
+                )
+                
+                if contrib.tipo == 'Dízimo' and membro_associado.pg_participante:
+                    pg_associado = membro_associado.pg_participante
+                    descricao_pg = f"Participante {membro_associado.nome_completo} contribuiu com dízimo."
+                    registrar_evento_jornada(
+                        tipo_acao='CONTRIBUICAO',
+                        descricao_detalhada=descricao_pg,
+                        usuario_executor=current_user,
+                        pgs=[pg_associado]
+                    )
 
             flash('Contribuição lançada com sucesso!', 'success')
             return redirect(url_for('financeiro.lancamentos'))
@@ -175,6 +194,7 @@ def nova_contribuicao():
 
 @financeiro_bp.route('/lancamentos')
 @login_required
+@financeiro_required
 def lancamentos():
     filter_form = ContribuicaoFilterForm(request.args, meta={'csrf': False})
 
@@ -228,6 +248,7 @@ def lancamentos():
 
 @financeiro_bp.route('download_lancamentos_excel')
 @login_required
+@financeiro_required
 def download_lancamentos_excel():
     busca_nome = request.args.get('busca_nome', '')
     tipo_filtro = request.args.get('tipo_filtro', '')
@@ -320,29 +341,55 @@ def download_lancamentos_excel():
 
 @financeiro_bp.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
+@financeiro_required
 def editar_contribuicao(id):
     contribuicao = Contribuicao.query.get_or_404(id)
     form = ContribuicaoForm(obj=contribuicao)
 
-    if contribuicao.membro:
-        form.membro_id.choices = [(contribuicao.membro.id, contribuicao.membro.nome_completo)]
-    else:
-        form.membro_id.choices = [('', 'Membro não encontrado.')]
+    old_membro = contribuicao.membro_id
+    old_valor = contribuicao.valor
+    old_tipo = contribuicao.tipo
+    old_forma = contribuicao.forma
+
+    form.membro_id.choices = [(contribuicao.membro.id, contribuicao.membro.nome_completo)] if contribuicao.membro else [('', 'Membro não encontrado.')]
 
     if form.validate_on_submit():
-        old_valor = contribuicao.valor
-        old_tipo = contribuicao.tipo
-        old_forma = contribuicao.forma
-
         form.populate_obj(contribuicao)
+        
         try:
             db.session.commit()
 
-            if old_valor != contribuicao.valor or old_tipo != contribuicao.tipo or old_forma != contribuicao.forma:
-                membro = Membro.query.get(contribuicao.membro_id)
-                db.session.commit()
+            membro_associado = Membro.query.get(contribuicao.membro_id)
+            if membro_associado and (old_valor != contribuicao.valor or old_tipo != contribuicao.tipo or old_forma != contribuicao.forma):
+                descricao_membro = f"Contribuição de {membro_associado.nome_completo} ({old_tipo}) atualizada. Mudanças: "
+                mudancas = []
+                if old_tipo != contribuicao.tipo:
+                    mudancas.append(f'Tipo: {old_tipo} -> {contribuicao.tipo}')
+                if old_valor != contribuicao.valor:
+                    mudancas.append(f'Valor: R$ {old_valor} -> R$ {contribuicao.valor}')
+                if old_forma != contribuicao.forma:
+                    mudancas.append(f'Forma: {old_forma} -> {contribuicao.forma}')
+                
+                descricao_membro += '; '.join(mudancas)
 
-            flash(f'Contribuição de {contribuicao.membro.nome_completo} atualizada com sucesso!', 'success')
+                registrar_evento_jornada(
+                    tipo_acao='CONTRIBUICAO',
+                    descricao_detalhada=descricao_membro,
+                    usuario_executor=current_user,
+                    membros=[membro_associado]
+                )
+
+                if contribuicao.tipo == 'Dízimo' and membro_associado.pg_participante:
+                    pg_associado = membro_associado.pg_participante
+                    descricao_pg = f"Contribuição de dízimo de {membro_associado.nome_completo} foi atualizada."
+                    registrar_evento_jornada(
+                        tipo_acao='CONTRIBUICAO',
+                        descricao_detalhada=descricao_pg,
+                        usuario_executor=current_user,
+                        pgs=[pg_associado]
+                    )
+            
+            flash(f'Contribuição de {membro_associado.nome_completo} atualizada com sucesso!', 'success')
             return redirect(url_for('financeiro.lancamentos'))
         except Exception as e:
             db.session.rollback()
@@ -355,6 +402,7 @@ def editar_contribuicao(id):
 
 @financeiro_bp.route('/buscar_membros_financeiro')
 @login_required
+@financeiro_required
 def buscar_membros_financeiro():
     search_term = request.args.get('term', '')
     results = []

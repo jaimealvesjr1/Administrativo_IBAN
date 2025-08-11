@@ -1,6 +1,6 @@
 from app.extensions import db
 from datetime import datetime
-from app.membresia.models import Membro, JornadaEvento
+from app.membresia.models import Membro
 
 class Aula(db.Model):
     id = db.Column(db.Integer, primary_key=True)

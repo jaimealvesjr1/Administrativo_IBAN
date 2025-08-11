@@ -1,7 +1,16 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 basedir = os.path.abspath(os.path.dirname(__file__))
+
+JORNADA_LIDERANCA_ALTERADA = {'class': 'bg-warning', 'icon': 'bi-person-badge', 'label': 'Liderança Alterada', 'categoria': 'Grupos'}
+JORNADA_PARTICIPANTE_ADICIONADO_PG = {'class': 'bg-success', 'icon': 'bi-person-plus', 'label': 'Participante Adicionado', 'categoria': 'Grupos'}
+JORNADA_PARTICIPANTE_REMOVIDO_PG = {'class': 'bg-danger', 'icon': 'bi-person-dash', 'label': 'Participante Removido', 'categoria': 'Grupos'}
+JORNADA_INDICADORES_PG_ATUALIZADOS = {'class': 'bg-info', 'icon': 'bi-bar-chart-line', 'label': 'Indicadores Atualizados', 'categoria': 'Grupos'}
+JORNADA_CADASTRO_MEMBRO = {'class': 'bg-success', 'icon': 'bi-person-add', 'label': 'Membro Cadastrado', 'categoria': 'Membresia'}
+JORNADA_MEMBRO_ATUALIZADO = {'class': 'bg-info', 'icon': 'bi-pencil', 'label': 'Membro Atualizado', 'categoria': 'Membresia'}
+JORNADA_DESLIGAMENTO = {'class': 'bg-danger', 'icon': 'bi-person-x', 'label': 'Desligamento', 'categoria': 'Membresia'}
+JORNADA_CONTRIBUICAO = {'class': 'bg-primary', 'icon': 'bi-currency-dollar', 'label': 'Contribuição', 'categoria': 'Financeiro'}
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'chave-secreta-segura'
@@ -12,22 +21,19 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     VERSAO_APP = 'Beta v1.1'
+    TIMEZONE = 'America/Sao_Paulo'
+    VERSAO_APP = 'Development'
     ANO_ATUAL = datetime.now().year
 
     IDS_OFERTA_ANONIMA_POR_CAMPUS = {
-        'Central':            90001,
-        'Concesso Elias':     90002,
-        'Capão':              90003,
-        'Cidade Nova':        90004,
-        'Perdigão':           90005,
-        'Pitangui':           90006,
-        'Desconhecido':       90000
+        'Central': 90001,
+        'Concesso Elias': 90002,
+        'Capão': 90003,
+        'Cidade Nova': 90004,
+        'Perdigão': 90005,
+        'Pitangui': 90006,
+        'Desconhecido': 90000
     }
-
-    AVAILABLE_PERMISSIONS = [
-        'admin',        # Acesso total a áreas administrativas e gerenciamento de usuários
-        'membro',       # Permissão padrão para membros registrados
-    ]
 
     CAMPUS = {
         'Central':        '#0d6efd',  # primary
@@ -36,63 +42,29 @@ class Config:
         'Cidade Nova':    '#dc3545',  # danger
         'Perdigão':       '#ffc107',  # warning
         'Pitangui':       '#0dcaf0',  # info
-    #   'Outro':          '#6f42c1',    # purple
     }
 
     STATUS = {
-        'Membro':       '#0d6efd',  # primary
-        'Líder':        '#198754',  # success
-        'Supervisor':   '#ffc107',  # warning
-        'Não-Membro':   '#dc3545',  # danger
-        'Inativo':      '#6c757d',  # secondary
+        'Membro':       '#0d6efd',
+        'Facilitador':  '#198754',
+        'Supervisor':   '#ffc107',
+        'Pastor':       '#dc3545',  
+        'Não-Membro':   '#6c757d', 
+        'Inativo':      '#6c757d',
     }
 
-    TIPOS = ['Dízimo', 'Oferta'] #'Oferta Missionária'
+    TIPOS = ['Dízimo', 'Oferta']
 
     FORMAS = ['via Pix', 'em Espécie']
 
-    JORNADA_CADASTRO_MEMBRO = {
-        'class': 'bg-secondary', 'icon': 'bi-person-add',
-        'label': 'Cadastro', 'categoria': 'Admissão'
-    }
-
-    JORNADA_CADASTRO_CTM = {
-        'class': 'bg-secondary', 'icon': 'bi-person-fill-add',
-        'label': 'Ingresso no CTM', 'categoria': 'Admissão'
-    }
-
     JORNADA = {
-        'Cadastro': JORNADA_CADASTRO_MEMBRO,
-
-        'Status_Mudanca': {
-            'class': 'bg-warning', 'icon': 'bi-person-check',
-            'label': 'Mudança de Status', 'categoria': 'Atualizações'
-        },
-
-        'Campus_Mudanca': {
-            'class': 'bg-warning', 'icon': 'bi-building',
-            'label': 'Mudança de Campus', 'categoria': 'Atualizações'
-        },
-
-        'Desligamento': {
-            'class': 'bg-danger', 'icon': 'bi-person-x',
-            'label': 'Desligamento', 'categoria': 'Saída'
-        },
-
-        'Data_Recepcao_Mudanca': {
-            'class': 'bg-warning', 'icon': 'bi-calendar-event',
-            'label': 'Data Recepção Alterada', 'categoria': 'Atualizações'
-        },
-
-        'Cadastro_Nao_Membro_CTM': JORNADA_CADASTRO_CTM,
-
-        'Presenca': {
-            'class': 'bg-success', 'icon': 'bi-check-circle',
-            'label': 'Presença no CTM', 'categoria': 'Frequência'
-        },
-
-        'Contribuicao': {
-            'class': 'bg-primary', 'icon': 'bi-currency-dollar',
-            'label': 'Contribuição', 'categoria': 'Financeiro'
-        },
+        'LIDERANCA_ALTERADA': JORNADA_LIDERANCA_ALTERADA,
+        'PARTICIPANTE_ADICIONADO_PG': JORNADA_PARTICIPANTE_ADICIONADO_PG,
+        'PARTICIPANTE_REMOVIDO_PG': JORNADA_PARTICIPANTE_REMOVIDO_PG,
+        'INDICADORES_PG_ATUALIZADOS': JORNADA_INDICADORES_PG_ATUALIZADOS,
+        'CADASTRO_MEMBRO': JORNADA_CADASTRO_MEMBRO,
+        'MEMBRO_ATUALIZADO': JORNADA_MEMBRO_ATUALIZADO,
+        'DESLIGAMENTO': JORNADA_DESLIGAMENTO,
+        'CADASTRO_NAO_MEMBRO_CTM': JORNADA_CADASTRO_MEMBRO,
+        'CONTRIBUICAO': JORNADA_CONTRIBUICAO,
     }

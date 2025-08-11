@@ -1,14 +1,16 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app.extensions import db
-from .models import Membro, JornadaEvento
+from .models import Membro
 from .forms import MembroForm, CadastrarNaoMembroForm
+from app.jornada.models import JornadaEvento, registrar_evento_jornada
 from config import Config
 from datetime import datetime
 from sqlalchemy import func
 import os
 import uuid
 from PIL import Image
+from app.decorators import admin_required, group_permission_required
 
 membresia_bp = Blueprint('membresia', __name__, url_prefix='/membresia')
 ano=Config.ANO_ATUAL
@@ -40,6 +42,7 @@ def save_profile_picture(file_data):
 @membresia_bp.route('/')
 @membresia_bp.route('/index')
 @login_required
+@admin_required
 def index():
     total_membros_ativos = Membro.query.filter_by(ativo=True).count()
     membros_por_status = db.session.query(Membro.status, func.count(Membro.id)).filter_by(ativo=True).group_by(Membro.status).all()
@@ -79,6 +82,7 @@ def index():
 
 @membresia_bp.route('/novo', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def novo_membro():
     form = MembroForm()
     
@@ -87,12 +91,14 @@ def novo_membro():
             nome_completo=form.nome_completo.data,
             data_nascimento=form.data_nascimento.data,
             data_recepcao=form.data_recepcao.data,
+            tipo_recepcao=form.tipo_recepcao.data,
             status=form.status.data,
             campus=form.campus.data,
+            obs_recepcao=form.obs_recepcao.data,
             ativo=True
         )
 
-        if form.foto_perfil.data:
+        if form.foto_perfil.data and form.foto_perfil.data.filename:
             filename = save_profile_picture(form.foto_perfil.data)
             if filename:
                 membro.foto_perfil = filename
@@ -101,22 +107,35 @@ def novo_membro():
                 return render_template('membresia/cadastro.html', form=form, ano=ano, versao=versao)
 
         db.session.add(membro)
-        db.session.commit()
+        try:
+            db.session.commit()
+            flash(f'{membro.nome_completo} registrado com sucesso!', 'success')
+            registrar_evento_jornada(
+                tipo_acao='CADASTRO_MEMBRO',
+                descricao_detalhada='Membro(a) cadastrado(a).',
+                usuario_executor=current_user,
+                membros=[membro]
+            )
+            return redirect(url_for('membresia.index'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao registrar membro: {e}', 'danger')
+    
+    elif request.method == 'POST':
+        print('O formulário falhou na validação.')
+        print(f'Erros do formulário: {form.errors}')
+        flash('Por favor, verifique os campos em vermelho e corrija os erros de validação.', 'danger')
 
-        descricao_cadastro = f'Chegou à IBAN no Campus {membro.campus}.'
-        membro.registrar_evento_jornada(descricao_cadastro, 'Cadastro')
-
-        flash(f'{membro.nome_completo} registrado com sucesso!', 'success')
-        return redirect(url_for('membresia.index'))
-    return render_template('membresia/cadastro.html',
-                           form=form, ano=ano, versao=versao)
+    return render_template('membresia/cadastro.html', form=form, ano=ano, versao=versao)
 
 @membresia_bp.route('/listagem')
 @login_required
+@admin_required
 def listagem():
     busca = request.args.get('busca', '')
     campus_filtro = request.args.get('campus', '')
     status_filtro = request.args.get('status', '')
+    recepcao_filtro = request.args.get('recepcao', '')
 
     query = Membro.query.filter_by(ativo=True)
     if busca:
@@ -125,6 +144,8 @@ def listagem():
         query = query.filter_by(campus=campus_filtro)
     if status_filtro:
         query = query.filter_by(status=status_filtro)
+    if recepcao_filtro:
+        query = query.filter_by(recepcao=recepcao_filtro)
 
     membros = query.order_by(Membro.nome_completo).all()
 
@@ -132,27 +153,26 @@ def listagem():
 
 @membresia_bp.route('/<int:id>/editar', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def editar_membro(id):
     membro = Membro.query.get_or_404(id)
+    
     old_status = membro.status
     old_campus = membro.campus
     old_data_recepcao = membro.data_recepcao
-
-    form = MembroForm()
-
-    if request.method == 'GET':
-        form.nome_completo.data = membro.nome_completo
-        form.data_nascimento.data = membro.data_nascimento
-        form.data_recepcao.data = membro.data_recepcao
-        form.status.data = membro.status
-        form.campus.data = membro.campus
+    old_tipo_recepcao = membro.tipo_recepcao
+    old_obs_recepcao = membro.obs_recepcao
+    
+    form = MembroForm(obj=membro)
 
     if form.validate_on_submit():
         membro.nome_completo = form.nome_completo.data
         membro.data_nascimento = form.data_nascimento.data
         membro.data_recepcao = form.data_recepcao.data
+        membro.tipo_recepcao = form.tipo_recepcao.data
         membro.status = form.status.data
         membro.campus = form.campus.data
+        membro.obs_recepcao = form.obs_recepcao.data
 
         if form.foto_perfil.data and form.foto_perfil.data.filename:
             if membro.foto_perfil and membro.foto_perfil != 'default.jpg':
@@ -167,43 +187,78 @@ def editar_membro(id):
                 flash('Tipo de arquivo de imagem não permitido ou inválido!', 'danger')
                 return render_template('membresia/cadastro.html', form=form, editar=True, membro=membro, ano=ano, versao=versao)
 
-        new_status = form.status.data
-        new_campus = form.campus.data
-        new_data_recepcao = form.data_recepcao.data
+        try:
+            db.session.commit()
+            flash(f'Registro de {membro.nome_completo} atualizado com sucesso!', 'success')
 
-        if old_status != new_status:
-            descricao_status = f'Status alterado de {old_status} para {new_status}'
-            membro.registrar_evento_jornada(descricao_status, 'Status_Mudanca')
-        
-        if old_campus != new_campus:
-            descricao_campus = f'Passou a frequentar o Campus {new_campus}.'
-            membro.registrar_evento_jornada(descricao_campus, 'Campus_Mudanca')
-        
-        if old_data_recepcao != new_data_recepcao:
-            descricao_data_recepcao = f"Data de Recepção alterada de {old_data_recepcao.strftime('%d/%m/%Y') if old_data_recepcao else 'Indefinida'} para {new_data_recepcao.strftime('%d/%m/%Y') if new_data_recepcao else 'Indefinida'}."
-            membro.registrar_evento_jornada(descricao_data_recepcao, 'Data_Recepcao_Mudanca')
-        
-        db.session.commit()
-        flash(f'Registro de {membro.nome_completo} atualizado com sucesso!', 'success')
-        return redirect(url_for('membresia.index'))
-        
+            descricao_jornada = 'Dados atualizados.'
+            mudancas = []
+            if old_status != membro.status:
+                mudancas.append(f'Status: {old_status} -> {membro.status}')
+            if old_campus != membro.campus:
+                mudancas.append(f'Campus: {old_campus} -> {membro.campus}')
+            if old_data_recepcao != membro.data_recepcao:
+                mudancas.append(f"Recepção: {old_data_recepcao.strftime('%d/%m/%Y') if old_data_recepcao else 'Indefinida'} -> {membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao else 'Indefinida'}")
+            if old_tipo_recepcao != membro.tipo_recepcao:
+                mudancas.append(f'Tipo Recepção: {old_tipo_recepcao} -> {membro.tipo_recepcao}')
+            if old_obs_recepcao != membro.obs_recepcao:
+                mudancas.append('Observações de Recepção alteradas')
+
+            if mudancas:
+                descricao_jornada += ' ' + '; '.join(mudancas)
+            else:
+                descricao_jornada = 'Dados atualizados. Nenhuma mudança nos campos principais detectada.'
+            
+            registrar_evento_jornada(
+                tipo_acao='MEMBRO_ATUALIZADO',
+                descricao_detalhada=descricao_jornada,
+                usuario_executor=current_user,
+                membros=[membro]
+            )
+            return redirect(url_for('membresia.index'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao atualizar membro: {e}', 'danger')
+            
     return render_template('membresia/cadastro.html',
-                           form=form, editar=True, membro=membro, ano=ano, versao=versao)
+                            form=form, editar=True, membro=membro, ano=ano, versao=versao)
 
 @membresia_bp.route('/<int:id>/desligar', methods=['POST'])
 @login_required
+@admin_required
 def desligar_membro(id):
     membro = Membro.query.get_or_404(id)
     current_status = membro.status
+    current_pg = membro.pg_participante
+
     membro.ativo = False
     membro.status = 'Desligado'
-    db.session.commit()
+    
+    if membro.pg_id:
+        membro.pg_id = None
+        membro.status_treinamento_pg = 'Participante'
+        membro.participou_ctm = False
+        membro.participou_encontro_deus = False
+        membro.batizado_aclamado = False
+        db.session.add(membro)
 
-    descricao_desligamento = f'Foi desligado(a) da IBAN enquanto era {current_status}.'
-    membro.registrar_evento_jornada(descricao_desligamento, 'Desligamento')
+    try:
+        db.session.commit()
+        flash(f"{membro.nome_completo} foi desligado.", 'warning')
 
-    flash(f"{membro.nome_completo} foi desligado.", 'warning')
+        registrar_evento_jornada(
+            tipo_acao='DESLIGAMENTO',
+            descricao_detalhada='Membro(a) foi desligado(a).',
+            usuario_executor=current_user,
+            membros=[membro]
+        )
+
+        return redirect(url_for('membresia.index'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao desligar membro: {e}', 'danger')
     return redirect(url_for('membresia.index'))
+
 
 @membresia_bp.route('/cadastro_nao_membro_ctm', methods=['GET', 'POST'])
 def cadastro_nao_membro_ctm():
@@ -232,16 +287,23 @@ def cadastro_nao_membro_ctm():
                 return render_template('membresia/cadastro_nao_membro.html', form=form, ano=ano, versao=versao)
 
         db.session.add(novo_membro)
-        db.session.commit()
+        try:
+            db.session.commit()
+            flash(f'{novo_membro.nome_completo} cadastrado(a) com sucesso!', 'success')
 
-        descricao_cadastro_nao_membro = f'Chegou à IBAN através do CTM no Campus {novo_membro.campus}'
-        novo_membro.registrar_evento_jornada(descricao_cadastro_nao_membro, 'Cadastro_Nao_Membro_CTM')
-
-        flash(f'{novo_membro.nome_completo} cadastrado(a) com sucesso!', 'success')
-        return redirect(url_for('ctm.registrar_presenca_aluno'))
+            registrar_evento_jornada(
+                tipo_acao='CADASTRO_NAO_MEMBRO_CTM',
+                descricao_detalhada='Membro(a) cadastrado(a).',
+                usuario_executor=current_user,
+                membros=[novo_membro]
+            )
+            return redirect(url_for('ctm.registrar_presenca_aluno'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao cadastrar Não-Membro CTM: {e}', 'danger')
 
     return render_template('membresia/cadastro_nao_membro.html',
-                           form=form, ano=ano, versao=versao)
+                            form=form, ano=ano, versao=versao)
 
 @membresia_bp.route('/nao_membros')
 @login_required
@@ -253,7 +315,14 @@ def listar_nao_membros():
 @login_required
 def perfil(id):
     membro = Membro.query.get_or_404(id)
-    jornada = JornadaEvento.query.filter_by(membro_id=membro.id).order_by(JornadaEvento.data_evento.desc()).all()
+    jornada_eventos = membro.jornada_eventos_membro.order_by(JornadaEvento.data_evento.desc()).all()
 
     return render_template('membresia/perfil.html',
-                           membro=membro, jornada=jornada, jornada_config=current_app.config.get('JORNADA', {}), ano=ano, versao=versao)
+                            membro=membro, jornada_eventos=jornada_eventos, jornada_config=current_app.config.get('JORNADA', {}), ano=ano, versao=versao)
+
+@membresia_bp.route('/membros/<int:membro_id>')
+@login_required
+def detalhes_membro(membro_id):
+    membro = Membro.query.get_or_404(membro_id)
+    jornada_eventos = membro.jornada_eventos_membro.order_by(JornadaEvento.data_evento.desc()).all()
+    return render_template('membresia/perfil.html', membro=membro, jornada_eventos=jornada_eventos)

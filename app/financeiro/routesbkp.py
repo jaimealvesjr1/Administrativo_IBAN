@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import login_required
 from app.extensions import db
 from datetime import datetime
-from app.membresia.models import Membro, JornadaEvento
+from app.membresia.models import Membro
 from .models import Contribuicao
 from .forms import ContribuicaoForm, ContribuicaoFilterForm
 from config import Config

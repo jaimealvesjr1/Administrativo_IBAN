@@ -1,5 +1,5 @@
-from pytz import timezone, utc
-from datetime import datetime
+from datetime import datetime, timezone
+from pytz import timezone as pytz_timezone, utc
 import locale
 
 try:
@@ -13,17 +13,25 @@ except locale.Error:
 def to_brasilia(value):
     if value is None:
         return ''
-    if isinstance(value, datetime) and value.tzinfo is None:
-        value = utc.localize(value)
+    if not isinstance(value, datetime):
+        return str(value)
 
-    return value.astimezone(timezone('America/Sao_Paulo'))
+    if value.tzinfo is None:
+        value_utc_aware = utc.localize(value)
+    else:
+        value_utc_aware = value.astimezone(utc)
+    
+    brasilia_tz = pytz_timezone('America/Sao_Paulo')
+    return value_utc_aware.astimezone(brasilia_tz)
 
 def format_datetime(value, format="%d/%m/%Y %H:%M"):
     if value is None:
         return ''
-    if isinstance(value, datetime):
-        return value.strftime(format)
-    return str(value)
+    if not isinstance(value, datetime):
+        return str(value)
+    dt_brasilia = to_brasilia(value)
+    return dt_brasilia.strftime(format)
+
 
 def format_currency(value, symbol='R$', decimal_places=2):
     if value is None:

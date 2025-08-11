@@ -1,0 +1,77 @@
+{% macro render_jornada_timeline(eventos) %}
+    {% if eventos %}
+        <div class="timeline mt-2 text-primary">
+            <h5 class="mb-3">Jornada:</h5>
+            {% for evento in eventos %}
+                {% set tipo_jornada = config.JORNADA[evento.tipo_acao] if evento.tipo_acao in config.JORNADA else None %}
+
+                <div class="timeline-item">
+                    <div class="timeline-dot {% if tipo_jornada %}{{ tipo_jornada.class }}{% else %}bg-secondary{% endif %}"></div>
+                    <div class="timeline-content card mb-2">
+                        <div class="card-body p-2">
+                            <small class="text-muted d-block">
+                                {{ evento.data_evento|strftime('%d/%m/%Y %H:%M') }}
+                                {% if tipo_jornada and tipo_jornada.icon %}
+                                    <i class="bi {{ tipo_jornada.icon }} ms-1"></i>
+                                {% endif %}
+                            </small>
+                            <strong class="d-block text-primary">
+                                {% if tipo_jornada %}{{ tipo_jornada.label }}{% else %}{{ evento.tipo_acao }}{% endif %}
+                            </strong>
+                            <p class="mb-1">{{ evento.descricao_detalhada }}</p>
+                            {% if evento.executor %}
+                                <small class="text-muted">Por: {{ evento.executor.email.split('@')[0] }}</small>
+                            {% else %}
+                                <small class="text-muted">Por: Sistema</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <style>
+            .timeline {
+                position: relative;
+                padding-left: 30px;
+            }
+            .timeline::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 10px;
+                width: 2px;
+                background-color: #3d8cdb;
+            }
+            .timeline-item {
+                position: relative;
+                margin-bottom: 20px;
+            }
+            .timeline-dot {
+                position: absolute;
+                top: 6px;
+                left: 0;
+                width: 12px;
+                height: 12px;
+                background-color: var(--cor-primaria);
+                border-radius: 50%;
+                transform: translateX(-50%);
+                z-index: 1;
+            }
+            .timeline-content {
+                margin-left: 20px;
+                border: 1px solid #e9ecef;
+                border-radius: 0.25rem;
+                box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            }
+            .timeline-dot.bg-primary { background-color: var(--bs-primary); }
+            .timeline-dot.bg-success { background-color: var(--bs-success); }
+            .timeline-dot.bg-info { background-color: var(--bs-info); }
+            .timeline-dot.bg-warning { background-color: var(--bs-warning); }
+            .timeline-dot.bg-danger { background-color: var(--bs-danger); }
+            .timeline-dot.bg-secondary { background-color: var(--bs-secondary); }
+        </style>
+    {% else %}
+        <p class="mt-4">Nenhum evento registrado ainda.</p>
+    {% endif %}
+{% endmacro %}

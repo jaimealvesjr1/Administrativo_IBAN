@@ -1,6 +1,6 @@
 from app.extensions import db
 from datetime import datetime, date, timezone
-from app.membresia.models import Membro, JornadaEvento
+from app.membresia.models import Membro
 from app.filters import format_currency
 
 class Contribuicao(db.Model):

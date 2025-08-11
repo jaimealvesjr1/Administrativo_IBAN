@@ -25,6 +25,14 @@ class UserPermissionsForm(FlaskForm):
                                       option_widget=widgets.CheckboxInput(),
                                       widget=MultiCheckboxWidget())
     submit = SubmitField('Atualizar Permissões')
+    
+    def __init__(self, *args, **kwargs):
+        super(UserPermissionsForm, self).__init__(*args, **kwargs)
+        self.permissions.choices = [
+            ('admin', 'Admin'),
+            ('membro', 'Membro'),
+            ('financeiro', 'Tesoureiro'),
+        ]
 
 class AdminResetPasswordForm(FlaskForm):
     new_password = PasswordField('Nova Senha', validators=[DataRequired(), Length(min=6)])
