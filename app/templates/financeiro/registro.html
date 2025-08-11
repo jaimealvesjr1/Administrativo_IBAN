@@ -17,17 +17,33 @@
             {{ form.hidden_tag() }}
             
             <div class="mb-3">
-                {# Campo de membro com Select2 para busca AJAX #}
                 {{ form.membro_id.label(class="form-label") }}
                 {{ form.membro_id(class="form-select", id="membro_financeiro_select2") }}
                 <small class="form-text text-muted mt-2 d-block">
-                    Não encontrou o contribuinte? <a href="{{ url_for('membresia.novo_membro') }}">Clique aqui para cadastrar</a>.
+                    Não encontrou o contribuinte?
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#confirmarCadastroModal">Clique aqui para cadastrar</a>.
                 </small>
-                {% if form.membro_id.errors %}
-                    {% for error in form.membro_id.errors %}
-                        <div class="alert alert-danger mt-1">{{ error }}</div>
-                    {% endfor %}
-                {% endif %}
+            </div>
+
+            <div class="modal fade" id="confirmarCadastroModal" tabindex="-1" aria-labelledby="confirmarCadastroModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmarCadastroModalLabel">Deseja cadastrar um novo contribuinte?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Por favor, selecione o tipo de cadastro.</p>
+                    <div class="d-flex justify-content-around mt-3">
+                        <a href="{{ url_for('membresia.novo_membro', next=url_for('financeiro.nova_contribuicao')) }}" class="btn btn-primary">Cadastrar Membro</a>
+                        <a href="{{ url_for('membresia.cadastro_nao_membro', next=url_for('financeiro.nova_contribuicao')) }}" class="btn btn-secondary">Cadastrar Não-Membro</a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+                </div>
+            </div>
             </div>
 
             <div class="mb-3">

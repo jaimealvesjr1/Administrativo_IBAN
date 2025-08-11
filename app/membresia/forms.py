@@ -4,21 +4,21 @@ from wtforms import StringField, SelectField, SubmitField, DateField, TextAreaFi
 from wtforms.validators import DataRequired, Length, Optional, ValidationError
 from config import Config
 from datetime import date
+from .models import Membro
 
 class MembroForm(FlaskForm):
     nome_completo = StringField('Nome Completo', validators=[DataRequired(), Length(max=100)])
     data_nascimento = DateField('Data de Nascimento', format='%Y-%m-%d', validators=[DataRequired()])
-    data_recepcao = DateField('Data de Recepção', format='%Y-%m-%d', validators=[Optional()]) # Tornando opcional novamente para flexibilidade
+
+    data_recepcao = DateField('Data de Recepção', format='%Y-%m-%d', validators=[Optional()])
     tipo_recepcao = SelectField('Tipo de Recepção', validators=[DataRequired()],
                                  choices=[
                                      ('', 'Selecione...'),
                                      ('Aclamação', 'Aclamação'),
                                      ('Batismo', 'Batismo'),
-                                     ('Outro', 'Outro')
                                  ])
-    obs_recepcao = TextAreaField('Observações de Membresia', validators=[Length(max=500), Optional()], render_kw={'rows': 2}) # Adicionada validação de tamanho e opcionalidade
+    obs_recepcao = TextAreaField('Observações de Membresia', validators=[Length(max=500), Optional()], render_kw={'rows': 2})
 
-    status = SelectField('Status', validators=[DataRequired()])
     campus = SelectField('Campus', validators=[DataRequired()])
     foto_perfil = FileField('Foto de Perfil', validators=[
         FileAllowed(['jpg', 'png', 'jpeg'], 'Apenas imagens JPG, PNG e JPEG são permitidas!'),
@@ -29,8 +29,12 @@ class MembroForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.status.choices = [('', 'Selecione...')] + [(s, s) for s in Config.STATUS.keys()]
-        self.campus.choices = [('', 'Selecione...')] + [(c, c) for c in Config.CAMPUS.keys()]
+        self.campus.choices = [(c, c) for c in Config.CAMPUS.keys()]
+
+    def validate_nome_completo(self, nome_completo):
+        membro = Membro.query.filter_by(nome_completo=nome_completo.data).first()
+        if membro:
+            raise ValidationError('Já existe um membro cadastrado com este nome.')
 
     def validate_data_nascimento(self, field):
         if field.data and field.data > date.today():
@@ -42,7 +46,6 @@ class MembroForm(FlaskForm):
 
 class CadastrarNaoMembroForm(FlaskForm):
     nome_completo = StringField('Nome Completo', validators=[DataRequired(), Length(min=3, max=100)])
-    data_nascimento = DateField('Data de Nascimento', format='%Y-%m-%d', validators=[DataRequired()])
     campus = SelectField('Campus', validators=[DataRequired()])
 
     foto_perfil = FileField('Foto de Perfil', validators=[
@@ -55,6 +58,11 @@ class CadastrarNaoMembroForm(FlaskForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.campus.choices = [(c, c) for c in Config.CAMPUS.keys()]
+
+    def validate_nome_completo(self, nome_completo):
+        membro = Membro.query.filter_by(nome_completo=nome_completo.data).first()
+        if membro:
+            raise ValidationError('Já existe uma pessoa com este nome completo.')
 
     def validate_data_nascimento(self, field):
         if field.data and field.data > date.today():

@@ -11,7 +11,7 @@
 
   <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
     <h2 class="text-center">
-      <strong>Cadastro de Pessoas</strong>
+      <strong>Cadastro de Não-Membro</strong>
     </h2>
     <form method="POST" enctype="multipart/form-data">
       {{ form.hidden_tag() }}
@@ -26,26 +26,14 @@
         {% endif %}
       </div>
 
-      <div class="row mb-4">
-        <div class="col-md-6">
-          {{ form.data_nascimento.label(class="form-label") }}
-          {{ form.data_nascimento(class="form-control", type="date") }}
-          {% if form.data_nascimento.errors %}
-            {% for error in form.data_nascimento.errors %}
-              <div class="text-danger small mt-1">{{ error }}</div>
-            {% endfor %}
-          {% endif %}
-        </div>
-
-        <div class="col-md-6">
-          {{ form.campus.label(class="form-label") }}
-          {{ form.campus(class="form-select") }}
-          {% if form.campus.errors %}
-            {% for error in form.campus.errors %}
-              <div class="text-danger small mt-1">{{ error }}</div>
-            {% endfor %}
-          {% endif %}
-        </div>
+      <div class="mb-3">
+        {{ form.campus.label(class="form-label") }}
+        {{ form.campus(class="form-select") }}
+        {% if form.campus.errors %}
+          {% for error in form.campus.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+          {% endfor %}
+        {% endif %}
       </div>
       
       <div class="mb-3">

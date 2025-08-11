@@ -80,16 +80,6 @@
 
       <div class="row mb-4">
         <div class="col-md-12">
-          {{ form.status.label(class="form-label") }}
-          {{ form.status(class="form-select") }}
-          {% if form.status.errors %}
-            {% for error in form.status.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="row mb-4">
-        <div class="col-md-12">
           {{ form.obs_recepcao.label(class="form-label") }}
           {{ form.obs_recepcao(class="form-control") }}
           {% if form.obs_recepcao.errors %}

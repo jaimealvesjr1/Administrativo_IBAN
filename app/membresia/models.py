@@ -8,10 +8,13 @@ class Membro(db.Model):
     foto_perfil = db.Column(db.String(255), nullable=True, default='default.jpg')
     nome_completo = db.Column(db.String(120), nullable=False)
     data_nascimento = db.Column(db.Date, nullable=True)
-    data_recepcao = db.Column(db.Date, nullable=True)
-    tipo_recepcao = db.Column(db.String(50), nullable=False)
-    obs_recepcao = db.Column(db.Text, nullable=True)
+
     status = db.Column(db.String(50), nullable=False)
+
+    data_recepcao = db.Column(db.Date, nullable=True)
+    tipo_recepcao = db.Column(db.String(50), nullable=True)
+    obs_recepcao = db.Column(db.Text, nullable=True)
+
     campus = db.Column(db.String(50), nullable=False)
     ativo = db.Column(db.Boolean, default=True)
 
@@ -20,7 +23,6 @@ class Membro(db.Model):
     participou_ctm = db.Column(db.Boolean, nullable=False, default=False)
     participou_encontro_deus = db.Column(db.Boolean, nullable=False, default=False)
     batizado_aclamado = db.Column(db.Boolean, nullable=False, default=False)
-    campus_frequencia = db.Column(db.String(50), nullable=True)
 
     presencas = db.relationship('Presenca', backref='membro', lazy=True)
 

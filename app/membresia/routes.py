@@ -92,7 +92,7 @@ def novo_membro():
             data_nascimento=form.data_nascimento.data,
             data_recepcao=form.data_recepcao.data,
             tipo_recepcao=form.tipo_recepcao.data,
-            status=form.status.data,
+            status='Membro',
             campus=form.campus.data,
             obs_recepcao=form.obs_recepcao.data,
             ativo=True
@@ -156,23 +156,33 @@ def listagem():
 @admin_required
 def editar_membro(id):
     membro = Membro.query.get_or_404(id)
-    
+
+    if membro.status == 'Membro':
+        form = MembroForm(obj=membro)
+    else:
+        form = CadastrarNaoMembroForm(obj=membro)
+
     old_status = membro.status
     old_campus = membro.campus
     old_data_recepcao = membro.data_recepcao
     old_tipo_recepcao = membro.tipo_recepcao
     old_obs_recepcao = membro.obs_recepcao
     
-    form = MembroForm(obj=membro)
-
     if form.validate_on_submit():
         membro.nome_completo = form.nome_completo.data
         membro.data_nascimento = form.data_nascimento.data
-        membro.data_recepcao = form.data_recepcao.data
-        membro.tipo_recepcao = form.tipo_recepcao.data
-        membro.status = form.status.data
+
+        if membro.status == 'Membro':
+            membro.data_recepcao = form.data_recepcao.data
+            membro.tipo_recepcao = form.tipo_recepcao.data
+            membro.obs_recepcao = form.obs_recepcao.data
+        else:
+            membro.data_recepcao = None
+            membro.tipo_recepcao = None
+            membro.obs_recepcao = None
+
+        membro.status = form.status.data if hasattr(form, 'status') else membro.status
         membro.campus = form.campus.data
-        membro.obs_recepcao = form.obs_recepcao.data
 
         if form.foto_perfil.data and form.foto_perfil.data.filename:
             if membro.foto_perfil and membro.foto_perfil != 'default.jpg':
@@ -228,8 +238,6 @@ def editar_membro(id):
 @admin_required
 def desligar_membro(id):
     membro = Membro.query.get_or_404(id)
-    current_status = membro.status
-    current_pg = membro.pg_participante
 
     membro.ativo = False
     membro.status = 'Desligado'
@@ -260,19 +268,14 @@ def desligar_membro(id):
     return redirect(url_for('membresia.index'))
 
 
-@membresia_bp.route('/cadastro_nao_membro_ctm', methods=['GET', 'POST'])
-def cadastro_nao_membro_ctm():
+@membresia_bp.route('/cadastro_nao_membro', methods=['GET', 'POST'])
+def cadastro_nao_membro():
     form = CadastrarNaoMembroForm()
+    next_url = request.args.get('next')
 
     if form.validate_on_submit():
-        membro_existente = Membro.query.filter_by(nome_completo=form.nome_completo.data).first()
-        if membro_existente:
-            flash(f'Já existe uma pessoa com o nome "{form.nome_completo.data}". Por favor, verifique ou selecione o nome na tela anterior.', 'warning')
-            return render_template('membresia/cadastro_nao_membro.html', form=form, ano=ano, versao=versao)
-
         novo_membro = Membro(
             nome_completo=form.nome_completo.data,
-            data_nascimento=form.data_nascimento.data,
             campus=form.campus.data,
             status='Não-Membro',
             ativo=True
@@ -292,15 +295,19 @@ def cadastro_nao_membro_ctm():
             flash(f'{novo_membro.nome_completo} cadastrado(a) com sucesso!', 'success')
 
             registrar_evento_jornada(
-                tipo_acao='CADASTRO_NAO_MEMBRO_CTM',
-                descricao_detalhada='Membro(a) cadastrado(a).',
+                tipo_acao='CADASTRO_NAO_MEMBRO',
+                descricao_detalhada='Cadastrado(a) como Não-Membro.',
                 usuario_executor=current_user,
                 membros=[novo_membro]
             )
-            return redirect(url_for('ctm.registrar_presenca_aluno'))
+            return redirect(next_url or url_for('ctm.registrar_presenca_aluno'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Erro ao cadastrar Não-Membro CTM: {e}', 'danger')
+            flash(f'Erro ao cadastrar Não-Membro: {e}', 'danger')
+
+    elif request.method == 'POST':
+        current_app.logger.error(f'Erros de validação do formulário de não-membro: {form.errors}')
+        flash('Por favor, verifique os campos em vermelho e corrija os erros.', 'danger')
 
     return render_template('membresia/cadastro_nao_membro.html',
                             form=form, ano=ano, versao=versao)
