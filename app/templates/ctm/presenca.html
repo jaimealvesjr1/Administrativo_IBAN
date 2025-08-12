@@ -19,7 +19,7 @@
         {{ form.membro_id(class="form-select", id="nome_aluno_select2") }} 
         
         <small class="form-text text-muted mt-2 d-block">
-            Não encontrou seu nome? <a href="{{ url_for('membresia.cadastro_nao_membro_ctm') }}">Clique aqui para cadastrar</a>. 
+            Não encontrou seu nome? <a href="{{ url_for('membresia.cadastro_nao_membro') }}">Clique aqui para cadastrar</a>. 
         </small>
         {# Exibe erros de validação do campo membro_id #}
         {% if form.membro_id.errors %}

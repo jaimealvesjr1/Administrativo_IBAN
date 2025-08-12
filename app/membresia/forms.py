@@ -27,14 +27,18 @@ class MembroForm(FlaskForm):
 
     submit = SubmitField('Salvar')
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, membro=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.membro = membro
         self.campus.choices = [(c, c) for c in Config.CAMPUS.keys()]
 
     def validate_nome_completo(self, nome_completo):
+        query = Membro.query.filter_by(nome_completo=nome_completo.data)
         membro = Membro.query.filter_by(nome_completo=nome_completo.data).first()
-        if membro:
-            raise ValidationError('Já existe um membro cadastrado com este nome.')
+        if self.membro:
+            query = query.filter(Membro.id != self.membro.id)
+        if query.first():
+            raise ValidationError('Já existe um membro cadastrado com este nome completo.')
 
     def validate_data_nascimento(self, field):
         if field.data and field.data > date.today():
@@ -55,13 +59,16 @@ class CadastrarNaoMembroForm(FlaskForm):
 
     submit = SubmitField('Cadastrar Pessoa')
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, membro=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.membro = membro
         self.campus.choices = [(c, c) for c in Config.CAMPUS.keys()]
 
     def validate_nome_completo(self, nome_completo):
-        membro = Membro.query.filter_by(nome_completo=nome_completo.data).first()
-        if membro:
+        query = Membro.query.filter_by(nome_completo=nome_completo.data)
+        if self.membro:
+            query = query.filter(Membro.id != self.membro.id)
+        if query.first():
             raise ValidationError('Já existe uma pessoa com este nome completo.')
 
     def validate_data_nascimento(self, field):

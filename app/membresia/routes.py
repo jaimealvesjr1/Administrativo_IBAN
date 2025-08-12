@@ -84,7 +84,8 @@ def index():
 @login_required
 @admin_required
 def novo_membro():
-    form = MembroForm()
+    form = MembroForm(membro=None)
+    next_url = request.args.get('next')
     
     if form.validate_on_submit():
         membro = Membro(
@@ -116,7 +117,7 @@ def novo_membro():
                 usuario_executor=current_user,
                 membros=[membro]
             )
-            return redirect(url_for('membresia.index'))
+            return redirect(next_url or url_for('membresia.index'))
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao registrar membro: {e}', 'danger')
@@ -158,9 +159,9 @@ def editar_membro(id):
     membro = Membro.query.get_or_404(id)
 
     if membro.status == 'Membro':
-        form = MembroForm(obj=membro)
+        form = MembroForm(obj=membro, membro=membro)
     else:
-        form = CadastrarNaoMembroForm(obj=membro)
+        form = CadastrarNaoMembroForm(obj=membro, membro=membro)
 
     old_status = membro.status
     old_campus = membro.campus
@@ -184,7 +185,7 @@ def editar_membro(id):
         membro.status = form.status.data if hasattr(form, 'status') else membro.status
         membro.campus = form.campus.data
 
-        if form.foto_perfil.data and form.foto_perfil.data.filename:
+        if form.foto_perfil.data and not isinstance(form.foto_perfil.data, str):
             if membro.foto_perfil and membro.foto_perfil != 'default.jpg':
                 old_filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], membro.foto_perfil)
                 if os.path.exists(old_filepath):
@@ -270,7 +271,7 @@ def desligar_membro(id):
 
 @membresia_bp.route('/cadastro_nao_membro', methods=['GET', 'POST'])
 def cadastro_nao_membro():
-    form = CadastrarNaoMembroForm()
+    form = CadastrarNaoMembroForm(membro=None)
     next_url = request.args.get('next')
 
     if form.validate_on_submit():
