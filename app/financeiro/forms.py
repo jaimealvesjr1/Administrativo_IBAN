@@ -1,8 +1,11 @@
 from flask_wtf import FlaskForm
 from wtforms import SelectField, SubmitField, DateField, FloatField, TextAreaField, StringField
-from wtforms.validators import DataRequired, NumberRange, Optional
+from wtforms.validators import DataRequired, NumberRange, Optional, ValidationError
 from config import Config
 from app.membresia.models import Membro
+from datetime import date
+from app.financeiro.models import Contribuicao
+from app.extensions import db
 
 def coerce_to_int_or_none(value):
     if value == '':
@@ -21,10 +24,15 @@ class ContribuicaoForm(FlaskForm):
     observacoes = TextAreaField('Observações', render_kw={'rows': 3})
     submit = SubmitField('Lançar Contribuição')
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, contribuicao=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.contribuicao = contribuicao
         self.tipo.choices = [(t, t) for t in Config.TIPOS]
         self.forma.choices = [(f, f) for f in Config.FORMAS]
+
+    def validate_data_lanc(self, field):
+        if field.data > date.today():
+            raise ValidationError('A data de lançamento não pode ser futura.')
 
 class ContribuicaoFilterForm(FlaskForm):
     csrf_enabled = False

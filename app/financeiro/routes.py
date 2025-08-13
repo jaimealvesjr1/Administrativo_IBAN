@@ -145,11 +145,20 @@ def index():
 @login_required
 @financeiro_required
 def nova_contribuicao():
-    form = ContribuicaoForm()
+    form = ContribuicaoForm(contribuicao=None)
     form.membro_id.choices = [('', 'Selecione um membro')] + \
-                                [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
+                             [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
 
     if form.validate_on_submit():
+        query = Contribuicao.query.filter(
+            Contribuicao.membro_id == form.membro_id.data,
+            Contribuicao.valor == form.valor.data,
+            Contribuicao.data_lanc == form.data_lanc.data
+        )
+        if query.first():
+            flash('Já existe uma contribuição com o mesmo valor e data para este membro.', 'danger')
+            return redirect(url_for('financeiro.nova_contribuicao'))
+
         contrib = Contribuicao(
             membro_id=form.membro_id.data,
             tipo=form.tipo.data,
@@ -344,16 +353,26 @@ def download_lancamentos_excel():
 @financeiro_required
 def editar_contribuicao(id):
     contribuicao = Contribuicao.query.get_or_404(id)
-    form = ContribuicaoForm(obj=contribuicao)
+    form = ContribuicaoForm(obj=contribuicao, contribuicao=contribuicao)
 
     old_membro = contribuicao.membro_id
     old_valor = contribuicao.valor
     old_tipo = contribuicao.tipo
     old_forma = contribuicao.forma
 
-    form.membro_id.choices = [(contribuicao.membro.id, contribuicao.membro.nome_completo)] if contribuicao.membro else [('', 'Membro não encontrado.')]
+    form.membro_id.choices = [(contribuicao.membro.id, contribuicao.membro.nome_completo)]
 
     if form.validate_on_submit():
+        query = Contribuicao.query.filter(
+            Contribuicao.membro_id == form.membro_id.data,
+            Contribuicao.valor == form.valor.data,
+            Contribuicao.data_lanc == form.data_lanc.data
+        ).filter(Contribuicao.id != contribuicao.id)
+
+        if query.first():
+            flash('Já existe uma contribuição com o mesmo valor e data para este membro.', 'danger')
+            return redirect(url_for('financeiro.editar_contribuicao', id=id))
+
         form.populate_obj(contribuicao)
         
         try:
@@ -389,7 +408,7 @@ def editar_contribuicao(id):
                         pgs=[pg_associado]
                     )
             
-            flash(f'Contribuição de {membro_associado.nome_completo} atualizada com sucesso!', 'success')
+            flash(f'Contribuição de {contribuicao.membro.nome_completo} atualizada com sucesso!', 'success')
             return redirect(url_for('financeiro.lancamentos'))
         except Exception as e:
             db.session.rollback()
