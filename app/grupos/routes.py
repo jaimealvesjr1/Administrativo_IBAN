@@ -419,8 +419,8 @@ def atualizar_indicadores(pg_id, membro_id):
     try:
         db.session.commit()
         flash(f'Indicadores de {membro.nome_completo} atualizados com sucesso!', 'success')
-        descricao_membro = f'Indicadores atualizados no PG "{pg.nome}".'
-        descricao_setor = f'Indicadores do PG "{pg.nome}" atualizados. (Membro: {membro.nome_completo})'
+        descricao_membro = f'Indicadores atualizados no PG {pg.nome}.'
+        descricao_setor = f'Indicadores do PG {pg.nome} atualizados. (Membro: {membro.nome_completo})'
         registrar_evento_jornada(tipo_acao='INDICADORES_PG_ATUALIZADOS', descricao_detalhada=descricao_membro, usuario_executor=current_user, membros=[membro])
         if pg.setor:
             registrar_evento_jornada(tipo_acao='INDICADORES_PG_ATUALIZADOS', descricao_detalhada=descricao_setor, usuario_executor=current_user, setores=[pg.setor])

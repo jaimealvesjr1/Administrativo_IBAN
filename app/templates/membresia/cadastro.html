@@ -11,10 +11,18 @@
     </div>
     <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
         <h2 class="text-center">
-            {% if form.data_recepcao is defined %}
-                <strong>{{ 'Editar Membro' if editar else 'Cadastro de Membro' }}</strong>
+            {% if editar %}
+                {% if membro.status != 'Não-Membro' %}
+                    <strong>Editar Membro</strong>
+                {% else %}
+                    <strong>Editar Não-Membro</strong>
+                {% endif %}
             {% else %}
-                <strong>{{ 'Editar Não-Membro' if editar else 'Cadastro de Não-Membro' }}</strong>
+                {% if form.data_recepcao is defined %}
+                    <strong>Cadastro de Membro</strong>
+                {% else %}
+                    <strong>Cadastro de Não-Membro</strong>
+                {% endif %}
             {% endif %}
         </h2>
 
@@ -98,7 +106,7 @@
             {% endif %}
 
             {{ submit('Salvar Alterações' if editar else 'Adicionar Registro') }}
-            {% if editar and membro.ativo %}
+            {% if editar and membro.status != 'Não-Membro' %}
                 {{ danger('Desligar Membro', '#modalDesligar') }}
             {% endif %}
 
@@ -111,7 +119,7 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-{% if editar and membro.ativo %}
+{% if editar and membro.status != 'Não-Membro' %}
 {{ confirm_modal(
     'modalDesligar',
     'Confirmar Desligamento',

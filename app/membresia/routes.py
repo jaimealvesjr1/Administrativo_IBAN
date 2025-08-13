@@ -171,7 +171,7 @@ def listagem():
 def editar_membro(id):
     membro = Membro.query.get_or_404(id)
 
-    if membro.status == 'Membro':
+    if membro.status != 'Não-Membro':
         form = MembroForm(obj=membro, membro=membro)
     else:
         form = CadastrarNaoMembroForm(obj=membro, membro=membro)
@@ -183,20 +183,20 @@ def editar_membro(id):
     old_obs_recepcao = membro.obs_recepcao
     
     if form.validate_on_submit():
-        membro.nome_completo = form.nome_completo.data
-        membro.data_nascimento = form.data_nascimento.data
+        if membro.status != 'Não-Membro':
+            if not form.data_recepcao.data or not form.tipo_recepcao.data:
+                flash('Data e tipo de recepção são obrigatórios para Membros.', 'danger')
+                return render_template('membresia/cadastro.html', form=form, editar=True, membro=membro, ano=ano, versao=versao)
+            
+            form.populate_obj(membro)
+            membro.status = form.status.data if hasattr(form, 'status') else membro.status
 
-        if membro.status == 'Membro':
-            membro.data_recepcao = form.data_recepcao.data
-            membro.tipo_recepcao = form.tipo_recepcao.data
-            membro.obs_recepcao = form.obs_recepcao.data
         else:
+            form.populate_obj(membro)
             membro.data_recepcao = None
             membro.tipo_recepcao = None
             membro.obs_recepcao = None
-
-        membro.status = form.status.data if hasattr(form, 'status') else membro.status
-        membro.campus = form.campus.data
+            membro.status = 'Não-Membro'
 
         if form.foto_perfil.data and not isinstance(form.foto_perfil.data, str):
             if membro.foto_perfil and membro.foto_perfil != 'default.jpg':

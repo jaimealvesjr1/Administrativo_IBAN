@@ -10,7 +10,7 @@ class MembroForm(FlaskForm):
     nome_completo = StringField('Nome Completo', validators=[DataRequired(), Length(max=100)])
     data_nascimento = DateField('Data de Nascimento', format='%Y-%m-%d', validators=[DataRequired()])
 
-    data_recepcao = DateField('Data de Recepção', format='%Y-%m-%d', validators=[Optional()])
+    data_recepcao = DateField('Data de Recepção', format='%Y-%m-%d', validators=[DataRequired()])
     tipo_recepcao = SelectField('Tipo de Recepção', validators=[DataRequired()],
                                  choices=[
                                      ('', 'Selecione...'),
