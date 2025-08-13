@@ -65,19 +65,12 @@ class Area(db.Model):
     
     @property
     def num_participantes_totais_agregado(self):
-        total_de_setores = sum(setor.num_participantes_totais_agregado for setor in self.setores.all())
-        
-        if self.coordenador:
-            return total_de_setores + 1
-            
-        return total_de_setores
+        return len(self.membros_da_area_completos)
 
     @property
     def num_dizimistas_atuais_agregado(self):
-        num_dizimistas_setores = sum(setor.num_dizimistas_atuais_agregado for setor in self.setores.all())
-        if self.coordenador and self.coordenador.contribuiu_dizimo_ultimos_30d:
-            return num_dizimistas_setores + 1
-        return num_dizimistas_setores
+        membros_da_area = self.membros_da_area_completos
+        return sum(1 for membro in membros_da_area if membro.contribuiu_dizimo_ultimos_30d)
 
     @property
     def distribuicao_campus_frequencia(self):
@@ -132,7 +125,6 @@ class Setor(db.Model):
             membros.update(pg.membros_completos)
         return list(membros)
 
-
     @property
     def num_facilitadores_treinamento_atuais_agregado(self):
         count = sum(pg.num_facilitadores_treinamento_atuais for pg in self.pequenos_grupos.all())
@@ -175,12 +167,7 @@ class Setor(db.Model):
     
     @property
     def num_participantes_totais_agregado(self):
-        total_de_pgs = sum(pg.num_participantes_totais for pg in self.pequenos_grupos.all())
-        
-        if self.supervisor:
-            return total_de_pgs + 1
-        
-        return total_de_pgs
+        return len(self.membros_do_setor_completos)
 
     @property
     def distribuicao_dizimistas_30d(self):

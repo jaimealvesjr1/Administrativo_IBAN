@@ -5,8 +5,8 @@ from .models import Membro
 from .forms import MembroForm, CadastrarNaoMembroForm
 from app.jornada.models import JornadaEvento, registrar_evento_jornada
 from config import Config
-from datetime import datetime
-from sqlalchemy import func
+from datetime import datetime, timedelta, date
+from sqlalchemy import func, and_, or_
 import os
 import uuid
 from PIL import Image
@@ -48,11 +48,24 @@ def index():
     membros_por_status = db.session.query(Membro.status, func.count(Membro.id)).filter_by(ativo=True).group_by(Membro.status).all()
     resumo_membros_por_status = {status: count for status, count in membros_por_status}
 
-    mes_atual = datetime.now().month
-    aniversariantes_do_mes = Membro.query.filter(
-        Membro.ativo == True,
-        func.strftime('%m', Membro.data_nascimento) == str(mes_atual).zfill(2)
-    ).order_by(func.strftime('%d', Membro.data_nascimento)).all()
+    hoje = date.today()
+    quinze_dias_depois = hoje + timedelta(days=15)
+
+    if hoje.month == quinze_dias_depois.month:
+        aniversariantes_do_mes = Membro.query.filter(
+            Membro.ativo == True,
+            db.extract('month', Membro.data_nascimento) == hoje.month,
+            db.extract('day', Membro.data_nascimento) >= hoje.day,
+            db.extract('day', Membro.data_nascimento) <= quinze_dias_depois.day
+        ).order_by(db.extract('day', Membro.data_nascimento)).all()
+    else:
+        aniversariantes_do_mes = Membro.query.filter(
+            Membro.ativo == True,
+            or_(
+                and_(db.extract('month', Membro.data_nascimento) == hoje.month, db.extract('day', Membro.data_nascimento) >= hoje.day),
+                and_(db.extract('month', Membro.data_nascimento) == quinze_dias_depois.month, db.extract('day', Membro.data_nascimento) <= quinze_dias_depois.day)
+            )
+        ).order_by(db.extract('month', Membro.data_nascimento), db.extract('day', Membro.data_nascimento)).all()
 
     membros_por_campus_data = db.session.query(Membro.campus, func.count(Membro.id)).filter_by(ativo=True).group_by(Membro.campus).all()
     chart_labels_campus = [campus for campus, _ in membros_por_campus_data]
@@ -310,8 +323,8 @@ def cadastro_nao_membro():
         current_app.logger.error(f'Erros de validação do formulário de não-membro: {form.errors}')
         flash('Por favor, verifique os campos em vermelho e corrija os erros.', 'danger')
 
-    return render_template('membresia/cadastro_nao_membro.html',
-                            form=form, ano=ano, versao=versao)
+    return render_template('membresia/cadastro.html',
+                           form=form, editar=False, ano=ano, versao=versao)
 
 @membresia_bp.route('/nao_membros')
 @login_required
