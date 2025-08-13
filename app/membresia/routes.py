@@ -181,7 +181,8 @@ def editar_membro(id):
     old_data_recepcao = membro.data_recepcao
     old_tipo_recepcao = membro.tipo_recepcao
     old_obs_recepcao = membro.obs_recepcao
-    
+    old_foto_perfil = membro.foto_perfil
+
     if form.validate_on_submit():
         if membro.status != 'Não-Membro':
             if not form.data_recepcao.data or not form.tipo_recepcao.data:
@@ -198,12 +199,12 @@ def editar_membro(id):
             membro.obs_recepcao = None
             membro.status = 'Não-Membro'
 
-        if form.foto_perfil.data and not isinstance(form.foto_perfil.data, str):
-            if membro.foto_perfil and membro.foto_perfil != 'default.jpg':
-                old_filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], membro.foto_perfil)
+        if form.foto_perfil.data and form.foto_perfil.data.filename:
+            if old_foto_perfil and old_foto_perfil != 'default.jpg':
+                old_filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], old_foto_perfil)
                 if os.path.exists(old_filepath):
                     os.remove(old_filepath)
-
+            
             filename = save_profile_picture(form.foto_perfil.data)
             if filename:
                 membro.foto_perfil = filename
