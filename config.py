@@ -44,12 +44,12 @@ class Config:
     }
 
     STATUS = {
-        'Membro':       '#0d6efd',
+        'Anfitrião':    '#0d6efd',
         'Facilitador':  '#198754',
         'Supervisor':   '#ffc107',
-        'Pastor':       '#dc3545',  
+        #'Pastor':       '#dc3545',  
         'Não-Membro':   '#6c757d', 
-        'Inativo':      '#6c757d',
+        #'Inativo':      '#6c757d',
     }
 
     TIPOS = ['Dízimo', 'Oferta']

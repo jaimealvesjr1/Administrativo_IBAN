@@ -3,10 +3,11 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from datetime import datetime
 from app.membresia.models import Membro
+from app.grupos.models import PequenoGrupo, Setor, Area
 from .models import Contribuicao
 from .forms import ContribuicaoForm, ContribuicaoFilterForm
 from config import Config
-from sqlalchemy import func, extract, and_
+from sqlalchemy import func, extract, and_, or_
 from app.jornada.models import registrar_evento_jornada, JornadaEvento
 from app.filters import format_currency
 import pandas as pd
@@ -87,46 +88,65 @@ def index():
         chart_datasets_campus_mes.append({
             'label': campus,
             'data': data_para_campus,
-            'backgroundColor': cores_campus.get(campus, '#6c757d'), # Cor padrão se não encontrar
+            'backgroundColor': cores_campus.get(campus, '#6c757d'),
             'borderColor': cores_campus.get(campus, '#6c757d'),
             'borderWidth': 1
         })
 
 
-    contribuicoes_por_status_mes_query = db.session.query(
-        Membro.status,
+    contribuicoes_por_membro_e_mes = db.session.query(
+        Contribuicao.membro_id,
         extract('month', Contribuicao.data_lanc).label('mes'),
         func.sum(Contribuicao.valor).label('total_valor')
     ).join(Membro).filter(
         extract('year', Contribuicao.data_lanc) == ano_atual
     ).group_by(
-        Membro.status,
-        extract('month', Contribuicao.data_lanc)
-    ).order_by(
-        Membro.status,
+        Contribuicao.membro_id,
         extract('month', Contribuicao.data_lanc)
     ).all()
 
-    dados_grafico_status_mes = {}
+    dados_grafico_categorias = {}
 
-    for status, mes, total_valor in contribuicoes_por_status_mes_query:
-        if status not in dados_grafico_status_mes:
-            dados_grafico_status_mes[status] = {}
-        dados_grafico_status_mes[status][int(mes)] = round(float(total_valor), 2)
+    for membro_id, mes, total_valor in contribuicoes_por_membro_e_mes:
+        membro = Membro.query.get(membro_id)
+        if not membro:
+            continue
 
-    cores_status = Config.STATUS
-    for status in sorted(dados_grafico_status_mes.keys()):
-        data_para_status = []
-        for mes_num in chart_labels_meses_numeros:
-            data_para_status.append(dados_grafico_status_mes[status].get(mes_num, 0))
+        categoria = None
 
-        chart_datasets_status_mes.append({
-            'label': status,
-            'data': data_para_status,
-            'backgroundColor': cores_status.get(status, '#6c757d'),
-            'borderColor': cores_status.get(status, '#6c757d'),
-            'borderWidth': 1
-        })
+        if PequenoGrupo.query.filter_by(facilitador_id=membro.id).first():
+            categoria = 'Facilitador'
+        elif PequenoGrupo.query.filter_by(anfitriao_id=membro.id).first():
+            categoria = 'Anfitrião'
+        elif Setor.query.filter_by(supervisor_id=membro.id).first() or Area.query.filter_by(coordenador_id=membro.id).first():
+            categoria = 'Supervisor'
+        elif membro.status == 'Não-Membro':
+            categoria = 'Não-Membro'
+        
+        if categoria:
+            if categoria not in dados_grafico_categorias:
+                dados_grafico_categorias[categoria] = {}
+            
+            dados_grafico_categorias[categoria][int(mes)] = dados_grafico_categorias[categoria].get(int(mes), 0) + float(total_valor)
+            meses_presentes.add(int(mes))
+
+    cores_categorias = Config.STATUS
+
+    categorias_ordenadas = ['Facilitador', 'Supervisor', 'Anfitrião', 'Não-Membro']
+
+    for categoria in categorias_ordenadas:
+        if categoria in dados_grafico_categorias:
+            data_para_categoria = []
+            for mes_num in chart_labels_meses_numeros:
+                data_para_categoria.append(dados_grafico_categorias[categoria].get(mes_num, 0))
+
+            chart_datasets_status_mes.append({
+                'label': categoria,
+                'data': data_para_categoria,
+                'backgroundColor': cores_categorias.get(categoria, '#6c757d'),
+                'borderColor': cores_categorias.get(categoria, '#6c757d'),
+                'borderWidth': 1
+            })
 
     return render_template(
         'financeiro/index.html',
@@ -224,7 +244,12 @@ def lancamentos():
         if campus_filtro:
             query = query.filter(Membro.campus == campus_filtro)
         if status_filtro:
-            query = query.filter(Membro.status == status_filtro)
+            if status_filtro == 'Facilitador':
+                query = query.filter(Membro.pgs_facilitados.any())
+            elif status_filtro == 'Supervisor':
+                query = query.filter(or_(Membro.setores_supervisionados.any(), Membro.areas_coordenadas.any()))
+            else:
+                query = query.filter(Membro.status == status_filtro)
         if data_inicial:
             query = query.filter(Contribuicao.data_lanc >= data_inicial)
         if data_final:
@@ -437,6 +462,6 @@ def buscar_membros_financeiro():
                search_term.lower() in anonimo_full_name or \
                str(anon_id) == search_term:
                 if not any(r['id'] == membro_anonimo.id for r in results):
-                    results.insert(0, {'id': membro_anonimo.id, 'text': membro_anonimo.nome_completo}) # Adiciona no topo
+                    results.insert(0, {'id': membro_anonimo.id, 'text': membro_anonimo.nome_completo})
 
     return jsonify(items=results)

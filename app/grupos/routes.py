@@ -33,7 +33,6 @@ def listar_grupos_unificada():
         setores = list(setores_supervisionados)
         pgs = list(pgs_liderados)
 
-        # Lógica para adicionar a hierarquia abaixo do coordenador
         for area in areas_coordenadas:
             for setor in area.setores:
                 if setor not in setores:
@@ -42,7 +41,6 @@ def listar_grupos_unificada():
                     if pg not in pgs:
                         pgs.append(pg)
 
-        # Lógica para adicionar a hierarquia abaixo do supervisor
         for setor in setores_supervisionados:
             for pg in setor.pequenos_grupos:
                 if pg not in pgs:
@@ -90,7 +88,7 @@ def criar_area():
             flash('Área criada com sucesso!', 'success')
             registrar_evento_jornada(
                 tipo_acao='AREA_CRIADA',
-                descricao_detalhada=f'Se tornou coordenador(a) da área "{nova_area.nome}".',
+                descricao_detalhada=f'Se tornou supervisor(a) da área {nova_area.nome}.',
                 usuario_executor=current_user,
                 membros=[nova_area.coordenador]
             )
@@ -129,8 +127,8 @@ def editar_area(area_id):
             db.session.commit()
             flash('Área atualizada com sucesso!', 'success')
             if coordenador_antigo and coordenador_antigo.id != area.coordenador_id: 
-                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser coordenador(a) da área "{area.nome}".', usuario_executor=current_user, membros=[coordenador_antigo])
-                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou coordenador(a) da área "{area.nome}".', usuario_executor=current_user, membros=[area.coordenador])
+                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser supervisor(a) da área {area.nome}.', usuario_executor=current_user, membros=[coordenador_antigo])
+                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou supervisor(a) da área {area.nome}.', usuario_executor=current_user, membros=[area.coordenador])
             return redirect(url_for('grupos.detalhes_area', area_id=area.id))
         except Exception as e:
             db.session.rollback()
@@ -154,7 +152,7 @@ def deletar_area(area_id):
         db.session.commit()
         flash('Área deletada com sucesso!', 'success')
         if coordenador_obj:
-            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser coordenador(a) da área "{nome_area}", pois a entidade foi deletada.', usuario_executor=current_user, membros=[coordenador_obj])
+            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser supervisor(a) da área {nome_area}.', usuario_executor=current_user, membros=[coordenador_obj])
     except Exception as e:
         db.session.rollback()
         flash(f'Erro ao deletar Área: {e}', 'danger')
@@ -180,7 +178,7 @@ def criar_setor():
         try:
             db.session.commit()
             flash('Setor criado com sucesso!', 'success')
-            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou supervisor(a) do setor "{novo_setor.nome}".', usuario_executor=current_user, membros=[novo_setor.supervisor])
+            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou supervisor(a) do setor {novo_setor.nome}.', usuario_executor=current_user, membros=[novo_setor.supervisor])
             return redirect(url_for('grupos.detalhes_setor', setor_id=novo_setor.id))
         except Exception as e:
             db.session.rollback()
@@ -218,8 +216,8 @@ def editar_setor(setor_id):
             db.session.commit()
             flash('Setor atualizado com sucesso!', 'success')
             if supervisor_antigo and supervisor_antigo.id != setor.supervisor_id:
-                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser supervisor(a) do setor "{setor.nome}".', usuario_executor=current_user, membros=[supervisor_antigo])
-                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou supervisor(a) do setor "{setor.nome}".', usuario_executor=current_user, membros=[setor.supervisor])
+                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser supervisor(a) do setor {setor.nome}.', usuario_executor=current_user, membros=[supervisor_antigo])
+                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou supervisor(a) do setor {setor.nome}.', usuario_executor=current_user, membros=[setor.supervisor])
             return redirect(url_for('grupos.detalhes_setor', setor_id=setor.id))
         except Exception as e:
             db.session.rollback()
@@ -244,7 +242,7 @@ def deletar_setor(setor_id):
         db.session.commit()
         flash('Setor deletado com sucesso!', 'success')
         if supervisor_obj:
-            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser supervisor(a) do setor "{nome_setor}", pois a entidade foi deletada.', usuario_executor=current_user, membros=[supervisor_obj])
+            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser supervisor(a) do setor {nome_setor}.', usuario_executor=current_user, membros=[supervisor_obj])
     except Exception as e:
         db.session.rollback()
         flash(f'Erro ao deletar Setor: {e}', 'danger')
@@ -266,8 +264,8 @@ def criar_pg():
         try:
             db.session.commit()
             flash('Pequeno Grupo criado com sucesso!', 'success')
-            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou facilitador(a) do PG "{novo_pg.nome}".', usuario_executor=current_user, membros=[novo_pg.facilitador])
-            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou anfitrião(a) do PG "{novo_pg.nome}".', usuario_executor=current_user, membros=[novo_pg.anfitriao])
+            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou facilitador(a) do PG {novo_pg.nome}.', usuario_executor=current_user, membros=[novo_pg.facilitador])
+            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou anfitrião do PG {novo_pg.nome}.', usuario_executor=current_user, membros=[novo_pg.anfitriao])
             return redirect(url_for('grupos.detalhes_pg', pg_id=novo_pg.id))
         except Exception as e:
             db.session.rollback()
@@ -304,11 +302,11 @@ def editar_pg(pg_id):
             db.session.commit()
             flash('Pequeno Grupo atualizado com sucesso!', 'success')
             if facilitador_antigo and facilitador_antigo.id != pg.facilitador_id:
-                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser facilitador(a) do PG "{pg.nome}".', usuario_executor=current_user, membros=[facilitador_antigo])
-                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou facilitador(a) do PG "{pg.nome}".', usuario_executor=current_user, membros=[pg.facilitador])
+                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser facilitador(a) do PG {pg.nome}.', usuario_executor=current_user, membros=[facilitador_antigo])
+                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou facilitador(a) do PG {pg.nome}.', usuario_executor=current_user, membros=[pg.facilitador])
             if anfitriao_antigo and anfitriao_antigo.id != pg.anfitriao_id:
-                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser anfitrião(a) do PG "{pg.nome}".', usuario_executor=current_user, membros=[anfitriao_antigo])
-                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou anfitrião(a) do PG "{pg.nome}".', usuario_executor=current_user, membros=[pg.anfitriao])
+                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser anfitrião do PG {pg.nome}.', usuario_executor=current_user, membros=[anfitriao_antigo])
+                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou anfitrião do PG {pg.nome}.', usuario_executor=current_user, membros=[pg.anfitriao])
             return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
         except Exception as e:
             db.session.rollback()
@@ -342,11 +340,11 @@ def deletar_pg(pg_id):
         db.session.commit()
         flash('Pequeno Grupo deletado com sucesso!', 'success')
         if facilitador_obj:
-            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser facilitador(a) do PG "{nome_pg}", pois a entidade foi deletada.', usuario_executor=current_user, membros=[facilitador_obj])
+            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser facilitador(a) do PG {nome_pg}.', usuario_executor=current_user, membros=[facilitador_obj])
         if anfitriao_obj:
-            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser anfitrião(a) do PG "{nome_pg}", pois a entidade foi deletada.', usuario_executor=current_user, membros=[anfitriao_obj])
+            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser anfitrião do PG {nome_pg}.', usuario_executor=current_user, membros=[anfitriao_obj])
         for membro in membros_no_pg_antes_deletar:
-            registrar_evento_jornada(tipo_acao='PARTICIPANTE_REMOVIDO_PG', descricao_detalhada=f'Deixou de ser participante do PG "{nome_pg}", pois o PG foi deletado.', usuario_executor=current_user, membros=[membro])
+            registrar_evento_jornada(tipo_acao='PARTICIPANTE_REMOVIDO_PG', descricao_detalhada=f'Deixou de ser participante do PG {nome_pg}.', usuario_executor=current_user, membros=[membro])
     except Exception as e:
         db.session.rollback()
         flash(f'Erro ao deletar Pequeno Grupo: {e}', 'danger')
@@ -365,7 +363,7 @@ def adicionar_participante(pg_id):
         try:
             db.session.commit()
             flash(f'{membro.nome_completo} adicionado(a) ao {pg.nome} como participante!', 'success')
-            registrar_evento_jornada(tipo_acao='PARTICIPANTE_ADICIONADO_PG', descricao_detalhada=f'Se tornou participante do PG "{pg_nome}".', usuario_executor=current_user, membros=[membro])
+            registrar_evento_jornada(tipo_acao='PARTICIPANTE_ADICIONADO_PG', descricao_detalhada=f'Se tornou participante do PG {pg_nome}.', usuario_executor=current_user, membros=[membro])
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao adicionar participante: {e}', 'danger')
@@ -389,7 +387,7 @@ def remover_participante(pg_id, membro_id):
         try:
             db.session.commit()
             flash(f'{membro.nome_completo} removido(a) do {pg.nome}!', 'success')
-            registrar_evento_jornada(tipo_acao='PARTICIPANTE_REMOVIDO_PG', descricao_detalhada=f'Deixou de ser participante do PG "{pg_nome}".', usuario_executor=current_user, membros=[membro])
+            registrar_evento_jornada(tipo_acao='PARTICIPANTE_REMOVIDO_PG', descricao_detalhada=f'Deixou de ser participante do PG {pg_nome}.', usuario_executor=current_user, membros=[membro])
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao remover participante: {e}', 'danger')
@@ -397,7 +395,7 @@ def remover_participante(pg_id, membro_id):
         flash('Membro não pertence a este Pequeno Grupo.', 'danger')
     return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
 
-@grupos_bp.route('/pgs/<int:pg_id>/atualizar/<int:membro_id>', methods=['POST'])
+@grupos_bp.route('/pgs/<int:pg_id>/atualizar-indicadores/<int:membro_id>', methods=['POST'])
 @login_required
 @group_permission_required(PequenoGrupo, 'manage_participants')
 def atualizar_indicadores(pg_id, membro_id):

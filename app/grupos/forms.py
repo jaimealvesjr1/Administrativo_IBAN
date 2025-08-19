@@ -7,7 +7,7 @@ from app.extensions import db
 
 class AreaForm(FlaskForm):
     nome = StringField('Nome da Área', validators=[DataRequired(), Length(min=2, max=80)])
-    coordenador = SelectField('Coordenador', coerce=int, validators=[DataRequired()])
+    coordenador = SelectField('Supervisor', coerce=int, validators=[DataRequired()])
 
     meta_facilitadores_treinamento = IntegerField('Facilitadores em Treinamento', default=0, validators=[NumberRange(min=0)])
     meta_anfitrioes_treinamento = IntegerField('Anfitriões em Treinamento', default=0, validators=[NumberRange(min=0)])
@@ -20,7 +20,7 @@ class AreaForm(FlaskForm):
     def __init__(self, *args, **kwargs):
         super(AreaForm, self).__init__(*args, **kwargs)
         self.coordenador.choices = [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
-        self.coordenador.choices.insert(0, (0, 'Selecione um coordenador'))
+        self.coordenador.choices.insert(0, (0, 'Selecione um supervisor'))
 
     def validate_nome(self, nome):
         area = Area.query.filter_by(nome=nome.data).first()
@@ -29,7 +29,7 @@ class AreaForm(FlaskForm):
 
     def validate_coordenador(self, coordenador):
         if coordenador.data == 0:
-            raise ValidationError('Por favor, selecione um Coordenador válido.')
+            raise ValidationError('Por favor, selecione um supervisor válido.')
 
 
 class SetorForm(FlaskForm):
