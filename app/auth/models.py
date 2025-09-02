@@ -29,16 +29,13 @@ class User(db.Model, UserMixin):
         return permission_name in permissions_list
 
     def is_leader(self):
-        if self.has_permission('admin'):
-            return True
         if not self.membro:
             return False
             
-        return (self.membro.areas_coordenadas.first() is not None or
-                self.membro.setores_supervisionados.first() is not None or
+        return (len(self.membro.areas_supervisionadas) > 0 or
+                len(self.membro.setores_supervisionados) > 0 or
                 self.membro.pgs_facilitados.first() is not None or
                 self.membro.pgs_anfitriados.first() is not None)
-
 
     def has_group_permission(self, entity, action):
         if self.has_permission('admin'):

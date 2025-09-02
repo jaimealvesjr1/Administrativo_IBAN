@@ -11,7 +11,6 @@
         {{ primary('+ Novo Acesso', url_for('auth.registrar_membro')) }}
     </div>
 
-
     {% if users %}
     <div class="table-responsive">
         <table class="table table-bordered table-striped">
@@ -31,15 +30,24 @@
                     <td>{{ user.membro.nome_completo if user.membro else 'N/A' }}</td>
                     <td>{{ user.email }}</td>
                     <td>
-                        {% set cargo_lideranca = user.membro.get_cargo_lideranca() if user.membro else None %}
-                        {% if cargo_lideranca %}
-                            <span class="badge bg-success">{{ cargo_lideranca }}</span>
-                        {% else %}
-                            {% if 'admin' in user.permissions %}
-                                <span class="badge bg-danger">Admin</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Membro</span>
-                            {% endif %}
+                        {% if user.has_permission('admin') %}
+                            <span class="badge bg-danger me-1">Admin</span>
+                        {% endif %}
+                        {% if user.has_permission('financeiro') %}
+                            <span class="badge bg-info me-1">Financeiro</span>
+                        {% endif %}
+                        
+                        {% if user.membro %}
+                            {% set cargos_lideranca = user.membro.get_cargo_lideranca().split(', ') %}
+                            {% for cargo in cargos_lideranca %}
+                                {% if cargo != 'Nenhum' %}
+                                    <span class="badge bg-success me-1">{{ cargo }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+
+                        {% if not user.has_permission('admin') and not user.has_permission('financeiro') and (not user.membro or user.membro.get_cargo_lideranca() == 'Nenhum') %}
+                            <span class="badge bg-secondary">Membro</span>
                         {% endif %}
                     </td>
                     <td>

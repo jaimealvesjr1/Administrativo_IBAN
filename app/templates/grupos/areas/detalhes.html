@@ -65,7 +65,13 @@
                             {% for setor in area.setores %}
                             <tr>
                                 <td><a href="{{ url_for('grupos.detalhes_setor', setor_id=setor.id) }}">Setor {{ setor.nome }}</a></td>
-                                <td>{{ setor.supervisor.nome_completo if setor.supervisor else 'N/A' }}</td>
+                                <td>
+                                    {% for supervisor in setor.supervisores %}
+                                        <span class="badge bg-secondary me-1">{{ supervisor.nome_completo }}</span>
+                                    {% else %}
+                                        N/A
+                                    {% endfor %}
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
