@@ -21,7 +21,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     TIMEZONE = 'America/Sao_Paulo'
-    VERSAO_APP = '2.0'
+    VERSAO_APP = '2.5.3 Liderança'
     ANO_ATUAL = datetime.now().year
 
     IDS_OFERTA_ANONIMA_POR_CAMPUS = {

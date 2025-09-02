@@ -34,8 +34,8 @@ class User(db.Model, UserMixin):
             
         return (len(self.membro.areas_supervisionadas) > 0 or
                 len(self.membro.setores_supervisionados) > 0 or
-                self.membro.pgs_facilitados.first() is not None or
-                self.membro.pgs_anfitriados.first() is not None)
+                len(self.membro.pgs_facilitados) > 0 or
+                len(self.membro.pgs_anfitriados) > 0)
 
     def has_group_permission(self, entity, action):
         if self.has_permission('admin'):
