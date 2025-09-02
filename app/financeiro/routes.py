@@ -118,10 +118,10 @@ def index():
             categoria = 'Facilitador'
         elif PequenoGrupo.query.filter_by(anfitriao_id=membro.id).first():
             categoria = 'Anfitrião'
-        elif Setor.query.filter_by(supervisor_id=membro.id).first() or Area.query.filter_by(coordenador_id=membro.id).first():
+        elif membro in membro.areas_supervisionadas or membro in membro.setores_supervisionados:
             categoria = 'Supervisor'
-        elif membro.status == 'Não-Membro':
-            categoria = 'Não-Membro'
+        elif membro.status == 'Não Membro':
+            categoria = 'Não Membro'
         
         if categoria:
             if categoria not in dados_grafico_categorias:
@@ -247,7 +247,7 @@ def lancamentos():
             if status_filtro == 'Facilitador':
                 query = query.filter(Membro.pgs_facilitados.any())
             elif status_filtro == 'Supervisor':
-                query = query.filter(or_(Membro.setores_supervisionados.any(), Membro.areas_coordenadas.any()))
+                query = query.filter(or_(Membro.setores_supervisionados.any(), Membro.areas_supervisionadas.any()))
             else:
                 query = query.filter(Membro.status == status_filtro)
         if data_inicial:
@@ -300,7 +300,12 @@ def download_lancamentos_excel():
     if campus_filtro:
         query = query.filter(Membro.campus == campus_filtro)
     if status_filtro:
-        query = query.filter(Membro.status == status_filtro)
+        if status_filtro == 'Facilitador':
+            query = query.filter(Membro.pgs_facilitados.any())
+        elif status_filtro == 'Supervisor':
+            query = query.filter(or_(Membro.setores_supervisionados.any(), Membro.areas_supervisionadas.any()))
+        else:
+            query = query.filter(Membro.status == status_filtro)
 
     if data_inicial_str:
         try:
