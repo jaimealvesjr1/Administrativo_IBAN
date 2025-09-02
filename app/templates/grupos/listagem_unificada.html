@@ -86,7 +86,13 @@
                             {% for setor in setores %}
                             <tr>
                                 <td><a href="{{ url_for('grupos.detalhes_setor', setor_id=setor.id) }}">{{ setor.nome }}</a></td>
-                                <td>{{ setor.supervisor.nome_completo if setor.supervisor else 'N/A' }}</td>
+                                <td>
+                                    {% for supervisor in setor.supervisores %}
+                                        <span class="badge bg-secondary me-1">{{ supervisor.nome_completo }}</span>
+                                    {% else %}
+                                        Nenhum
+                                    {% endfor %}
+                                </td>
                                 <td>{{ setor.area.nome if setor.area else 'N/A' }}</td>
                                 <td>
                                     <a href="{{ url_for('grupos.editar_setor', setor_id=setor.id) }}" class="btn btn-sm btn-info">Editar</a>
@@ -123,7 +129,13 @@
                             {% for area in areas %}
                             <tr>
                                 <td><a href="{{ url_for('grupos.detalhes_area', area_id=area.id) }}">{{ area.nome }}</a></td>
-                                <td>{{ area.coordenador.nome_completo if area.coordenador else 'N/A' }}</td>
+                                <td>
+                                    {% for supervisor in area.supervisores %}
+                                        <span class="badge bg-secondary me-1">{{ supervisor.nome_completo }}</span>
+                                    {% else %}
+                                        Nenhum
+                                    {% endfor %}
+                                </td>
                                 <td>{{ area.data_criacao|strftime('%d/%m/%Y %H:%M') }}</td>
                                 <td>
                                     <a href="{{ url_for('grupos.editar_area', area_id=area.id) }}" class="btn btn-sm btn-info">Editar</a>

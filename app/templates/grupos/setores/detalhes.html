@@ -39,7 +39,14 @@
                     <h5 class="mb-0">Dados do Setor</h5>
                 </div>
                 <div class="card-body">
-                    <p class="card-text"><strong>Supervisor:</strong> {{ setor.supervisor.nome_completo if setor.supervisor else 'N/A' }}</p>
+                    <p class="card-text">
+                        <strong>Supervisores:</strong>
+                        {% for supervisor in setor.supervisores %}
+                            <span class="badge bg-primary me-1">{{ supervisor.nome_completo }}</span>
+                        {% else %}
+                            Nenhum supervisor atribuído.
+                        {% endfor %}
+                    </p>
                 </div>
             </div>
             <div class="card shadow-sm mb-4">

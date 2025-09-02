@@ -1,6 +1,7 @@
 from app.extensions import db
 from datetime import datetime, date, timedelta
 from sqlalchemy import String, func
+from sqlalchemy.orm import relationship
 from flask import url_for
 
 class Membro(db.Model):
@@ -26,10 +27,10 @@ class Membro(db.Model):
 
     presencas = db.relationship('Presenca', backref='membro', lazy=True)
 
-    areas_coordenadas = db.relationship('Area', back_populates='coordenador', lazy='dynamic', foreign_keys='Area.coordenador_id')
-    setores_supervisionados = db.relationship('Setor', back_populates='supervisor', lazy='dynamic', foreign_keys='Setor.supervisor_id')
-    pgs_facilitados = db.relationship('PequenoGrupo', back_populates='facilitador', lazy='dynamic', foreign_keys='PequenoGrupo.facilitador_id')
-    pgs_anfitriados = db.relationship('PequenoGrupo', back_populates='anfitriao', lazy='dynamic', foreign_keys='PequenoGrupo.anfitriao_id')
+    areas_supervisionadas = relationship('Area', secondary='area_supervisores', back_populates='supervisores')
+    setores_supervisionados = relationship('Setor', secondary='setor_supervisores', back_populates='supervisores')
+    pgs_facilitados = relationship('PequenoGrupo', back_populates='facilitador', foreign_keys='PequenoGrupo.facilitador_id')
+    pgs_anfitriados = relationship('PequenoGrupo', back_populates='anfitriao', foreign_keys='PequenoGrupo.anfitriao_id')
 
     @property
     def contribuiu_dizimo_mes_atual(self):
@@ -57,19 +58,17 @@ class Membro(db.Model):
         return f'<Membro {self.nome_completo}>'
 
     def get_cargo_lideranca(self):
-        if self.areas_coordenadas.first():
-            return f"Coordenador da Área {self.areas_coordenadas.first().nome}"
+        areas = [f"Supervisor da Área {a.nome}" for a in self.areas_supervisionadas]
+        setores = [f"Supervisor do Setor {s.nome}" for s in self.setores_supervisionados]
+        pgs_facilitados = [f"Facilitador do PG {p.nome}" for p in self.pgs_facilitados]
+        pgs_anfitriados = [f"Anfitrião do PG {p.nome}" for p in self.pgs_anfitriados]
         
-        if self.setores_supervisionados.first():
-            return f"Supervisor do Setor {self.setores_supervisionados.first().nome}"
-            
-        if self.pgs_facilitados.first():
-            return f"Facilitador do PG {self.pgs_facilitados.first().nome}"
-
-        if self.pgs_anfitriados.first():
-            return f"Anfitrião do PG {self.pgs_anfitriados.first().nome}"
-
-        return None
+        cargos = areas + setores + pgs_facilitados + pgs_anfitriados
+        
+        if cargos:
+            return ", ".join(cargos)
+        
+        return "Nenhum"
 
     def get_foto_perfil_url(self):
         return url_for('static', filename=f'uploads/profile_pics/{self.foto_perfil}')

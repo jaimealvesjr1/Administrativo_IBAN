@@ -26,14 +26,29 @@
                 </div>
             </div>
             <div>
-                {{ form.supervisor.label (class="form-label") }}
-                {{ form.supervisor (class="form-select") }}
+                {{ form.supervisores.label(class="form-label") }}
+                <select class="form-select" name="{{ form.supervisores.name }}" id="{{ form.supervisores.id }}" multiple>
+                    {% for value, label in form.supervisores.choices %}
+                        <option value="{{ value }}" {% if value in form.supervisores.data %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
             </div>
-            {{ submit('Salvar Alterações' if editar else 'Criar Setor') }}
+            {{ submit('Salvar Alterações' if setor else 'Criar Setor') }}
             <div class="text-end mt-3">
                 <a href="{{ url_for('grupos.listar_setores') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
             </div>
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        $('#supervisores').select2({
+            theme: "bootstrap-5",
+            width: $( this ).data( 'width' ) ? $( this ).data( 'width' ) : $( this ).hasClass( 'w-100' ) ? '100%' : 'style'
+        });
+    });
+</script>
 {% endblock %}

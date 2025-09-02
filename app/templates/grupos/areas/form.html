@@ -21,11 +21,15 @@
                     {{ form.nome (class="form-control") }}
                 </div>
                 <div class="col-md-6">
-                    {{ form.coordenador.label (class="form-label") }}
-                    {{ form.coordenador (class="form-select") }}
+                    {{ form.supervisores.label(class="form-label") }}
+                    <select class="form-select" name="{{ form.supervisores.name }}" id="{{ form.supervisores.id }}" multiple>
+                        {% for value, label in form.supervisores.choices %}
+                            <option value="{{ value }}" {% if value in form.supervisores.data %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
-
+            
             <fieldset class="mb-4 p-3 border rounded">
                 <legend class="float-none w-auto px-2 fs-5">Metas</legend>
                 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
@@ -55,11 +59,22 @@
                     </div>
                 </div>
             </fieldset>
-            {{ submit('Salvar Alterações' if editar else 'Criar Área') }}
+            {{ submit('Salvar Alterações' if area else 'Criar Área') }}
             <div class="text-end mt-3">
                 <a href="{{ url_for('grupos.listar_areas') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
             </div>
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        $('#supervisores').select2({
+            theme: "bootstrap-5",
+            width: $( this ).data( 'width' ) ? $( this ).data( 'width' ) : $( this ).hasClass( 'w-100' ) ? '100%' : 'style'
+        });
+    });
+</script>
 {% endblock %}

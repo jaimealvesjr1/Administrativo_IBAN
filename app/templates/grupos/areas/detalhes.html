@@ -38,7 +38,14 @@
                     <h5 class="mb-0">Dados da Área</h5>
                 </div>
                 <div class="card-body">
-                    <p class="card-text"><strong>Supervisor:</strong> {{ area.coordenador.nome_completo if area.coordenador else 'N/A' }}</p>
+                    <p class="card-text">
+                        <strong>Supervisores:</strong>
+                        {% for supervisor in area.supervisores %}
+                            <span class="badge bg-primary me-1">{{ supervisor.nome_completo }}</span>
+                        {% else %}
+                            Nenhum supervisor atribuído.
+                        {% endfor %}
+                    </p>
                 </div>
             </div>
             <div class="card shadow-sm mb-4">

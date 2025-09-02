@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, SelectField, IntegerField
+from wtforms import StringField, SubmitField, SelectField, IntegerField, SelectMultipleField
 from wtforms.validators import DataRequired, Length, ValidationError, NumberRange
 from app.grupos.models import Area, Setor, PequenoGrupo
 from app.membresia.models import Membro
@@ -7,7 +7,7 @@ from app.extensions import db
 
 class AreaForm(FlaskForm):
     nome = StringField('Nome da Área', validators=[DataRequired(), Length(min=2, max=80)])
-    coordenador = SelectField('Supervisor', coerce=int, validators=[DataRequired()])
+    supervisores = SelectMultipleField('Supervisores da Área', coerce=int, validators=[DataRequired()])
 
     meta_facilitadores_treinamento = IntegerField('Facilitadores em Treinamento', default=0, validators=[NumberRange(min=0)])
     meta_anfitrioes_treinamento = IntegerField('Anfitriões em Treinamento', default=0, validators=[NumberRange(min=0)])
@@ -19,40 +19,36 @@ class AreaForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(AreaForm, self).__init__(*args, **kwargs)
-        self.coordenador.choices = [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
-        self.coordenador.choices.insert(0, (0, 'Selecione um supervisor'))
+        self.obj = kwargs.get('obj', None)
+        self.supervisores.choices = [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
+
 
     def validate_nome(self, nome):
         area = Area.query.filter_by(nome=nome.data).first()
-        if area and (not self.area or area.id != self.area.id):
+        if area and (not self.obj or area.id != self.obj.id):
             raise ValidationError('Já existe uma Área com este nome. Por favor, escolha outro.')
-
-    def validate_coordenador(self, coordenador):
-        if coordenador.data == 0:
-            raise ValidationError('Por favor, selecione um supervisor válido.')
-
 
 class SetorForm(FlaskForm):
     nome = StringField('Nome do Setor', validators=[DataRequired(), Length(min=2, max=80)])
-    supervisor = SelectField('Supervisor', coerce=int, validators=[DataRequired()])
+    supervisores = SelectMultipleField('Supervisores do Setor', coerce=int, validators=[DataRequired()])
     area = SelectField('Área Pertencente', coerce=int, validators=[DataRequired()])
     submit = SubmitField('Salvar Setor')
 
     def __init__(self, *args, **kwargs):
         super(SetorForm, self).__init__(*args, **kwargs)
-        self.supervisor.choices = [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
-        self.supervisor.choices.insert(0, (0, 'Selecione um supervisor'))
+        self.obj = kwargs.get('obj', None)
+        self.supervisores.choices = [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
         self.area.choices = [(a.id, a.nome) for a in Area.query.order_by(Area.nome).all()]
         self.area.choices.insert(0, (0, 'Selecione uma área'))
 
     def validate_nome(self, nome):
         setor = Setor.query.filter_by(nome=nome.data).first()
-        if setor and (not self.setor or setor.id != self.setor.id):
+        if setor and (not self.obj or setor.id != self.obj.id):
             raise ValidationError('Já existe um Setor com este nome. Por favor, escolha outro.')
 
-    def validate_supervisor(self, supervisor):
-        if supervisor.data == 0:
-            raise ValidationError('Por favor, selecione um Supervisor válido.')
+    def validate_supervisores(self, field):
+        if not field.data:
+            raise ValidationError('Por favor, selecione pelo menos um Supervisor válido.')
 
     def validate_area(self, area):
         if area.data == 0:
@@ -77,6 +73,7 @@ class PequenoGrupoForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(PequenoGrupoForm, self).__init__(*args, **kwargs)
+        self.obj = kwargs.get('obj', None)
         self.facilitador.choices = [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
         self.facilitador.choices.insert(0, (0, 'Selecione um facilitador'))
         self.anfitriao.choices = [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
@@ -86,7 +83,7 @@ class PequenoGrupoForm(FlaskForm):
 
     def validate_nome(self, nome):
         pg = PequenoGrupo.query.filter_by(nome=nome.data).first()
-        if pg and (not self.pg or pg.id != self.pg.id):
+        if pg and (not self.obj or pg.id != self.obj.id):
             raise ValidationError('Já existe um Pequeno Grupo com este nome. Por favor, escolha outro.')
 
     def validate_facilitador(self, facilitador):

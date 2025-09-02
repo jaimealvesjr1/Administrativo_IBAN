@@ -1,27 +1,20 @@
 from functools import wraps
 from flask import flash, redirect, url_for
 from flask_login import current_user
-from app.grupos.models import Area, Setor, PequenoGrupo
 
 def permission_required(permission_name):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated or not current_user.has_permission(permission_name):
-                flash('Você não tem permissão para acessar aqui.', 'danger')
+                flash(f'Você não tem permissão para acessar esta página.', 'danger')
                 return redirect(url_for('main.index'))
             return f(*args, **kwargs)
         return decorated_function
     return decorator
 
 def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.has_permission('admin'):
-            flash('Você não tem permissão de administrador para acessar esta página.', 'danger')
-            return redirect(url_for('main.index'))
-        return f(*args, **kwargs)
-    return decorated_function
+    return permission_required('admin')(f)
 
 def financeiro_required(f):
     @wraps(f)
@@ -41,23 +34,41 @@ def leader_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def group_permission_required(model, action):
+def group_permission_required(model, permission, relationship_name=None):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            entity_id = kwargs.get('area_id') or kwargs.get('setor_id') or kwargs.get('pg_id')
-            if not entity_id:
-                flash('ID não fornecido.', 'danger')
+            if current_user.has_permission('admin'):
+                return f(*args, **kwargs)
+
+            group_id = kwargs.get(f'{model.__tablename__.lower()}_id')
+            if not group_id:
+                flash('Não foi possível encontrar o ID do grupo.', 'danger')
                 return redirect(url_for('main.index'))
 
-            entity = model.query.get(entity_id)
-            if not entity:
-                flash('Grupo não encontrado.', 'danger')
-                return redirect(url_for('main.index'))
+            group_obj = model.query.get_or_404(group_id)
 
-            if not current_user.is_authenticated or not current_user.has_group_permission(entity, action):
-                flash('Você não tem permissão para realizar esta ação.', 'danger')
+            if not current_user.membro:
+                flash(f'Você não tem permissão de {permission} neste grupo.', 'danger')
                 return redirect(url_for('main.index'))
-            return f(*args, **kwargs)
+            
+            if relationship_name:
+                supervisores = getattr(group_obj, relationship_name, None)
+                if supervisores and current_user.membro in supervisores:
+                    return f(*args, **kwargs)
+            
+            if model.__name__ == 'PequenoGrupo':
+                is_facilitador = current_user.membro.id == group_obj.facilitador_id
+                is_anfitriao = current_user.membro.id == group_obj.anfitriao_id
+                
+                if permission == 'view' and (is_facilitador or is_anfitriao):
+                    return f(*args, **kwargs)
+                if permission == 'edit' and is_facilitador:
+                    return f(*args, **kwargs)
+                if permission == 'manage_participants' and (is_facilitador or is_anfitriao):
+                    return f(*args, **kwargs)
+            
+            flash(f'Você não tem permissão de {permission} neste grupo.', 'danger')
+            return redirect(url_for('main.index'))
         return decorated_function
     return decorator

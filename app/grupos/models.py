@@ -5,13 +5,20 @@ from app.membresia.models import Membro
 from sqlalchemy import func
 from app.financeiro.models import Contribuicao
 
+area_supervisores = db.Table('area_supervisores',
+    db.Column('area_id', db.Integer, db.ForeignKey('area.id'), primary_key=True),
+    db.Column('supervisor_id', db.Integer, db.ForeignKey('membro.id'), primary_key=True))
+
+setor_supervisores = db.Table('setor_supervisores',
+    db.Column('setor_id', db.Integer, db.ForeignKey('setor.id'), primary_key=True),
+    db.Column('supervisor_id', db.Integer, db.ForeignKey('membro.id'), primary_key=True))
+
 class Area(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(80), unique=True, nullable=False)
-    coordenador_id = db.Column(db.Integer, db.ForeignKey('membro.id'), nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
 
-    coordenador = db.relationship('Membro', back_populates='areas_coordenadas', foreign_keys=[coordenador_id])
+    supervisores = relationship('Membro', secondary=area_supervisores, back_populates='areas_supervisionadas')
     setores = db.relationship('Setor', backref='area', lazy='dynamic', cascade='all, delete-orphan')
 
     meta_facilitadores_treinamento = db.Column(db.Integer, default=0)
@@ -24,8 +31,7 @@ class Area(db.Model):
     @property
     def membros_da_area_completos(self):
         membros = set()
-        if self.coordenador:
-            membros.add(self.coordenador)
+        membros.update(self.supervisores)
         for setor in self.setores.all():
             membros.update(setor.membros_do_setor_completos)
         return list(membros)
@@ -33,22 +39,19 @@ class Area(db.Model):
     @property
     def num_facilitadores_treinamento_atuais_agregado(self):
         count = sum(setor.num_facilitadores_treinamento_atuais_agregado for setor in self.setores.all())
-        if self.coordenador and self.coordenador.status_treinamento_pg == 'Facilitador em Treinamento':
-            count += 1
+        count += sum(1 for supervisor in self.supervisores if supervisor.status_treinamento_pg == 'Facilitador em Treinamento')
         return count
 
     @property
     def num_anfitrioes_treinamento_atuais_agregado(self):
         count = sum(setor.num_anfitrioes_treinamento_atuais_agregado for setor in self.setores.all())
-        if self.coordenador and self.coordenador.status_treinamento_pg == 'Anfitrião em Treinamento':
-            count += 1
+        count += sum(1 for supervisor in self.supervisores if supervisor.status_treinamento_pg == 'Anfitrião em Treinamento')
         return count
 
     @property
     def num_ctm_participantes_atuais_agregado(self):
         count = sum(setor.num_ctm_participantes_atuais_agregado for setor in self.setores.all())
-        if self.coordenador and self.coordenador.participou_ctm:
-            count += 1
+        count += sum(1 for supervisor in self.supervisores if supervisor.participou_ctm)
         return count
 
     @property
@@ -86,12 +89,9 @@ class Area(db.Model):
     def distribuicao_dizimistas_30d(self):
         try:
             membros_da_area = self.membros_da_area_completos
-            
             num_dizimistas = sum(1 for membro in membros_da_area if membro.contribuiu_dizimo_ultimos_30d)
             num_nao_dizimistas = len(membros_da_area) - num_dizimistas
-            
             return {'dizimistas': num_dizimistas, 'nao_dizimistas': num_nao_dizimistas}
-
         except Exception as e:
             print(f"ERRO ao calcular distribuição de dizimistas: {e}")
             return {'dizimistas': 0, 'nao_dizimistas': 0}
@@ -102,11 +102,10 @@ class Area(db.Model):
 class Setor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(80), unique=True, nullable=False)
-    supervisor_id = db.Column(db.Integer, db.ForeignKey('membro.id'), nullable=False)
     area_id = db.Column(db.Integer, db.ForeignKey('area.id'), nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
 
-    supervisor = db.relationship('Membro', back_populates='setores_supervisionados', foreign_keys=[supervisor_id])
+    supervisores = relationship('Membro', secondary=setor_supervisores, back_populates='setores_supervisionados')
     pequenos_grupos = db.relationship('PequenoGrupo', backref='setor', lazy='dynamic', cascade='all, delete-orphan')
 
     meta_facilitadores_treinamento = db.Column(db.Integer, default=0)
@@ -119,8 +118,7 @@ class Setor(db.Model):
     @property
     def membros_do_setor_completos(self):
         membros = set()
-        if self.supervisor:
-            membros.add(self.supervisor)
+        membros.update(self.supervisores)
         for pg in self.pequenos_grupos.all():
             membros.update(pg.membros_completos)
         return list(membros)
@@ -128,22 +126,19 @@ class Setor(db.Model):
     @property
     def num_facilitadores_treinamento_atuais_agregado(self):
         count = sum(pg.num_facilitadores_treinamento_atuais for pg in self.pequenos_grupos.all())
-        if self.supervisor and self.supervisor.status_treinamento_pg == 'Facilitador em Treinamento':
-            count += 1
+        count += sum(1 for supervisor in self.supervisores if supervisor.status_treinamento_pg == 'Facilitador em Treinamento')
         return count
 
     @property
     def num_anfitrioes_treinamento_atuais_agregado(self):
         count = sum(pg.num_anfitrioes_treinamento_atuais for pg in self.pequenos_grupos.all())
-        if self.supervisor and self.supervisor.status_treinamento_pg == 'Anfitrião em Treinamento':
-            count += 1
+        count += sum(1 for supervisor in self.supervisores if supervisor.status_treinamento_pg == 'Anfitrião em Treinamento')
         return count
 
     @property
     def num_ctm_participantes_atuais_agregado(self):
         count = sum(pg.num_ctm_participantes_atuais for pg in self.pequenos_grupos.all())
-        if self.supervisor and self.supervisor.participou_ctm:
-            count += 1
+        count += sum(1 for supervisor in self.supervisores if supervisor.participou_ctm)
         return count
 
     @property
@@ -161,9 +156,8 @@ class Setor(db.Model):
     @property
     def num_dizimistas_atuais_agregado(self):
         num_dizimistas_pgs = sum(pg.num_dizimistas_atuais for pg in self.pequenos_grupos.all())
-        if self.supervisor and self.supervisor.contribuiu_dizimo_ultimos_30d:
-            return num_dizimistas_pgs + 1
-        return num_dizimistas_pgs
+        num_dizimistas_supervisores = sum(1 for supervisor in self.supervisores if supervisor.contribuiu_dizimo_ultimos_30d)
+        return num_dizimistas_pgs + num_dizimistas_supervisores
     
     @property
     def num_participantes_totais_agregado(self):
@@ -216,15 +210,15 @@ class PequenoGrupo(db.Model):
 
     @property
     def num_ctm_participantes_atuais(self):
-        return self.participantes.filter_by(participou_ctm=True).count()
+        return db.session.query(Membro).filter(Membro.pg_id == self.id, Membro.participou_ctm == True).count()
 
     @property
     def num_encontro_deus_participantes_atuais(self):
-        return self.participantes.filter_by(participou_encontro_deus=True).count()
+        return db.session.query(Membro).filter(Membro.pg_id == self.id, Membro.participou_encontro_deus == True).count()
 
     @property
     def num_batizados_aclamados_atuais(self):
-        return self.participantes.filter_by(batizado_aclamado=True).count()
+        return db.session.query(Membro).filter(Membro.pg_id == self.id, Membro.batizado_aclamado == True).count()
 
     @property
     def membros_completos(self):
@@ -243,6 +237,13 @@ class PequenoGrupo(db.Model):
     def num_dizimistas_atuais(self):
         membros_do_pg = self.membros_completos
         return sum(1 for membro in membros_do_pg if membro.contribuiu_dizimo_ultimos_30d)
+
+    @property
+    def membros_para_indicadores(self):
+        membros = set(p for p in self.participantes.all())
+        if self.anfitriao and self.anfitriao.id != self.facilitador.id:
+            membros.add(self.anfitriao)
+        return list(membros)
 
     def __repr__(self):
         return f'<PG: {self.nome} | Facilitador: {self.facilitador.nome_completo}>'

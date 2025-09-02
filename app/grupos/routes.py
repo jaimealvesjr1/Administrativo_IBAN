@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.grupos.models import Area, Setor, PequenoGrupo
@@ -8,6 +8,7 @@ from app.auth.models import User
 from app.jornada.models import registrar_evento_jornada, JornadaEvento
 from config import Config
 from app.decorators import admin_required, group_permission_required, leader_required
+from sqlalchemy import or_
 
 grupos_bp = Blueprint('grupos', __name__, template_folder='templates')
 
@@ -22,18 +23,18 @@ def listar_grupos_unificada():
         setores = Setor.query.order_by(Setor.nome).all()
         pgs = PequenoGrupo.query.order_by(PequenoGrupo.nome).all()
     elif current_user.membro:
-        areas_coordenadas = current_user.membro.areas_coordenadas.all()
-        setores_supervisionados = current_user.membro.setores_supervisionados.all()
+        areas_supervisionadas = current_user.membro.areas_supervisionadas
+        setores_supervisionados = current_user.membro.setores_supervisionados
         pgs_liderados = PequenoGrupo.query.filter(
             (PequenoGrupo.facilitador_id == current_user.membro.id) |
             (PequenoGrupo.anfitriao_id == current_user.membro.id)
         ).all()
 
-        areas = list(areas_coordenadas)
+        areas = list(areas_supervisionadas)
         setores = list(setores_supervisionados)
         pgs = list(pgs_liderados)
 
-        for area in areas_coordenadas:
+        for area in areas_supervisionadas:
             for setor in area.setores:
                 if setor not in setores:
                     setores.append(setor)
@@ -55,11 +56,11 @@ def listar_grupos_unificada():
         return redirect(url_for('main.index'))
 
     tipo_selecionado = request.args.get('tipo', 'pgs')
-    return render_template('grupos/listagem_unificada.html', 
-                            areas=areas, 
-                            setores=setores, 
-                            pgs=pgs, 
-                            tipo_selecionado=tipo_selecionado, config=Config)
+    return render_template('grupos/listagem_unificada.html',
+                           areas=areas,
+                           setores=setores,
+                           pgs=pgs,
+                           tipo_selecionado=tipo_selecionado, config=Config)
 
 @grupos_bp.route('/areas')
 @login_required
@@ -74,7 +75,6 @@ def criar_area():
     if form.validate_on_submit():
         nova_area = Area(
             nome=form.nome.data,
-            coordenador_id=form.coordenador.data,
             meta_facilitadores_treinamento=form.meta_facilitadores_treinamento.data,
             meta_anfitrioes_treinamento=form.meta_anfitrioes_treinamento.data,
             meta_ctm_participantes=form.meta_ctm_participantes.data,
@@ -82,16 +82,22 @@ def criar_area():
             meta_batizados_aclamados=form.meta_batizados_aclamados.data,
             meta_multiplicacoes_pg=form.meta_multiplicacoes_pg.data
         )
+        for supervisor_id in form.supervisores.data:
+            supervisor = Membro.query.get(supervisor_id)
+            if supervisor:
+                nova_area.supervisores.append(supervisor)
+
         db.session.add(nova_area)
         try:
             db.session.commit()
             flash('Área criada com sucesso!', 'success')
-            registrar_evento_jornada(
-                tipo_acao='AREA_CRIADA',
-                descricao_detalhada=f'Se tornou supervisor(a) da área {nova_area.nome}.',
-                usuario_executor=current_user,
-                membros=[nova_area.coordenador]
-            )
+            for supervisor in nova_area.supervisores:
+                registrar_evento_jornada(
+                    tipo_acao='LIDERANCA_ALTERADA',
+                    descricao_detalhada=f'Se tornou supervisor(a) da área "{nova_area.nome}".',
+                    usuario_executor=current_user,
+                    membros=[supervisor]
+                )
             return redirect(url_for('grupos.detalhes_area', area_id=nova_area.id))
         except Exception as e:
             db.session.rollback()
@@ -100,41 +106,65 @@ def criar_area():
 
 @grupos_bp.route('/areas/<int:area_id>')
 @login_required
-@group_permission_required(Area, 'view')
+@group_permission_required(Area, 'view', 'supervisores')
 def detalhes_area(area_id):
-    area = Area.query.get_or_404(area_id)    
+    area = Area.query.get_or_404(area_id)
     jornada_eventos = area.jornada_eventos_area.order_by(JornadaEvento.data_evento.desc()).all()
     return render_template('grupos/areas/detalhes.html', area=area, jornada_eventos=jornada_eventos, config=Config)
 
 @grupos_bp.route('/areas/editar/<int:area_id>', methods=['GET', 'POST'])
 @login_required
-@group_permission_required(Area, 'edit')
+@group_permission_required(Area, 'edit', 'supervisores')
 def editar_area(area_id):
-    area = Area.query.get_or_404(area_id)    
+    area = Area.query.get_or_404(area_id)
     form = AreaForm(obj=area)
-    form.area = area
-    coordenador_antigo = area.coordenador
+
     if form.validate_on_submit():
         area.nome = form.nome.data
-        area.coordenador_id = form.coordenador.data
-        area.meta_facilitadores_treinamento = form.meta_facilitadores_treinamento.data
-        area.meta_anfitrioes_treinamento = form.meta_anfitrioes_treinamento.data
-        area.meta_ctm_participantes = form.meta_ctm_participantes.data
-        area.meta_encontro_deus_participantes = form.meta_encontro_deus_participantes.data
-        area.meta_batizados_aclamados = form.meta_batizados_aclamados.data
-        area.meta_multiplicacoes_pg = form.meta_multiplicacoes_pg.data
+        
+        supervisores_antigos_ids = {s.id for s in area.supervisores}
+        supervisores_novos_ids = set(form.supervisores.data)
+
+        area.supervisores = []
+        for supervisor_id in supervisores_novos_ids:
+            supervisor = Membro.query.get(supervisor_id)
+            if supervisor:
+                area.supervisores.append(supervisor)
+        
         try:
             db.session.commit()
+
+            novos_supervisores_adicionados = supervisores_novos_ids.difference(supervisores_antigos_ids)
+            supervisores_removidos = supervisores_antigos_ids.difference(supervisores_novos_ids)
+
+            for supervisor_id in novos_supervisores_adicionados:
+                supervisor = Membro.query.get(supervisor_id)
+                if supervisor:
+                    registrar_evento_jornada(
+                        tipo_acao='LIDERANCA_ALTERADA', 
+                        descricao_detalhada=f'Se tornou supervisor(a) da área "{area.nome}".', 
+                        usuario_executor=current_user, 
+                        membros=[supervisor]
+                    )
+            
+            for supervisor_id in supervisores_removidos:
+                supervisor = Membro.query.get(supervisor_id)
+                if supervisor:
+                    registrar_evento_jornada(
+                        tipo_acao='LIDERANCA_ALTERADA', 
+                        descricao_detalhada=f'Deixou de ser supervisor(a) da área "{area.nome}".', 
+                        usuario_executor=current_user, 
+                        membros=[supervisor]
+                    )
+
             flash('Área atualizada com sucesso!', 'success')
-            if coordenador_antigo and coordenador_antigo.id != area.coordenador_id: 
-                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser supervisor(a) da área {area.nome}.', usuario_executor=current_user, membros=[coordenador_antigo])
-                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou supervisor(a) da área {area.nome}.', usuario_executor=current_user, membros=[area.coordenador])
             return redirect(url_for('grupos.detalhes_area', area_id=area.id))
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao atualizar Área: {e}', 'danger')
     elif request.method == 'GET':
-        form.coordenador.data = area.coordenador_id
+        form.supervisores.data = [s.id for s in area.supervisores]
+        
     return render_template('grupos/areas/form.html', form=form, area=area)
 
 @grupos_bp.route('/areas/deletar/<int:area_id>', methods=['POST'])
@@ -145,14 +175,21 @@ def deletar_area(area_id):
     if area.setores.count() > 0:
         flash(f'Não é possível deletar a Área "{area.nome}" pois ela possui Setores vinculados.', 'danger')
         return redirect(url_for('grupos.listar_areas'))
+    
     nome_area = area.nome
-    coordenador_obj = area.coordenador
+    supervisores_antigos = list(area.supervisores)
+    
     try:
         db.session.delete(area)
         db.session.commit()
         flash('Área deletada com sucesso!', 'success')
-        if coordenador_obj:
-            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser supervisor(a) da área {nome_area}.', usuario_executor=current_user, membros=[coordenador_obj])
+        for supervisor in supervisores_antigos:
+            registrar_evento_jornada(
+                tipo_acao='LIDERANCA_ALTERADA', 
+                descricao_detalhada=f'Deixou de ser supervisor(a) da área "{nome_area}".', 
+                usuario_executor=current_user, 
+                membros=[supervisor]
+            )
     except Exception as e:
         db.session.rollback()
         flash(f'Erro ao deletar Área: {e}', 'danger')
@@ -171,14 +208,25 @@ def criar_setor():
     if form.validate_on_submit():
         novo_setor = Setor(
             nome=form.nome.data,
-            supervisor_id=form.supervisor.data,
             area_id=form.area.data,
-            )
+        )
+        
+        for supervisor_id in form.supervisores.data:
+            supervisor = Membro.query.get(supervisor_id)
+            if supervisor:
+                novo_setor.supervisores.append(supervisor)
+
         db.session.add(novo_setor)
         try:
             db.session.commit()
             flash('Setor criado com sucesso!', 'success')
-            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou supervisor(a) do setor {novo_setor.nome}.', usuario_executor=current_user, membros=[novo_setor.supervisor])
+            for supervisor in novo_setor.supervisores:
+                registrar_evento_jornada(
+                    tipo_acao='LIDERANCA_ALTERADA', 
+                    descricao_detalhada=f'Se tornou supervisor(a) do setor "{novo_setor.nome}".', 
+                    usuario_executor=current_user, 
+                    membros=[supervisor]
+                )
             return redirect(url_for('grupos.detalhes_setor', setor_id=novo_setor.id))
         except Exception as e:
             db.session.rollback()
@@ -187,7 +235,7 @@ def criar_setor():
 
 @grupos_bp.route('/setores/<int:setor_id>')
 @login_required
-@group_permission_required(Setor, 'view')
+@group_permission_required(Setor, 'view', 'supervisores')
 def detalhes_setor(setor_id):
     setor = Setor.query.get_or_404(setor_id)
     jornada_eventos = setor.jornada_eventos_setor.order_by(JornadaEvento.data_evento.desc()).all()
@@ -195,36 +243,59 @@ def detalhes_setor(setor_id):
 
 @grupos_bp.route('/setores/editar/<int:setor_id>', methods=['GET', 'POST'])
 @login_required
-@group_permission_required(Setor, 'edit')
+@group_permission_required(Setor, 'edit', 'supervisores')
 def editar_setor(setor_id):
     setor = Setor.query.get_or_404(setor_id)
     form = SetorForm(obj=setor)
-    form.setor = setor
-    supervisor_antigo = setor.supervisor
-    area_antiga = setor.area
+    
     if form.validate_on_submit():
         setor.nome = form.nome.data
-        setor.supervisor_id = form.supervisor.data
         setor.area_id = form.area.data
-        setor.meta_facilitadores_treinamento = form.meta_facilitadores_treinamento.data
-        setor.meta_anfitrioes_treinamento = form.meta_anfitrioes_treinamento.data
-        setor.meta_ctm_participantes = form.meta_ctm_participantes.data
-        setor.meta_encontro_deus_participantes = form.meta_encontro_deus_participantes.data
-        setor.meta_batizados_aclamados = form.meta_batizados_aclamados.data
-        setor.meta_multiplicacoes_pg = form.meta_multiplicacoes_pg.data
+        
+        supervisores_antigos_ids = {s.id for s in setor.supervisores}
+        supervisores_novos_ids = set(form.supervisores.data)
+
+        setor.supervisores = []
+        for supervisor_id in supervisores_novos_ids:
+            supervisor = Membro.query.get(supervisor_id)
+            if supervisor:
+                setor.supervisores.append(supervisor)
+        
         try:
             db.session.commit()
+
+            novos_supervisores_adicionados = supervisores_novos_ids.difference(supervisores_antigos_ids)
+            supervisores_removidos = supervisores_antigos_ids.difference(supervisores_novos_ids)
+
+            for supervisor_id in novos_supervisores_adicionados:
+                supervisor = Membro.query.get(supervisor_id)
+                if supervisor:
+                    registrar_evento_jornada(
+                        tipo_acao='LIDERANCA_ALTERADA', 
+                        descricao_detalhada=f'Se tornou supervisor(a) do setor "{setor.nome}".', 
+                        usuario_executor=current_user, 
+                        membros=[supervisor]
+                    )
+            
+            for supervisor_id in supervisores_removidos:
+                supervisor = Membro.query.get(supervisor_id)
+                if supervisor:
+                    registrar_evento_jornada(
+                        tipo_acao='LIDERANCA_ALTERADA', 
+                        descricao_detalhada=f'Deixou de ser supervisor(a) do setor "{setor.nome}".', 
+                        usuario_executor=current_user, 
+                        membros=[supervisor]
+                    )
+
             flash('Setor atualizado com sucesso!', 'success')
-            if supervisor_antigo and supervisor_antigo.id != setor.supervisor_id:
-                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser supervisor(a) do setor {setor.nome}.', usuario_executor=current_user, membros=[supervisor_antigo])
-                registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou supervisor(a) do setor {setor.nome}.', usuario_executor=current_user, membros=[setor.supervisor])
             return redirect(url_for('grupos.detalhes_setor', setor_id=setor.id))
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao atualizar Setor: {e}', 'danger')
     elif request.method == 'GET':
-        form.supervisor.data = setor.supervisor_id
+        form.supervisores.data = [s.id for s in setor.supervisores]
         form.area.data = setor.area_id
+        
     return render_template('grupos/setores/form.html', form=form, setor=setor)
 
 @grupos_bp.route('/setores/deletar/<int:setor_id>', methods=['POST'])
@@ -235,14 +306,21 @@ def deletar_setor(setor_id):
     if setor.pequenos_grupos.count() > 0:
         flash(f'Não é possível deletar o Setor "{setor.nome}" pois ele possui Pequenos Grupos vinculados.', 'danger')
         return redirect(url_for('grupos.listar_setores'))
+
     nome_setor = setor.nome
-    supervisor_obj = setor.supervisor
+    supervisores_antigos = list(setor.supervisores)
+
     try:
         db.session.delete(setor)
         db.session.commit()
         flash('Setor deletado com sucesso!', 'success')
-        if supervisor_obj:
-            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser supervisor(a) do setor {nome_setor}.', usuario_executor=current_user, membros=[supervisor_obj])
+        for supervisor in supervisores_antigos:
+            registrar_evento_jornada(
+                tipo_acao='LIDERANCA_ALTERADA', 
+                descricao_detalhada=f'Deixou de ser supervisor(a) do setor "{nome_setor}".', 
+                usuario_executor=current_user, 
+                membros=[supervisor]
+            )
     except Exception as e:
         db.session.rollback()
         flash(f'Erro ao deletar Setor: {e}', 'danger')
@@ -371,6 +449,29 @@ def adicionar_participante(pg_id):
         flash('Membro não pertence a este Pequeno Grupo.', 'danger')
     return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
 
+@grupos_bp.route('/buscar_membros_pgs')
+@login_required
+def buscar_membros_pgs():
+    term = request.args.get('term', '')
+    
+    membros = Membro.query.filter(
+        or_(
+            Membro.nome_completo.ilike(f'%{term}%'),
+        ),
+        Membro.ativo == True,
+        Membro.pg_id == None,
+        Membro.id != current_user.membro.id
+    ).order_by(Membro.nome_completo).limit(20).all()
+    
+    results = []
+    for membro in membros:
+        results.append({
+            'id': membro.id,
+            'text': membro.nome_completo
+        })
+    
+    return jsonify(items=results)
+
 @grupos_bp.route('/pgs/<int:pg_id>/remover/<int:membro_id>', methods=['POST'])
 @login_required
 @group_permission_required(PequenoGrupo, 'manage_participants')
@@ -401,20 +502,25 @@ def remover_participante(pg_id, membro_id):
 def atualizar_indicadores(pg_id, membro_id):
     pg = PequenoGrupo.query.get_or_404(pg_id)
     membro = Membro.query.get_or_404(membro_id)
-    if membro.pg_id != pg.id:
-        flash('Membro não pertence a este Pequeno Grupo.', 'danger')
+    
+    if membro.id not in [m.id for m in pg.membros_para_indicadores]:
+        flash('Este membro não pode ter seus indicadores atualizados neste Pequeno Grupo.', 'danger')
         return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
-    status_treinamento_antigo = membro.status_treinamento_pg
-    participou_ctm_antigo = membro.participou_ctm
-    participou_encontro_deus_antigo = membro.participou_encontro_deus
-    batizado_aclamado_antigo = membro.batizado_aclamado
+    
     status_treinamento = request.form.get(f'status_treinamento_pg_{membro.id}')
-    if status_treinamento in ['Facilitador em Treinamento', 'Anfitrião em Treinamento', 'Participante']:
-        membro.status_treinamento_pg = status_treinamento
+
     membro.participou_ctm = 'participou_ctm' in request.form
     membro.participou_encontro_deus = 'participou_encontro_deus' in request.form
-    membro.batizado_aclamado = 'batizado_aclamado' in request.form
+
+    if membro.status == 'Não-Membro':
+        membro.batizado_aclamado = 'batizado_aclamado' in request.form
+    else:
+        membro.batizado_aclamado = False
+
+    membro.status_treinamento_pg = status_treinamento
+
     try:
+        db.session.add(membro)
         db.session.commit()
         flash(f'Indicadores de {membro.nome_completo} atualizados com sucesso!', 'success')
         descricao_membro = f'Indicadores atualizados no PG {pg.nome}.'
@@ -429,11 +535,8 @@ def atualizar_indicadores(pg_id, membro_id):
 
 @grupos_bp.route('/setores/<int:setor_id>/gerenciar_metas_pgs', methods=['GET', 'POST'])
 @login_required
-@group_permission_required(Setor, 'edit')
+@group_permission_required(Setor, 'edit', 'supervisores')
 def gerenciar_metas_pgs_do_setor(setor_id):
-    if not (current_user.has_permission('admin') or (current_user.membro and Setor.query.filter_by(supervisor_id=current_user.membro.id, id=setor_id).first())):
-        flash('Você não tem permissão para gerenciar metas deste Setor.', 'danger')
-        return redirect(url_for('grupos.detalhes_setor', setor_id=setor_id))
     setor = Setor.query.get_or_404(setor_id)
     pgs = setor.pequenos_grupos.all()
     forms = {pg.id: PequenoGrupoMetasForm(prefix=str(pg.id), obj=pg) for pg in pgs}
@@ -464,7 +567,7 @@ def gerenciar_metas_pgs_do_setor(setor_id):
 
 @grupos_bp.route('/areas/<int:area_id>/gerenciar_metas_setores', methods=['GET', 'POST'])
 @login_required
-@group_permission_required(Area, 'edit')
+@group_permission_required(Area, 'edit', 'supervisores')
 def gerenciar_metas_setores_da_area(area_id):
     area = Area.query.get_or_404(area_id)
     setores = area.setores.all()
