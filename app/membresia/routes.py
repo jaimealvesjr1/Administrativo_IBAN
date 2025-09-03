@@ -2,11 +2,12 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import login_required, current_user
 from app.extensions import db
 from .models import Membro
-from .forms import MembroForm, CadastrarNaoMembroForm
+from .forms import MembroForm, CadastrarNaoMembroForm, EditarMembroForm
 from app.jornada.models import JornadaEvento, registrar_evento_jornada
 from config import Config
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, and_, or_
+from werkzeug.datastructures import FileStorage
 import os
 import uuid
 from PIL import Image
@@ -92,6 +93,54 @@ def index():
         campus_colors=campus_colors,
         status_colors=status_colors
     )
+
+@membresia_bp.route('/perfil/editar', methods=['GET', 'POST'])
+@login_required
+def editar_proprio_perfil():
+    membro = current_user.membro
+    if not membro:
+        flash('Você não tem um perfil de membro para editar.', 'danger')
+        return redirect(url_for('main.index'))
+    
+    form = EditarMembroForm(obj=membro)
+    
+    if form.validate_on_submit():
+        old_foto_perfil = membro.foto_perfil
+
+        membro.nome_completo = form.nome_completo.data
+        membro.data_nascimento = form.data_nascimento.data
+        membro.campus = form.campus.data
+
+        # CORRIGIDO: Lógica de upload agora verifica o tipo de dado
+        # O campo só é processado se for um objeto de arquivo (FileStorage) e tiver um nome de arquivo.
+        if isinstance(form.foto_perfil.data, FileStorage) and form.foto_perfil.data.filename:
+            if old_foto_perfil and old_foto_perfil != 'default.jpg':
+                old_filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], old_foto_perfil)
+                if os.path.exists(old_filepath):
+                    os.remove(old_filepath)
+            
+            filename = save_profile_picture(form.foto_perfil.data)
+            if filename:
+                membro.foto_perfil = filename
+            else:
+                flash('Tipo de arquivo de imagem não permitido ou inválido!', 'danger')
+                return render_template('membresia/editar_proprio_perfil.html', form=form, membro=membro, ano=ano, versao=versao)
+        
+        try:
+            db.session.commit()
+            flash('Seu perfil foi atualizado com sucesso!', 'success')
+            registrar_evento_jornada(
+                tipo_acao='MEMBRO_ATUALIZADO_SELF',
+                descricao_detalhada='O próprio membro atualizou seu perfil.',
+                usuario_executor=current_user,
+                membros=[membro]
+            )
+            return redirect(url_for('membresia.perfil', id=membro.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao atualizar o perfil: {e}', 'danger')
+    
+    return render_template('membresia/editar_proprio_perfil.html', form=form, membro=membro, ano=ano, versao=versao)
 
 @membresia_bp.route('/novo', methods=['GET', 'POST'])
 @login_required

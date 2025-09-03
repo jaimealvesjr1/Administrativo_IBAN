@@ -1,0 +1,47 @@
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit %}
+{% block title %}Editar Meu Perfil · IBAN{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="text-center mb-4">
+        <img src="{{ membro.get_foto_perfil_url() }}" alt="Foto de Perfil de {{ membro.nome_completo }}" class="img-thumbnail rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+    </div>
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+        <h2 class="text-center">
+            <strong>Editar Meu Perfil</strong>
+        </h2>
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            
+            <div class="mb-3">
+                <label for="{{ form.nome_completo.id }}" class="form-label">{{ form.nome_completo.label.text }}</label>
+                {{ form.nome_completo(class="form-control", value=form.nome_completo.data) }}
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.data_nascimento.id }}" class="form-label">{{ form.data_nascimento.label.text }}</label>
+                {{ form.data_nascimento(class="form-control", value=form.data_nascimento.data.strftime('%Y-%m-%d') if form.data_nascimento.data else '') }}
+            </div>
+
+            <div class="mb-3">
+                <label for="{{ form.campus.id }}" class="form-label">{{ form.campus.label.text }}</label>
+                {{ form.campus(class="form-select") }}
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.foto_perfil.id }}" class="form-label">{{ form.foto_perfil.label.text }}</label>
+                {{ form.foto_perfil(class="form-control") }}
+            </div>
+            
+            <div class="d-grid gap-2">
+                {{ submit('Salvar Alterações') }}
+            </div>
+            <div class="text-end mt-3">
+                <a href="{{ url_for('membresia.perfil', id=membro.id) }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

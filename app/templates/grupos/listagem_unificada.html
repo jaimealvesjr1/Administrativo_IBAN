@@ -28,7 +28,9 @@
         <div class="tab-pane fade {% if tipo_selecionado == 'pgs' %}show active{% endif %}" id="pgs-content" role="tabpanel" aria-labelledby="pgs-tab">
             <div class="d-flex justify-content-between align-items-center mt-3">
                 <h4 class="mb-0"><strong>Pequenos Grupos</strong></h4>
-                <a href="{{ url_for('grupos.criar_pg') }}" class="btn btn-primary">Criar Novo PG</a>
+                {% if current_user.has_permission('admin') %}
+                    <a href="{{ url_for('grupos.criar_pg') }}" class="btn btn-primary">Criar Novo PG</a>
+                {% endif %}
             </div>
             {% if pgs %}
                 <div class="table-responsive mt-3">
@@ -69,7 +71,9 @@
         <div class="tab-pane fade {% if tipo_selecionado == 'setores' %}show active{% endif %}" id="setores-content" role="tabpanel" aria-labelledby="setores-tab">
             <div class="d-flex justify-content-between align-items-center mt-3">
                 <h4 class="mb-0"><strong>Setores</strong></h4>
-                <a href="{{ url_for('grupos.criar_setor') }}" class="btn btn-primary">Criar Novo Setor</a>
+                {% if current_user.has_permission('admin') %}
+                    <a href="{{ url_for('grupos.criar_setor') }}" class="btn btn-primary">Criar Novo Setor</a>
+                {% endif %}
             </div>
             {% if setores %}
                 <div class="table-responsive mt-3">
@@ -96,7 +100,9 @@
                                 <td>{{ setor.area.nome if setor.area else 'N/A' }}</td>
                                 <td>
                                     <a href="{{ url_for('grupos.editar_setor', setor_id=setor.id) }}" class="btn btn-sm btn-info">Editar</a>
-                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteSetorModal{{ setor.id }}">Deletar</button>
+                                    {% if current_user.has_permission('admin') %}
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteSetorModal{{ setor.id }}">Deletar</button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -112,7 +118,9 @@
         <div class="tab-pane fade {% if tipo_selecionado == 'areas' %}show active{% endif %}" id="areas-content" role="tabpanel" aria-labelledby="areas-tab">
             <div class="d-flex justify-content-between align-items-center mt-3">
                 <h4 class="mb-0"><strong>Áreas</strong></h4>
-                <a href="{{ url_for('grupos.criar_area') }}" class="btn btn-primary">Criar Nova Área</a>
+                {% if current_user.has_permission('admin') %}
+                    <a href="{{ url_for('grupos.criar_area') }}" class="btn btn-primary">Criar Nova Área</a>
+                {% endif %}
             </div>
             {% if areas %}
                 <div class="table-responsive mt-3">
@@ -139,7 +147,9 @@
                                 <td>{{ area.data_criacao|strftime('%d/%m/%Y %H:%M') }}</td>
                                 <td>
                                     <a href="{{ url_for('grupos.editar_area', area_id=area.id) }}" class="btn btn-sm btn-info">Editar</a>
-                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteAreaModal{{ area.id }}">Deletar</button>
+                                    {% if current_user.has_permission('admin') %}
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteAreaModal{{ area.id }}">Deletar</button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -151,35 +161,36 @@
             {% endif %}
         </div>
     </div>
+
+    {% for pg in pgs %}
+        {{ confirm_modal(
+            id='confirmDeletePGModal' ~ pg.id,
+            title='Confirmar Exclusão de Pequeno Grupo',
+            body='Tem certeza que deseja deletar o Pequeno Grupo ' ~ pg.nome ~ '? Atenção: Isso desvinculará todos os participantes e não pode ser desfeito.',
+            action_url=url_for('grupos.deletar_pg', pg_id=pg.id)
+        ) }}
+    {% endfor %}
+
+    {% for setor in setores %}
+        {{ confirm_modal(
+            id='confirmDeleteSetorModal' ~ setor.id,
+            title='Confirmar Exclusão de Setor',
+            body='Tem certeza que deseja deletar o Setor ' ~ setor.nome ~ '? Atenção: Isso não pode ser desfeito e só é possível se não houver Pequenos Grupos vinculados.',
+            action_url=url_for('grupos.deletar_setor', setor_id=setor.id)
+        ) }}
+    {% endfor %}
+
+    {% for area in areas %}
+        {{ confirm_modal(
+            id='confirmDeleteAreaModal' ~ area.id,
+            title='Confirmar Exclusão de Área',
+            body='Tem certeza que deseja deletar a Área ' ~ area.nome ~ '? Atenção: Isso não pode ser desfeito e só é possível se não houver Setores vinculados.',
+            action_url=url_for('grupos.deletar_area', area_id=area.id)
+        ) }}
+    {% endfor %}
+
 </div>
 {% endblock %}
-
-{% for pg in pgs %}
-    {{ confirm_modal(
-        id='confirmDeletePGModal' ~ pg.id,
-        title='Confirmar Exclusão de Pequeno Grupo',
-        body='Tem certeza que deseja deletar o Pequeno Grupo "' ~ pg.nome ~ '"? Atenção: Isso desvinculará todos os participantes e não pode ser desfeito.',
-        action_url=url_for('grupos.deletar_pg', pg_id=pg.id)
-    ) }}
-{% endfor %}
-
-{% for setor in setores %}
-    {{ confirm_modal(
-        id='confirmDeleteSetorModal' ~ setor.id,
-        title='Confirmar Exclusão de Setor',
-        body='Tem certeza que deseja deletar o Setor "' ~ setor.nome ~ '"? Atenção: Isso não pode ser desfeito e só é possível se não houver Pequenos Grupos vinculados.',
-        action_url=url_for('grupos.deletar_setor', setor_id=setor.id)
-    ) }}
-{% endfor %}
-
-{% for area in areas %}
-    {{ confirm_modal(
-        id='confirmDeleteAreaModal' ~ area.id,
-        title='Confirmar Exclusão de Área',
-        body='Tem certeza que deseja deletar a Área "' ~ area.nome ~ '"? Atenção: Isso não pode ser desfeito e só é possível se não houver Setores vinculados.',
-        action_url=url_for('grupos.deletar_area', area_id=area.id)
-    ) }}
-{% endfor %}
 
 {% block scripts %}
 {{ super() }}

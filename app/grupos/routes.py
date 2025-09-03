@@ -11,6 +11,8 @@ from app.decorators import admin_required, group_permission_required, leader_req
 from sqlalchemy import or_
 
 grupos_bp = Blueprint('grupos', __name__, template_folder='templates')
+ano=Config.ANO_ATUAL
+versao=Config.VERSAO_APP
 
 @grupos_bp.route('/')
 @grupos_bp.route('/index')
@@ -60,7 +62,9 @@ def listar_grupos_unificada():
                            areas=areas,
                            setores=setores,
                            pgs=pgs,
-                           tipo_selecionado=tipo_selecionado, config=Config)
+                           tipo_selecionado=tipo_selecionado,
+                           ano=ano, versao=versao,
+                           config=Config)
 
 @grupos_bp.route('/areas')
 @login_required
@@ -102,7 +106,7 @@ def criar_area():
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao criar Área: {e}', 'danger')
-    return render_template('grupos/areas/form.html', form=form)
+    return render_template('grupos/areas/form.html', form=form, ano=ano, versao=versao)
 
 @grupos_bp.route('/areas/<int:area_id>')
 @login_required
@@ -110,7 +114,7 @@ def criar_area():
 def detalhes_area(area_id):
     area = Area.query.get_or_404(area_id)
     jornada_eventos = area.jornada_eventos_area.order_by(JornadaEvento.data_evento.desc()).all()
-    return render_template('grupos/areas/detalhes.html', area=area, jornada_eventos=jornada_eventos, config=Config)
+    return render_template('grupos/areas/detalhes.html', area=area, jornada_eventos=jornada_eventos, config=Config, ano=ano, versao=versao)
 
 @grupos_bp.route('/areas/editar/<int:area_id>', methods=['GET', 'POST'])
 @login_required
@@ -121,6 +125,13 @@ def editar_area(area_id):
 
     if form.validate_on_submit():
         area.nome = form.nome.data
+        
+        area.meta_facilitadores_treinamento = form.meta_facilitadores_treinamento.data
+        area.meta_anfitrioes_treinamento = form.meta_anfitrioes_treinamento.data
+        area.meta_ctm_participantes = form.meta_ctm_participantes.data
+        area.meta_encontro_deus_participantes = form.meta_encontro_deus_participantes.data
+        area.meta_batizados_aclamados = form.meta_batizados_aclamados.data
+        area.meta_multiplicacoes_pg = form.meta_multiplicacoes_pg.data
         
         supervisores_antigos_ids = {s.id for s in area.supervisores}
         supervisores_novos_ids = set(form.supervisores.data)
@@ -164,8 +175,7 @@ def editar_area(area_id):
             flash(f'Erro ao atualizar Área: {e}', 'danger')
     elif request.method == 'GET':
         form.supervisores.data = [s.id for s in area.supervisores]
-        
-    return render_template('grupos/areas/form.html', form=form, area=area)
+    return render_template('grupos/areas/form.html', form=form, area=area, ano=ano, versao=versao)
 
 @grupos_bp.route('/areas/deletar/<int:area_id>', methods=['POST'])
 @login_required
@@ -231,7 +241,7 @@ def criar_setor():
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao criar Setor: {e}', 'danger')
-    return render_template('grupos/setores/form.html', form=form)
+    return render_template('grupos/setores/form.html', form=form, ano=ano, versao=versao)
 
 @grupos_bp.route('/setores/<int:setor_id>')
 @login_required
@@ -239,7 +249,7 @@ def criar_setor():
 def detalhes_setor(setor_id):
     setor = Setor.query.get_or_404(setor_id)
     jornada_eventos = setor.jornada_eventos_setor.order_by(JornadaEvento.data_evento.desc()).all()
-    return render_template('grupos/setores/detalhes.html', setor=setor, jornada_eventos=jornada_eventos, config=Config)
+    return render_template('grupos/setores/detalhes.html', setor=setor, jornada_eventos=jornada_eventos, config=Config, ano=ano, versao=versao)
 
 @grupos_bp.route('/setores/editar/<int:setor_id>', methods=['GET', 'POST'])
 @login_required
@@ -296,7 +306,7 @@ def editar_setor(setor_id):
         form.supervisores.data = [s.id for s in setor.supervisores]
         form.area.data = setor.area_id
         
-    return render_template('grupos/setores/form.html', form=form, setor=setor)
+    return render_template('grupos/setores/form.html', form=form, setor=setor, ano=ano, versao=versao)
 
 @grupos_bp.route('/setores/deletar/<int:setor_id>', methods=['POST'])
 @login_required
@@ -348,7 +358,7 @@ def criar_pg():
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao criar Pequeno Grupo: {e}', 'danger')
-    return render_template('grupos/pgs/form.html', form=form)
+    return render_template('grupos/pgs/form.html', form=form, ano=ano, versao=versao)
 
 @grupos_bp.route('/pgs/<int:pg_id>')
 @login_required
@@ -357,7 +367,7 @@ def detalhes_pg(pg_id):
     pg = PequenoGrupo.query.get_or_404(pg_id)
     membros_disponiveis = Membro.query.filter(Membro.id != pg.facilitador_id, Membro.id != pg.anfitriao_id, Membro.pg_id == None).order_by(Membro.nome_completo).all()
     jornada_eventos = pg.jornada_eventos_pg.order_by(JornadaEvento.data_evento.desc()).all()
-    return render_template('grupos/pgs/detalhes.html', pg=pg, membros_disponiveis=membros_disponiveis, jornada_eventos=jornada_eventos, config=Config)
+    return render_template('grupos/pgs/detalhes.html', pg=pg, membros_disponiveis=membros_disponiveis, jornada_eventos=jornada_eventos, config=Config, ano=ano, versao=versao)
 
 @grupos_bp.route('/pgs/editar/<int:pg_id>', methods=['GET', 'POST'])
 @login_required
@@ -395,7 +405,7 @@ def editar_pg(pg_id):
         form.setor.data = pg.setor_id
         form.dia_reuniao.data = pg.dia_reuniao
         form.horario_reuniao.data = pg.horario_reuniao
-    return render_template('grupos/pgs/form.html', form=form, pg=pg)
+    return render_template('grupos/pgs/form.html', form=form, pg=pg, ano=ano, versao=versao)
 
 @grupos_bp.route('/pgs/deletar/<int:pg_id>', methods=['POST'])
 @login_required
@@ -563,7 +573,7 @@ def gerenciar_metas_pgs_do_setor(setor_id):
             except Exception as e:
                 db.session.rollback()
                 flash(f'Erro ao atualizar metas: {e}', 'danger')
-    return render_template('grupos/setores/gerenciar_metas_pgs.html', setor=setor, pgs=pgs, forms=forms, config=Config)
+    return render_template('grupos/setores/gerenciar_metas_pgs.html', setor=setor, pgs=pgs, forms=forms, config=Config, ano=ano, versao=versao)
 
 @grupos_bp.route('/areas/<int:area_id>/gerenciar_metas_setores', methods=['GET', 'POST'])
 @login_required
@@ -595,4 +605,4 @@ def gerenciar_metas_setores_da_area(area_id):
             except Exception as e:
                 db.session.rollback()
                 flash(f'Erro ao atualizar metas: {e}', 'danger')
-    return render_template('grupos/areas/gerenciar_metas_setores.html', area=area, setores=setores, forms=forms, config=Config)
+    return render_template('grupos/areas/gerenciar_metas_setores.html', area=area, setores=setores, forms=forms, config=Config, ano=ano, versao=versao)

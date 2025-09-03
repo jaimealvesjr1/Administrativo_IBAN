@@ -74,3 +74,19 @@ class CadastrarNaoMembroForm(FlaskForm):
     def validate_data_nascimento(self, field):
         if field.data and field.data > date.today():
             raise ValidationError('A data de nascimento não pode ser no futuro.')
+
+class EditarMembroForm(FlaskForm):
+    nome_completo = StringField('Nome Completo', validators=[DataRequired(), Length(min=2, max=120)])
+    data_nascimento = DateField('Data de Nascimento', format='%Y-%m-%d', validators=[DataRequired()])
+    foto_perfil = FileField('Alterar Foto de Perfil')
+    campus = SelectField('Campus', choices=[(c, c) for c in Config.CAMPUS.keys()], validators=[DataRequired()])
+    submit = SubmitField('Salvar Alterações')
+    
+    def __init__(self, *args, **kwargs):
+        super(EditarMembroForm, self).__init__(*args, **kwargs)
+        self.obj = kwargs.get('obj', None)
+    
+    def validate_nome_completo(self, nome_completo):
+        membro = Membro.query.filter_by(nome_completo=nome_completo.data).first()
+        if membro and (not self.obj or membro.id != self.obj.id):
+            raise ValidationError('Já existe um membro com este nome. Por favor, escolha outro.')
