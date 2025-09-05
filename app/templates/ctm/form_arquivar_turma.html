@@ -1,0 +1,49 @@
+{% set show_navbar = true %}
+{% extends "base/layout.html" %}
+{% from 'base/components/buttons.html' import submit %}
+
+{% block title %}Arquivar Turma {{ turma.nome }} · CTM{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 600px;">
+        <h2 class="text-center">
+            <strong>Arquivar Turma {{ turma.nome }}</strong>
+        </h2>
+        <p class="text-center text-muted">A turma será arquivada e o status de conclusão de cada aluno será salvo.</p>
+        
+        <form method="POST">
+            {% if turma.alunos %}
+            <ul class="list-group list-group-flush mb-4">
+                {% for aluno in turma.alunos %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>{{ aluno.nome_completo }}</span>
+                    <div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="status_{{ aluno.id }}" id="aprovado_{{ aluno.id }}" value="Aprovado" checked>
+                            <label class="form-check-label" for="aprovado_{{ aluno.id }}">Aprovado</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="status_{{ aluno.id }}" id="reprovado_{{ aluno.id }}" value="Reprovado">
+                            <label class="form-check-label" for="reprovado_{{ aluno.id }}">Reprovado</label>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            <div class="text-center">
+                <p><strong>Atenção:</strong> Ao arquivar a turma, ela se tornará inativa e esta ação não poderá ser desfeita.</p>
+                {{ submit('Arquivar e Avaliar Alunos') }}
+            </div>
+            {% else %}
+            <div class="alert alert-warning text-center" role="alert">
+                Esta turma não possui alunos. Não é possível arquivar.
+            </div>
+            {% endif %}
+            <div class="text-end mt-3">
+                <a href="{{ url_for('ctm.painel_facilitador_turma', turma_id=turma.id) }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

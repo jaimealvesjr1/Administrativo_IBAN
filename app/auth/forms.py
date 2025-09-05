@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, SelectField
+from wtforms import StringField, PasswordField, SubmitField, SelectField, SelectMultipleField
 from wtforms.validators import DataRequired, Email, EqualTo, ValidationError
 from app.auth.models import User
 from app.membresia.models import Membro

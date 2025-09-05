@@ -1,0 +1,39 @@
+{% set show_navbar = true %}
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit, danger %}
+
+{% block title %}{% if classe %}Editar Classe{% else %}Criar Classe{% endif %} · CTM{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+        <h2 class="text-center">
+            <strong>{% if classe %}Editar Classe {{ classe.nome }}{% else %}Criar Nova Classe{% endif %}</strong>
+        </h2>
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            
+            <div class="mb-3">
+                {{ form.nome.label(class="form-label") }}
+                {{ form.nome(class="form-control") }}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.supervisor_id.label(class="form-label") }}
+                {{ form.supervisor_id(class="form-select") }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.num_aulas_ciclo.label(class="form-label") }}
+                {{ form.num_aulas_ciclo(class="form-control") }}
+            </div>
+
+            {{ submit('Salvar Classe') }}
+            <div class="text-end mt-3">
+                <a href="{{ url_for('ctm.listar_ctm_unificada') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

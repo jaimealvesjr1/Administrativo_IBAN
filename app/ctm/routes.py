@@ -1,11 +1,13 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_file
 from flask_login import login_required, current_user
-from app.decorators import admin_required
+from app.decorators import admin_required, group_permission_required
 from app.extensions import db
 from app.membresia.models import Membro
-from .models import Presenca, Aula
-from .forms import PresencaForm, AulaForm, PresencaManualForm
+from app.jornada.models import registrar_evento_jornada
+from .models import Presenca, AulaModelo, AulaRealizada, ClasseCTM, TurmaCTM, aluno_turma, ConclusaoCTM
+from .forms import PresencaForm, AulaModeloForm, AulaRealizadaForm, ClasseCTMForm, TurmaCTMForm, PresencaManualForm
 from datetime import date, datetime
+from sqlalchemy import and_, func
 from config import Config
 import pandas as pd
 import io
@@ -18,94 +20,610 @@ versao = Config.VERSAO_APP
 @login_required
 @admin_required
 def index():
-    aulas = Aula.query.order_by(Aula.data.desc()).all()
+    classes_total = ClasseCTM.query.count()
+    turmas_total = TurmaCTM.query.filter_by(ativa=True).count()
+    aulas_modelo_total = AulaModelo.query.count()
 
-    ultimas_aulas = Aula.query.order_by(Aula.data.desc()).limit(4).all()
-    media_presentes_ultimas_4_aulas = 0
+    turmas_ativas = TurmaCTM.query.filter_by(ativa=True).order_by(TurmaCTM.nome).all()
+    campus_por_turma = {}
 
-    if ultimas_aulas:
-        total_presentes_nas_ultimas_4 = 0
-        total_membros_ativos_para_calculo = Membro.query.filter_by(ativo=True).count()
-        if total_membros_ativos_para_calculo == 0:
-            media_presentes_ultimas_4_aulas = 0
-        else:
-            for aula_obj in ultimas_aulas:
-                presencas_na_aula = Presenca.query.filter_by(aula_id=aula_obj.id).count()
-                total_presentes_nas_ultimas_4 += presencas_na_aula
-            
-            media_presentes_ultimas_4_aulas = (total_presentes_nas_ultimas_4 / len(ultimas_aulas)) / total_membros_ativos_para_calculo * 100
-            media_presentes_ultimas_4_aulas = round(media_presentes_ultimas_4_aulas, 1)
+    for turma in turmas_ativas:
+        campus_counts = {}
+        for aluno in turma.alunos:
+            campus = aluno.campus if aluno.campus else 'Não Informado'
+            campus_counts[campus] = campus_counts.get(campus, 0) + 1
+        campus_por_turma[turma.nome] = campus_counts
 
-    total_alunos_com_presenca = db.session.query(Presenca.membro_id).distinct().count()
+    return render_template(
+        'ctm/index.html',
+        classes_total=classes_total,
+        turmas_total=turmas_total,
+        aulas_modelo_total=aulas_modelo_total,
+        turmas_ativas=turmas_ativas,
+        campus_por_turma=campus_por_turma,
+        versao=versao,
+        ano=ano
+    )
 
-    dados_por_campus = {}
-    campus_list_for_chart_filter = ['Todos'] + sorted(Config.CAMPUS.keys()) 
+@ctm_bp.route('/listar')
+@login_required
+@admin_required
+def listar_ctm_unificada():
+    classes_with_aulas = db.session.query(
+        ClasseCTM, 
+        func.count(AulaModelo.id).label('num_aulas')
+    ).outerjoin(AulaModelo).group_by(ClasseCTM.id).order_by(ClasseCTM.nome).all()
+
+    turmas = TurmaCTM.query.filter_by(ativa=True).order_by(TurmaCTM.nome).all()
+    aulas_realizadas = AulaRealizada.query.order_by(AulaRealizada.data.desc()).all()
     
-    all_aulas_for_charts = Aula.query.order_by(Aula.data).all()
-    
-    for campus in campus_list_for_chart_filter:
-        membros_do_campus = Membro.query.filter_by(ativo=True)
-        if campus != 'Todos':
-            membros_do_campus = membros_do_campus.filter_by(campus=campus)
-        membros_do_campus_list = membros_do_campus.all()
-        total_lideres_ativos_no_campus = len(membros_do_campus_list)
+    return render_template(
+        'ctm/listagem_unificada.html',
+        classes=classes_with_aulas,
+        turmas=turmas,
+        aulas_realizadas=aulas_realizadas,
+        versao=versao,
+        ano=ano
+    )
 
-        dados_campus_atual = []
-        for aula_obj in all_aulas_for_charts:
-            presentes_na_aula_no_campus = db.session.query(Presenca).filter(
-                Presenca.aula_id == aula_obj.id,
-                Presenca.membro_id.in_([m.id for m in membros_do_campus_list])
-            ).count()
+@ctm_bp.route('/classes/criar', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def criar_classe():
+    form = ClasseCTMForm()
+    if form.validate_on_submit():
+        nova_classe = ClasseCTM(nome=form.nome.data, supervisor_id=form.supervisor_id.data)
+        db.session.add(nova_classe)
+        
+        try:
+            db.session.flush()
             
-            faltas_na_aula_no_campus = max(0, total_lideres_ativos_no_campus - presentes_na_aula_no_campus)
+            for i in range(1, form.num_aulas_ciclo.data + 1):
+                nova_aula = AulaModelo(tema=f'Tema da Aula {i}', ordem=i, classe_id=nova_classe.id)
+                db.session.add(nova_aula)
 
-            dados_campus_atual.append({
-                'data': aula_obj.data.strftime('%d/%m'),
-                'presentes': presentes_na_aula_no_campus,
-                'faltas': faltas_na_aula_no_campus
+            db.session.commit()
+            flash('Classe e aulas modelo criadas com sucesso!', 'success')
+            return redirect(url_for('ctm.listar_ctm_unificada', tipo='classes'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao criar Classe: {e}', 'danger')
+    
+    for field, errors in form.errors.items():
+        for error in errors:
+            flash(f'Erro no campo "{form[field].label.text}": {error}', 'danger')
+            
+    return render_template('ctm/form_classe.html', form=form, versao=versao, ano=ano)
+
+@ctm_bp.route('/classes/editar/<int:classe_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def editar_classe(classe_id):
+    classe = ClasseCTM.query.get_or_404(classe_id)
+    form = ClasseCTMForm(obj=classe)
+    
+    if form.validate_on_submit():
+        classe.nome = form.nome.data
+        classe.supervisor_id = form.supervisor_id.data
+        
+        try:
+            db.session.commit()
+            flash('Classe atualizada com sucesso!', 'success')
+            return redirect(url_for('ctm.listar_ctm_unificada'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao atualizar classe: {e}', 'danger')
+            
+    for field, errors in form.errors.items():
+        for error in errors:
+            flash(f'Erro no campo "{form[field].label.text}": {error}', 'danger')
+            
+    return render_template('ctm/form_classe.html', form=form, classe=classe, versao=versao, ano=ano)
+
+@ctm_bp.route('/classes/deletar/<int:classe_id>', methods=['POST'])
+@login_required
+@admin_required
+def deletar_classe(classe_id):
+    classe = ClasseCTM.query.get_or_404(classe_id)
+    if classe.turmas.count() > 0:
+        flash(f'Não é possível deletar a Classe "{classe.nome}" pois ela possui Turmas vinculadas.', 'danger')
+        return redirect(url_for('ctm.listar_ctm_unificada'))
+    
+    try:
+        db.session.delete(classe)
+        db.session.commit()
+        flash('Classe deletada com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao deletar Classe: {e}', 'danger')
+        
+    return redirect(url_for('ctm.listar_ctm_unificada'))
+
+@ctm_bp.route('/turmas/criar', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def criar_turma():
+    form = TurmaCTMForm()
+    if form.validate_on_submit():
+        nova_turma = TurmaCTM(nome=form.nome.data, classe_id=form.classe_id.data, facilitador_id=form.facilitador_id.data)
+        db.session.add(nova_turma)
+        try:
+            db.session.commit()
+            flash('Turma criada com sucesso!', 'success')
+            return redirect(url_for('ctm.listar_ctm_unificada'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao criar Turma: {e}', 'danger')
+            
+    for field, errors in form.errors.items():
+        for error in errors:
+            flash(f'Erro no campo "{form[field].label.text}": {error}', 'danger')
+    
+    return render_template('ctm/form_turma.html', form=form, versao=versao, ano=ano)
+
+@ctm_bp.route('/turmas/editar/<int:turma_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def editar_turma(turma_id):
+    turma = TurmaCTM.query.get_or_404(turma_id)
+    
+    if not turma.ativa:
+        flash(f'Não é possível editar a turma "{turma.nome}", pois ela está arquivada.', 'danger')
+        return redirect(url_for('ctm.listar_ctm_unificada', tipo='turmas'))
+    
+    form = TurmaCTMForm(obj=turma)
+    
+    if form.validate_on_submit():
+        turma.nome = form.nome.data
+        turma.classe_id = form.classe_id.data
+        turma.facilitador_id = form.facilitador_id.data
+        
+        try:
+            db.session.commit()
+            flash('Turma atualizada com sucesso!', 'success')
+            return redirect(url_for('ctm.listar_ctm_unificada', tipo='turmas'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao atualizar turma: {e}', 'danger')
+            
+    if request.method == 'POST':
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f'Erro no campo "{form[field].label.text}": {error}', 'danger')
+            
+    return render_template('ctm/form_turma.html', form=form, turma=turma, versao=versao, ano=ano)
+
+@ctm_bp.route('/turmas/deletar/<int:turma_id>', methods=['POST'])
+@login_required
+@admin_required
+def deletar_turma(turma_id):
+    turma = TurmaCTM.query.get_or_404(turma_id)
+    
+    if not turma.ativa:
+        flash(f'Não é possível deletar a turma "{turma.nome}", pois ela está arquivada.', 'danger')
+        return redirect(url_for('ctm.listar_ctm_unificada', tipo='turmas'))
+    
+    if len(turma.alunos) > 0 or turma.aulas_realizadas.count() > 0:
+        flash(f'Não é possível deletar a Turma "{turma.nome}" pois ela possui Alunos ou Aulas Realizadas vinculados.', 'danger')
+        return redirect(url_for('ctm.listar_ctm_unificada', tipo='turmas'))
+
+    try:
+        db.session.delete(turma)
+        db.session.commit()
+        flash('Turma deletada com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao deletar Turma: {e}', 'danger')
+        
+    return redirect(url_for('ctm.listar_ctm_unificada', tipo='turmas'))
+
+@ctm_bp.route('/turmas/arquivar/<int:turma_id>', methods=['GET', 'POST'])
+@login_required
+@group_permission_required(TurmaCTM, 'edit', 'facilitador')
+def arquivar_turma(turma_id):
+    turma = TurmaCTM.query.get_or_404(turma_id)
+
+    if request.method == 'POST':
+        for aluno in turma.alunos:
+            status = request.form.get(f'status_{aluno.id}')
+            if status:
+                conclusao = ConclusaoCTM.query.filter_by(membro_id=aluno.id, turma_id=turma.id).first()
+                if not conclusao:
+                    conclusao = ConclusaoCTM(membro_id=aluno.id, turma_id=turma.id, status_conclusao=status)
+                    db.session.add(conclusao)
+                else:
+                    conclusao.status_conclusao = status
+                
+                if status == 'Aprovado':
+                    registrar_evento_jornada(
+                        tipo_acao='CONCLUSAO_CTM',
+                        descricao_detalhada=f'Concluiu com aprovação a Classe {turma.classe.nome}.',
+                        usuario_executor=current_user,
+                        membros=[aluno],
+                        turmas_ctm=[turma]
+                    )
+                    aluno.participou_ctm = True
+                else:
+                    registrar_evento_jornada(
+                        tipo_acao='REPROVACAO_CTM',
+                        descricao_detalhada=f'Foi reprovado na Classe {turma.classe.nome}.',
+                        usuario_executor=current_user,
+                        membros=[aluno],
+                        turmas_ctm=[turma]
+                    )
+                    aluno.participou_ctm = False
+        
+        turma.ativa = False
+        db.session.add(turma)
+
+        try:
+            db.session.commit()
+            flash(f'Turma "{turma.nome}" arquivada e alunos avaliados com sucesso!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao arquivar turma: {e}', 'danger')
+            
+        return redirect(url_for('ctm.listar_ctm_unificada'))
+
+    return render_template('ctm/form_arquivar_turma.html', turma=turma, versao=versao, ano=ano)
+
+@ctm_bp.route('/aulas-modelo/criar', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def criar_aula_modelo():
+    form = AulaModeloForm()
+    if form.validate_on_submit():
+        nova_aula = AulaModelo(tema=form.tema.data, ordem=form.ordem.data, classe_id=form.classe_id.data)
+        db.session.add(nova_aula)
+        try:
+            db.session.commit()
+            flash('Aula Modelo cadastrada com sucesso!', 'success')
+            return redirect(url_for('ctm.listar_ctm_unificada'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao cadastrar aula modelo: {e}', 'danger')
+            
+    for field, errors in form.errors.items():
+        for error in errors:
+            flash(f'Erro no campo "{form[field].label.text}": {error}', 'danger')
+    
+    return render_template('ctm/form_aula_modelo.html', form=form, versao=versao, ano=ano)
+
+@ctm_bp.route('/aulas-realizadas/criar', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def criar_aula_realizada():
+    form = AulaRealizadaForm()
+    if form.validate_on_submit():
+        aula_realizada = AulaRealizada(data=form.data.data, turma_id=form.turma_id.data, chave=form.chave.data, aula_modelo_id=form.aula_modelo_id.data)
+        db.session.add(aula_realizada)
+        try:
+            db.session.commit()
+            flash('Aula realizada criada com sucesso!', 'success')
+            return redirect(url_for('ctm.listar_ctm_unificada'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao criar aula realizada: {e}', 'danger')
+    
+    for field, errors in form.errors.items():
+        for error in errors:
+            flash(f'Erro no campo "{form[field].label.text}": {error}', 'danger')
+    
+    return render_template('ctm/form_aula_realizada.html', form=form, versao=versao, ano=ano)
+
+@ctm_bp.route('/aulas-modelo/editar/<int:aula_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def editar_aula_modelo(aula_id):
+    aula = AulaModelo.query.get_or_404(aula_id)
+    form = AulaModeloForm(obj=aula)
+
+    if form.validate_on_submit():
+        aula.tema = form.tema.data
+        aula.ordem = form.ordem.data
+        aula.classe_id = form.classe_id.data
+        
+        try:
+            db.session.commit()
+            flash('Aula Modelo atualizada com sucesso!', 'success')
+            return redirect(url_for('ctm.listar_ctm_unificada'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao atualizar aula modelo: {e}', 'danger')
+            
+    for field, errors in form.errors.items():
+        for error in errors:
+            flash(f'Erro no campo "{form[field].label.text}": {error}', 'danger')
+    
+    return render_template('ctm/form_aula_modelo.html', form=form, aula=aula, versao=versao, ano=ano)
+
+@ctm_bp.route('/aulas-realizadas/editar/<int:aula_realizada_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def editar_aula_realizada(aula_realizada_id):
+    aula_realizada = AulaRealizada.query.get_or_404(aula_realizada_id)
+    form = AulaRealizadaForm(obj=aula_realizada)
+
+    if form.validate_on_submit():
+        aula_realizada.data = form.data.data
+        aula_realizada.turma_id = form.turma_id.data
+        aula_realizada.aula_modelo_id = form.aula_modelo_id.data
+        aula_realizada.chave = form.chave.data
+        
+        try:
+            db.session.commit()
+            flash('Aula Realizada atualizada com sucesso!', 'success')
+            return redirect(url_for('ctm.listar_ctm_unificada'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao atualizar aula realizada: {e}', 'danger')
+            
+    for field, errors in form.errors.items():
+        for error in errors:
+            flash(f'Erro no campo "{form[field].label.text}": {error}', 'danger')
+            
+    return render_template('ctm/form_aula_realizada.html', form=form, aula_realizada=aula_realizada, versao=versao, ano=ano)
+
+@ctm_bp.route('/aulas-modelo/deletar/<int:aula_id>', methods=['POST'])
+@login_required
+@admin_required
+def deletar_aula_modelo(aula_id):
+    aula = AulaModelo.query.get_or_404(aula_id)
+    if aula.realizadas:
+        flash(f'Não é possível deletar a Aula Modelo "{aula.tema}" pois ela possui Aulas Realizadas vinculadas.', 'danger')
+        return redirect(url_for('ctm.listar_ctm_unificada'))
+        
+    try:
+        db.session.delete(aula)
+        db.session.commit()
+        flash('Aula Modelo deletada com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao deletar Aula Modelo: {e}', 'danger')
+        
+    return redirect(url_for('ctm.listar_ctm_unificada'))
+
+@ctm_bp.route('/aulas-realizadas/deletar/<int:aula_realizada_id>', methods=['POST'])
+@login_required
+@admin_required
+def deletar_aula_realizada(aula_realizada_id):
+    aula = AulaRealizada.query.get_or_404(aula_realizada_id)
+    
+    try:
+        db.session.delete(aula)
+        db.session.commit()
+        flash('Aula Realizada deletada com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao deletar Aula Realizada: {e}', 'danger')
+        
+    return redirect(url_for('ctm.listar_ctm_unificada'))
+
+@ctm_bp.route('/classes/<int:classe_id>/painel')
+@login_required
+@group_permission_required(ClasseCTM, 'view', 'supervisor')
+def painel_supervisor_classe(classe_id):
+    classe = ClasseCTM.query.get_or_404(classe_id)
+    
+    dados_turmas = {}
+    for turma in classe.turmas:
+        aulas_realizadas = AulaRealizada.query.filter_by(turma_id=turma.id).order_by(AulaRealizada.data).all()
+        alunos = turma.alunos
+        
+        dados_turmas[turma.id] = {
+            'nome': turma.nome,
+            'facilitador': turma.facilitador.nome_completo if turma.facilitador else 'N/A',
+            'alunos': [],
+            'aulas': aulas_realizadas,
+        }
+        
+        for aluno in alunos:
+            presencas_aluno = {p.aula_realizada_id for p in aluno.presencas if p.aula_realizada.turma_id == turma.id}
+            dados_turmas[turma.id]['alunos'].append({
+                'id': aluno.id,
+                'nome': aluno.nome_completo,
+                'presencas': presencas_aluno,
             })
-        dados_por_campus[campus] = dados_campus_atual
 
-    media_por_campus_query = db.session.query(
-        Membro.campus,
-        db.func.avg(Presenca.avaliacao)
-    ).join(Presenca).filter(Presenca.avaliacao.isnot(None)).group_by(Membro.campus).all()
-    media_por_campus_dict = {campus: round(media, 2) for campus, media in media_por_campus_query}
+    return render_template(
+        'ctm/painel_supervisor.html',
+        classe=classe,
+        dados_turmas=dados_turmas,
+        versao=versao,
+        ano=ano
+    )
 
-    media_por_tema_query = db.session.query(
-        Aula.tema,
-        db.func.avg(Presenca.avaliacao)
-    ).join(Presenca).filter(Presenca.avaliacao.isnot(None)).group_by(Aula.tema).all()
-    media_por_tema_dict = {tema: round(media, 2) for tema, media in media_por_tema_query}
+@ctm_bp.route('/turmas/<int:turma_id>/painel')
+@login_required
+@group_permission_required(TurmaCTM, 'view', 'facilitador')
+def painel_facilitador_turma(turma_id):
+    turma = TurmaCTM.query.get_or_404(turma_id)
+    aulas_realizadas = AulaRealizada.query.filter_by(turma_id=turma.id).order_by(AulaRealizada.data).all()
     
-    if not media_por_campus_dict:
-        media_por_campus_dict = {'Sem Dados': 0}
-    if not media_por_tema_dict:
-        media_por_tema_dict = {'Sem Dados': 0}
-
-    todos_membros_ativos = Membro.query.filter_by(ativo=True).order_by(Membro.nome_completo).all()
+    dados_alunos = []
+    for aluno in turma.alunos:
+        presencas_aluno = {p.aula_realizada_id for p in aluno.presencas if p.aula_realizada.turma_id == turma.id}
+        dados_alunos.append({
+            'id': aluno.id,
+            'nome': aluno.nome_completo,
+            'presencas': presencas_aluno,
+        })
     
-    presenca_manual_form = PresencaManualForm()
-    presenca_manual_form.membro_id.choices = [('', 'Selecione um membro')] + \
-                                            [(m.id, m.nome_completo) for m in todos_membros_ativos]
+    membros_fora_da_turma = Membro.query.filter(
+        Membro.ativo == True,
+        ~Membro.turmas_ctm.any(TurmaCTM.id == turma.id)
+    ).order_by(Membro.nome_completo).all()
 
-    aula_form = AulaForm()
-    if not aula_form.data.data:
-        aula_form.data.data = date.today()
+    aulas_modelo = AulaModelo.query.filter_by(classe_id=turma.classe_id).order_by(AulaModelo.ordem).all()
 
-    return render_template('ctm/admin_dashboard.html',
-                           total_alunos_com_presenca=total_alunos_com_presenca,
-                           media_presentes_ultimas_4_aulas=media_presentes_ultimas_4_aulas,
-                           dados_grafico=dados_por_campus,
-                           campus_list_for_chart_filter=campus_list_for_chart_filter,
-                           media_por_campus=media_por_campus_dict,
-                           media_por_tema=media_por_tema_dict,
-                           aulas=aulas,
-                           nomes=todos_membros_ativos,
-                           versao=versao, ano=ano,
-                           today=date.today(),
-                           presenca_manual_form=presenca_manual_form,
-                           aula_form=aula_form)
+    form_aula_realizada = AulaRealizadaForm(turma_id=turma.id)
+
+    return render_template(
+        'ctm/painel_facilitador.html',
+        turma=turma,
+        aulas_realizadas=aulas_realizadas,
+        dados_alunos=dados_alunos,
+        membros_fora_da_turma=membros_fora_da_turma,
+        aulas_modelo=aulas_modelo,
+        form=form_aula_realizada,
+        versao=versao,
+        ano=ano
+    )
+
+@ctm_bp.route('/turmas/<int:turma_id>/adicionar-aluno', methods=['POST'])
+@login_required
+@group_permission_required(TurmaCTM, 'edit', 'facilitador')
+def adicionar_aluno(turma_id):
+    turma = TurmaCTM.query.get_or_404(turma_id)
+    
+    if not turma.ativa:
+        flash(f'Não é possível adicionar alunos à turma "{turma.nome}", pois ela está arquivada.', 'danger')
+        return redirect(url_for('ctm.painel_facilitador_turma', turma_id=turma.id))
+    
+    membro_id = request.form.get('membro_id')
+    membro = Membro.query.get_or_404(membro_id)
+    
+    if membro in turma.alunos:
+        flash(f'{membro.nome_completo} já é aluno(a) desta turma.', 'warning')
+    else:
+        turma.alunos.append(membro)
+        try:
+            db.session.commit()
+            flash(f'{membro.nome_completo} foi adicionado(a) à turma "{turma.nome}".', 'success')
+            registrar_evento_jornada(
+                tipo_acao='PARTICIPANTE_ADICIONADO_CTM',
+                descricao_detalhada=f'Adicionado(a) à turma {turma.nome} como aluno(a).',
+                usuario_executor=current_user,
+                membros=[membro],
+                turmas_ctm=[turma]
+            )
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao adicionar aluno: {e}', 'danger')
+            
+    return redirect(url_for('ctm.painel_facilitador_turma', turma_id=turma.id))
+
+
+@ctm_bp.route('/turmas/<int:turma_id>/remover-aluno/<int:membro_id>', methods=['POST'])
+@login_required
+@group_permission_required(TurmaCTM, 'edit', 'facilitador')
+def remover_aluno(turma_id, membro_id):
+    turma = TurmaCTM.query.get_or_404(turma_id)
+    
+    if not turma.ativa:
+        flash(f'Não é possível remover alunos da turma "{turma.nome}", pois ela está arquivada.', 'danger')
+        return redirect(url_for('ctm.painel_facilitador_turma', turma_id=turma.id))
+        
+    membro = Membro.query.get_or_404(membro_id)
+    
+    if membro not in turma.alunos:
+        flash(f'{membro.nome_completo} não é aluno(a) desta turma.', 'warning')
+    else:
+        turma.alunos.remove(membro)
+        try:
+            db.session.commit()
+            flash(f'{membro.nome_completo} foi removido(a) da turma "{turma.nome}".', 'success')
+            registrar_evento_jornada(
+                tipo_acao='PARTICIPANTE_REMOVIDO_CTM',
+                descricao_detalhada=f'Removido(a) da turma {turma.nome}.',
+                usuario_executor=current_user,
+                membros=[membro],
+                turmas_ctm=[turma]
+            )
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao remover aluno: {e}', 'danger')
+            
+    return redirect(url_for('ctm.painel_facilitador_turma', turma_id=turma.id))
+
+@ctm_bp.route('/buscar_membros')
+@login_required
+def buscar_membros():
+    search_term = request.args.get('term', '')
+    query = Membro.query.filter(
+        Membro.nome_completo.ilike(f'%{search_term}%'),
+        Membro.ativo == True
+    )
+    membros = query.order_by(Membro.nome_completo).limit(20).all()
+    
+    results = []
+    for membro in membros:
+        results.append({
+            'id': membro.id,
+            'text': membro.nome_completo
+        })
+    
+    return jsonify(items=results)
+
+@ctm_bp.route('/turmas/<int:turma_id>/lancar-presenca', methods=['POST'])
+@login_required
+@group_permission_required(TurmaCTM, 'edit', 'facilitador')
+def lancar_presenca_manual(turma_id):
+    turma = TurmaCTM.query.get_or_404(turma_id)
+    
+    if not turma.ativa:
+        flash(f'Não é possível lançar presença para a turma "{turma.nome}", pois ela está arquivada.', 'danger')
+        return redirect(url_for('ctm.painel_facilitador_turma', turma_id=turma.id))
+
+    membro_id = request.form.get('membro_id')
+    aula_id = request.form.get('aula_id')
+
+    membro = Membro.query.get_or_404(membro_id)
+    aula = AulaRealizada.query.get_or_404(aula_id)
+    
+    presenca_existente = Presenca.query.filter_by(membro_id=membro.id, aula_realizada_id=aula.id).first()
+    
+    if presenca_existente:
+        db.session.delete(presenca_existente)
+        flash(f'Presença de {membro.nome_completo} para a aula de {aula.aula_modelo.tema} desmarcada.', 'info')
+        registrar_evento_jornada(
+            tipo_acao='PRESENCA_CTM_REMOVIDA',
+            descricao_detalhada=f'Presença desmarcada na aula {aula.aula_modelo.tema} da Turma {turma.nome}.',
+            usuario_executor=current_user,
+            membros=[membro],
+            turmas_ctm=[turma])
+    else:
+        nova_presenca = Presenca(membro_id=membro.id, aula_realizada_id=aula.id)
+        db.session.add(nova_presenca)
+        flash(f'Presença de {membro.nome_completo} para a aula de {aula.aula_modelo.tema} marcada.', 'success')
+        registrar_evento_jornada(
+            tipo_acao='PRESENCA_CTM',
+            descricao_detalhada=f'Presença registrada na aula {aula.aula_modelo.tema} da Turma {turma.nome}.',
+            usuario_executor=current_user,
+            membros=[membro],
+            turmas_ctm=[turma])
+
+    try:
+        db.session.commit()
+        presencas_na_turma = Presenca.query.join(AulaRealizada).filter(
+            and_(
+                Presenca.membro_id == membro.id,
+                AulaRealizada.turma_id == turma.id
+            )
+        ).count()
+        
+        numero_aulas_da_classe = AulaModelo.query.filter_by(classe_id=turma.classe_id).count()
+        
+        if presencas_na_turma >= numero_aulas_da_classe:
+            if not membro.participou_ctm:
+                membro.participou_ctm = True
+                registrar_evento_jornada(
+                    tipo_acao='CONCLUSAO_CTM',
+                    descricao_detalhada=f'Concluiu o ciclo de {numero_aulas_da_classe} aulas da Classe {turma.classe.nome}.',
+                    usuario_executor=current_user,
+                    membros=[membro]
+                )
+        else:
+            membro.participou_ctm = False
+            
+        db.session.add(membro)
+        db.session.commit()
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao atualizar presença: {e}', 'danger')
+
+    return redirect(url_for('ctm.painel_facilitador_turma', turma_id=turma.id))
 
 @ctm_bp.route('/presenca', methods=['GET', 'POST'])
 def registrar_presenca_aluno():
@@ -118,65 +636,70 @@ def registrar_presenca_aluno():
             avaliacao = form.avaliacao.data
 
             membro_obj = Membro.query.get(membro_id_selecionado)
-
+            
             if not membro_obj:
-                flash("Membro selecionado não encontrado. Por favor, selecione um nome da lista ou cadastre-se.", 'error')
-                return render_template('ctm/presenca.html', form=form)
+                flash("Membro selecionado não encontrado. Por favor, selecione um nome da lista ou cadastre-se.", 'danger')
+                return render_template('ctm/presenca.html', form=form, versao=versao, ano=ano)
             
             data_hoje = date.today()
-            aula_hoje = Aula.query.filter_by(data=data_hoje).first()
-
-            if not aula_hoje:
-                flash("Sua presença não foi registrada, pois não há aula cadastrada para hoje.", 'error')
-                return render_template('ctm/presenca.html', form=form)
             
-            if palavra_chave_digitada != aula_hoje.chave.lower():
-                flash("Sua presença não foi registrada, pois a palavra-chave está incorreta. 😕", 'error')
-                return render_template('ctm/presenca.html', form=form)
+            aula_realizada_hoje = AulaRealizada.query.filter_by(
+                data=data_hoje,
+                chave=palavra_chave_digitada
+            ).first()
+
+            if not aula_realizada_hoje:
+                flash("Sua presença não foi registrada, pois não há aula cadastrada para hoje com essa palavra-chave.", 'danger')
+                return render_template('ctm/presenca.html', form=form, versao=versao, ano=ano)
+
+            turma_da_aula = aula_realizada_hoje.turma
+            if membro_obj not in turma_da_aula.alunos:
+                turma_da_aula.alunos.append(membro_obj)
+                db.session.add(turma_da_aula)
+                flash(f'{membro_obj.nome_completo} foi matriculado(a) na turma "{turma_da_aula.nome}".', 'info')
 
             ja_registrado = Presenca.query.filter_by(
                 membro_id=membro_obj.id,
-                aula_id=aula_hoje.id
+                aula_realizada_id=aula_realizada_hoje.id
             ).first()
 
             if ja_registrado:
-                flash("Você já registrou presença hoje.", 'warning')
-                db.session.rollback()
-                return render_template('ctm/presenca.html', form=form)
+                flash("Você já registrou presença para a aula de hoje.", 'warning')
+                return render_template('ctm/presenca.html', form=form, versao=versao, ano=ano)
             
             nova_presenca = Presenca(
                 membro_id=membro_obj.id,
-                aula_id=aula_hoje.id,
+                aula_realizada_id=aula_realizada_hoje.id,
                 avaliacao=avaliacao
             )
 
             try:
                 db.session.add(nova_presenca)
                 db.session.commit()
-
-                nova_presenca.registrar_evento_jornada()
-                db.session.commit()
-
-                flash(f'Presença de {membro_obj.nome_completo} para a aula de {aula_hoje.tema} registrada com sucesso!', 'success')
-                return render_template('ctm/confirmacao.html',
-                                       nome=membro_obj.nome_completo, sucesso=True, versao=versao, ano=ano)
+                
+                registrar_evento_jornada(
+                    tipo_acao='PRESENCA_CTM',
+                    descricao_detalhada=f'Presença registrada na aula {aula_realizada_hoje.aula_modelo.tema} da Turma {turma_da_aula.nome}.',
+                    usuario_executor=membro_obj,
+                    membros=[membro_obj],
+                    turmas_ctm=[turma_da_aula]
+                )
+                
+                flash(f'Presença de {membro_obj.nome_completo} para a aula de {aula_realizada_hoje.aula_modelo.tema} registrada com sucesso!', 'success')
+                return render_template('ctm/confirmacao.html', nome=membro_obj.nome_completo, sucesso=True, versao=versao, ano=ano)
             
             except Exception as e:
                 db.session.rollback()
-                flash(f'Erro ao registrar presença: {str(e)}', 'error')
-                return render_template('ctm/presenca.html', form=form)
+                flash(f'Erro ao registrar presença: {str(e)}', 'danger')
+                return render_template('ctm/presenca.html', form=form, versao=versao, ano=ano)
 
         else:
             for field, errors in form.errors.items():
                 for error in errors:
                     flash(f"Erro no campo '{getattr(form, field).label.text if hasattr(form, field) else field}': {error}", 'danger')
-            
-            return render_template('ctm/presenca.html', form=form)
+        return render_template('ctm/presenca.html', form=form, versao=versao, ano=ano)
 
-    return render_template('ctm/presenca.html',
-                           form=form,
-                           versao=versao,
-                           ano=ano)
+    return render_template('ctm/presenca.html', form=form, versao=versao, ano=ano)
 
 @ctm_bp.route('/confirmacao')
 def confirmacao():
@@ -187,108 +710,28 @@ def confirmacao():
                            versao=versao,
                            ano=ano)
 
-@ctm_bp.route('/admin/cadastrar-aula', methods=['POST'])
-@login_required
-@admin_required
-def cadastrar_aula():
-    form = AulaForm()
-    if form.validate_on_submit():
-        data = form.data.data
-        tema = form.tema.data
-        chave = form.chave.data.strip().lower()
-
-        aula_existente = Aula.query.filter_by(data=data).first()
-        if aula_existente:
-            flash(f"Já existe uma aula cadastrada para a data {data.strftime('%d/%m/%Y')}. Edite a existente se necessário.", 'warning')
-            return redirect(url_for('ctm.index'))
-        
-        nova_aula = Aula(data=data, tema=tema, chave=chave)
-        try:
-            db.session.add(nova_aula)
-            db.session.commit()
-            flash('Aula cadastrada com sucesso!', 'success')
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Erro ao cadastrar aula: {str(e)}', 'error')
-    else:
-        for field, errors in form.errors.items():
-            for error in errors:
-                flash(f"Erro no campo {getattr(form, field).label.text}: {error}", 'error')
-
-    return redirect(url_for('ctm.index'))
-
-@ctm_bp.route('/admin/adicionar-presenca-manual', methods=['POST'])
-@login_required
-@admin_required
-def adicionar_presenca_manual():
-    presenca_manual_form = PresencaManualForm()
-
-    if presenca_manual_form.validate_on_submit():
-        aula_id = presenca_manual_form.aula_id.data
-        membro_id = presenca_manual_form.membro_id.data
-        
-        membro = Membro.query.get(membro_id)
-        if not membro:
-            flash(f"Membro selecionado não encontrado.", 'error')
-            return redirect(url_for('ctm.index'))
-        
-        aula = Aula.query.get(aula_id)
-        if not aula:
-            flash("Aula selecionada não encontrada.", 'error')
-            return redirect(url_for('ctm.index'))
-
-        ja_registrado = Presenca.query.filter_by(
-            membro_id=membro.id,
-            aula_id=aula.id
-        ).first()
-
-        if ja_registrado:
-            flash(f"{membro.nome_completo} já possui presença registrada para a aula de {aula.data.strftime('%d/%m/%Y')}.", 'warning')
-            db.session.rollback()
-            return redirect(url_for('ctm.index'))
-
-        nova_presenca = Presenca(
-            membro_id=membro.id,
-            aula_id=aula.id,
-        )
-        try:
-            db.session.add(nova_presenca)
-            db.session.commit()
-
-            nova_presenca.registrar_evento_jornada()
-            db.session.commit
-
-            flash(f'Presença manual de {membro.nome_completo} para a aula de {aula.data.strftime("%d/%m/%Y")} registrada com sucesso!', 'success')
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Erro ao adicionar presença manual: {str(e)}', 'error')
-    else:
-        for field, errors in presenca_manual_form.errors.items():
-            for error in errors:
-                flash(f"Erro no campo {getattr(presenca_manual_form, field).label.text}: {error}", 'error')
-
-    return redirect(url_for('ctm.index'))
-
 @ctm_bp.route('/relatorio')
 @login_required
 @admin_required
 def relatorio_ctm():
-    campus_filtro = request.args.get('campus', '')
-    status_filtro = request.args.get('status', '')
+    turma_id = request.args.get('turma_id', '')
 
-    query_membros = Membro.query.filter_by(ativo=True)
+    query_membros = Membro.query.join(aluno_turma).join(TurmaCTM).order_by(Membro.nome_completo)
     
-    if campus_filtro:
-        query_membros = query_membros.filter_by(campus=campus_filtro)
-    if status_filtro:
-        query_membros = query_membros.filter_by(status=status_filtro)
-    
-    membros_para_relatorio = query_membros.order_by(Membro.nome_completo).all()
+    turma_selecionada = None
+    if turma_id:
+        turma_selecionada = TurmaCTM.query.get_or_404(turma_id)
+        query_membros = query_membros.filter(TurmaCTM.id == turma_id)
 
-    todas_aulas = Aula.query.order_by(Aula.data).all()
+    membros_para_relatorio = query_membros.all()
+    
+    todas_aulas = []
+    if turma_selecionada:
+        todas_aulas = AulaRealizada.query.filter_by(turma_id=turma_selecionada.id).order_by(AulaRealizada.data).all()
+        
     datas_unicas_str = [aula.data.strftime('%Y-%m-%d') for aula in todas_aulas]
-    datas_formatadas = [aula.data.strftime('%d-%m') for aula in todas_aulas]
-    mapa_datas = {aula.data.strftime('%d-%m'): aula.data.strftime('%Y-%m-%d') for aula in todas_aulas}
+    datas_formatadas = [f"{aula.data.strftime('%d-%m')} ({aula.aula_modelo.ordem})" for aula in todas_aulas]
+    mapa_datas = {f"{aula.data.strftime('%d-%m')} ({aula.aula_modelo.ordem})": aula.data.strftime('%Y-%m-%d') for aula in todas_aulas}
 
     relatorio_dados = []
     if todas_aulas:
@@ -296,11 +739,11 @@ def relatorio_ctm():
             linha = {'Nome': membro.nome_completo}
             total_presencas_membro = 0
             
-            presencas_membro_dict = {p.aula.data: p for p in membro.presencas if p.aula in todas_aulas}
-
-            for aula_obj in todas_aulas:
-                presente = aula_obj.data in presencas_membro_dict
-                linha[aula_obj.data.strftime('%Y-%m-%d')] = '✔️' if presente else '❌'
+            presencas_membro_dict = {p.aula_realizada.data: p for p in membro.presencas}
+            
+            for aula_realizada_obj in todas_aulas:
+                presente = aula_realizada_obj.data in presencas_membro_dict
+                linha[aula_realizada_obj.data.strftime('%Y-%m-%d')] = '✔️' if presente else '❌'
                 if presente:
                     total_presencas_membro += 1
             
@@ -312,18 +755,16 @@ def relatorio_ctm():
     
     relatorio_dados.sort(key=lambda x: (-int(x['% Presença'].replace('%', '')), x['Faltas']))
 
-    lista_campus_disponiveis = sorted(Config.CAMPUS.keys())
-    lista_funcoes_disponiveis = sorted(Config.STATUS.keys())
+    lista_turmas = TurmaCTM.query.filter_by(ativa=True).order_by(TurmaCTM.nome).all()
 
     return render_template(
         'ctm/relatorio.html',
         relatorio=relatorio_dados,
         datas_formatadas=datas_formatadas,
         mapa_datas=mapa_datas,
-        campus_filtro=campus_filtro,
-        status_filtro=status_filtro,
-        lista_campus=lista_campus_disponiveis,
-        lista_funcoes=lista_funcoes_disponiveis,
+        turma_id_selecionada=turma_id,
+        turma_selecionada=turma_selecionada,
+        lista_turmas=lista_turmas,
         versao=versao,
         ano=ano
     )
@@ -332,30 +773,31 @@ def relatorio_ctm():
 @login_required
 @admin_required
 def download_excel_relatorio():
-    campus_filtro = request.args.get('campus', '')
-    status_filtro = request.args.get('status', '')
+    turma_id = request.args.get('turma_id', '')
 
-    query_membros = Membro.query.filter_by(ativo=True)
-    if campus_filtro:
-        query_membros = query_membros.filter_by(campus=campus_filtro)
-    if status_filtro:
-        query_membros = query_membros.filter_by(status=status_filtro)
+    query_membros = Membro.query.join(aluno_turma).join(TurmaCTM).order_by(Membro.nome_completo)
     
-    membros_para_relatorio = query_membros.order_by(Membro.nome_completo).all()
+    turma_selecionada = None
+    if turma_id:
+        turma_selecionada = TurmaCTM.query.get_or_404(turma_id)
+        query_membros = query_membros.filter(TurmaCTM.id == turma_id)
 
-
-    todas_aulas = Aula.query.order_by(Aula.data).all()
+    membros_para_relatorio = query_membros.all()
+    
+    todas_aulas = []
+    if turma_selecionada:
+        todas_aulas = AulaRealizada.query.filter_by(turma_id=turma_selecionada.id).order_by(AulaRealizada.data).all()
 
     relatorio_dados = []
     if todas_aulas:
         for membro in membros_para_relatorio:
             linha = {'Nome': membro.nome_completo}
             total_presencas_membro = 0
-            presencas_datas_membro = {p.aula.data for p in membro.presencas if p.aula in todas_aulas}
+            presencas_datas_membro = {p.aula_realizada.data for p in membro.presencas}
 
-            for aula_obj in todas_aulas:
-                presente = aula_obj.data in presencas_datas_membro
-                linha[aula_obj.data.strftime('%Y-%m-%d')] = '✔️' if presente else '❌'
+            for aula_realizada_obj in todas_aulas:
+                presente = aula_realizada_obj.data in presencas_datas_membro
+                linha[f"{aula_realizada_obj.data.strftime('%d/%m/%Y')} - {aula_realizada_obj.aula_modelo.tema}"] = '✔️' if presente else '❌'
                 if presente:
                     total_presencas_membro += 1
             
@@ -377,22 +819,25 @@ def download_excel_relatorio():
             width = max(df_final[col].astype(str).map(len).max(), len(str(col))) + 2
             worksheet.set_column(i, i, width)
     output.seek(0)
-
-    filename = f"relatorio_presencas_{campus_filtro if campus_filtro else 'geral'}{'_'+status_filtro if status_filtro else ''}.xlsx"
+    
+    turma_nome = turma_selecionada.nome if turma_selecionada else "geral"
+    filename = f"relatorio_presencas_{turma_nome}.xlsx"
     return send_file(output,
                      download_name=filename,
                      as_attachment=True,
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-@ctm_bp.route('/buscar_membros')
+@ctm_bp.route('/classes')
 @login_required
-def buscar_membros():
-    search_term = request.args.get('term', '')
+def listar_classes():
+    return redirect(url_for('ctm.listar_ctm_unificada', tipo='classes'))
 
-    membros = Membro.query.filter(Membro.nome_completo.ilike(f'%{search_term}%')).limit(50).all()
+@ctm_bp.route('/turmas')
+@login_required
+def listar_turmas():
+    return redirect(url_for('ctm.listar_ctm_unificada', tipo='turmas'))
 
-    results = []
-    for membro in membros:
-        results.append({'id': membro.id, 'text': membro.nome_completo})
-
-    return jsonify(items=results)
+@ctm_bp.route('/aulas-modelo')
+@login_required
+def listar_aulas_modelo():
+    return redirect(url_for('ctm.listar_ctm_unificada', tipo='aulas_modelo'))

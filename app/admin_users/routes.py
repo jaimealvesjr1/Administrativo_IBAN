@@ -3,7 +3,8 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.auth.models import User
 from app.membresia.models import Membro
-from .forms import UserPermissionsForm, AdminResetPasswordForm, RequestResetPasswordForm, ResetPasswordForm
+from app.decorators import admin_required
+from .forms import RequestResetPasswordForm, ResetPasswordForm, UserEditForm
 from werkzeug.security import generate_password_hash
 from config import Config
 import os
@@ -24,32 +25,36 @@ def list_users():
     users = User.query.order_by(User.email).all()
     return render_template('admin_users/list_users.html', users=users, ano=Config.ANO_ATUAL, versao=Config.VERSAO_APP)
 
-@admin_users_bp.route('/<int:user_id>/edit_permissions', methods=['GET', 'POST'])
-def edit_user_permissions(user_id):
+@admin_users_bp.route('/edit_user/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_user(user_id):
     user = User.query.get_or_404(user_id)
-    
-    form = UserPermissionsForm()
+    form = UserEditForm(original_email=user.email)
 
     if form.validate_on_submit():
-        user.permissions = ','.join(form.permissions.data)
-        db.session.commit()
-        flash(f'Permissões para {user.email} atualizadas com sucesso!', 'success')
-        return redirect(url_for('admin_users.list_users'))
+        user.email = form.email.data
+
+        if form.password.data:
+            user.set_password(form.password.data)
+
+        permissions_list = form.permissions.data
+        user.permissions = ','.join(permissions_list)
+
+        try:
+            db.session.commit()
+            flash('Usuário atualizado com sucesso!', 'success')
+            return redirect(url_for('admin_users.list_users'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao atualizar usuário: {e}', 'danger')
+
     elif request.method == 'GET':
-        form.permissions.data = user.permissions.split(',') if user.permissions else []
+        form.email.data = user.email
+        current_permissions = user.permissions.split(',') if user.permissions else []
+        form.permissions.data = current_permissions
 
-    return render_template('admin_users/edit_user_permissions.html', form=form, user=user, ano=Config.ANO_ATUAL, versao=Config.VERSAO_APP)
-
-@admin_users_bp.route('/<int:user_id>/admin_reset_password', methods=['GET', 'POST'])
-def admin_reset_password(user_id):
-    user = User.query.get_or_404(user_id)
-    form = AdminResetPasswordForm()
-    if form.validate_on_submit():
-        user.set_password(form.new_password.data)
-        db.session.commit()
-        flash(f'Senha para {user.email} redefinida com sucesso!', 'success')
-        return redirect(url_for('admin_users.list_users'))
-    return render_template('admin_users/admin_reset_password.html', form=form, user=user, ano=Config.ANO_ATUAL, versao=Config.VERSAO_APP)
+    return render_template('admin_users/edit_user.html', form=form, user=user)
 
 @admin_users_bp.route('/<int:user_id>/delete', methods=['POST'])
 @login_required

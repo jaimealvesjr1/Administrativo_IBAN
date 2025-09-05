@@ -13,6 +13,9 @@ JORNADA_MEMBRO_ATUALIZADO_SELF = {'class': 'bg-info', 'icon': 'bi-pencil', 'labe
 JORNADA_DESLIGAMENTO = {'class': 'bg-danger', 'icon': 'bi-person-x', 'label': 'Desligamento', 'categoria': 'Membresia'}
 JORNADA_CONTRIBUICAO = {'class': 'bg-primary', 'icon': 'bi-currency-dollar', 'label': 'Contribuição', 'categoria': 'Financeiro'}
 JORNADA_AREA_CRIADA = {'class': 'bg-primary', 'icon': 'bi-plus-circle', 'label': 'Área Criada', 'categoria': 'Grupos'}
+JORNADA_CONCLUSAO_CTM = {'class': 'bg-success', 'icon': 'bi-award', 'label': 'Conclusão de Ciclo', 'categoria': 'CTM'}
+JORNADA_REPROVACAO_CTM = {'class': 'bg-danger', 'icon': 'bi-x-circle', 'label': 'Reprovação de Ciclo', 'categoria': 'CTM'}
+JORNADA_TURMA_ARQUIVADA = {'class': 'bg-secondary', 'icon': 'bi-archive-fill', 'label': 'Turma Arquivada', 'categoria': 'CTM'}
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'chave-secreta-segura'
@@ -23,7 +26,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     TIMEZONE = 'America/Sao_Paulo'
-    VERSAO_APP = '2.5.4 Liderança'
+    VERSAO_APP = '2.6 - Treinamento'
     ANO_ATUAL = datetime.now().year
 
     IDS_OFERTA_ANONIMA_POR_CAMPUS = {
@@ -37,17 +40,17 @@ class Config:
     }
 
     CAMPUS = {
-        'Central':        '#0d6efd',  # primary
-        'Concesso Elias': '#6c757d',  # secondary
-        'Capão':          '#198754',  # success
-        'Cidade Nova':    '#dc3545',  # danger
-        'Perdigão':       '#ffc107',  # warning
-        'Pitangui':       '#0dcaf0',  # info
+        'Central':        '#0d6efd',
+        'Concesso Elias': '#6c757d',
+        'Capão':          '#198754',
+        'Cidade Nova':    '#dc3545',
+        'Perdigão':       '#ffc107',
+        'Pitangui':       '#0dcaf0',
     }
 
     STATUS = {
         'Anfitrião':    '#0d6efd',
-        'Facilitador':  '#198754',
+        'Líder':  '#198754',
         'Supervisor':   '#ffc107',
         #'Pastor':       '#dc3545',  
         'Não-Membro':   '#6c757d', 
@@ -70,4 +73,8 @@ class Config:
         'CADASTRO_NAO_MEMBRO': JORNADA_CADASTRO_MEMBRO,
         'CONTRIBUICAO': JORNADA_CONTRIBUICAO,
         'AREA_CRIADA': JORNADA_AREA_CRIADA,
+        'CONCLUSAO_CTM': JORNADA_CONCLUSAO_CTM,
+        'REPROVACAO_CTM': JORNADA_REPROVACAO_CTM,
+        'TURMA_ARQUIVADA': JORNADA_TURMA_ARQUIVADA,
+        'PARTICIPANTE_ADICIONADO_CTM': JORNADA_PARTICIPANTE_ADICIONADO_PG,
     }

@@ -19,27 +19,6 @@ class MultiCheckboxWidget(widgets.ListWidget):
         html.append('</div>')
         return Markup(''.join(html))
 
-class UserPermissionsForm(FlaskForm):
-    permissions = SelectMultipleField('Permissões',
-                                      coerce=str,
-                                      option_widget=widgets.CheckboxInput(),
-                                      widget=MultiCheckboxWidget())
-    submit = SubmitField('Atualizar Permissões')
-    
-    def __init__(self, *args, **kwargs):
-        super(UserPermissionsForm, self).__init__(*args, **kwargs)
-        self.permissions.choices = [
-            ('admin', 'Admin'),
-            ('membro', 'Membro'),
-            ('financeiro', 'Tesoureiro'),
-        ]
-
-class AdminResetPasswordForm(FlaskForm):
-    new_password = PasswordField('Nova Senha', validators=[DataRequired(), Length(min=6)])
-    confirm_password = PasswordField(
-        'Confirmar Nova Senha', validators=[DataRequired(), EqualTo('new_password')])
-    submit = SubmitField('Redefinir Senha')
-
 class RequestResetPasswordForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     submit = SubmitField('Redefinir Senha')
@@ -54,3 +33,36 @@ class ResetPasswordForm(FlaskForm):
     password2 = PasswordField(
         'Confirmar Nova Senha', validators=[DataRequired(), EqualTo('password')])
     submit = SubmitField('Alterar Senha')
+
+class UserEditForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField(
+        'Nova Senha (opcional)',
+        validators=[
+            Optional(),
+            Length(min=8, message="A senha deve ter no mínimo 8 caracteres.")
+        ]
+    )
+    password2 = PasswordField(
+        'Repetir Nova Senha',
+        validators=[
+            EqualTo('password', message="As senhas não coincidem.")
+        ]
+    )
+    permissions = SelectMultipleField(
+        'Permissões',
+        choices=[('admin', 'Admin'), ('financeiro', 'Financeiro')],
+        widget=widgets.ListWidget(prefix_label=False), 
+        option_widget=widgets.CheckboxInput()
+    )
+    submit = SubmitField('Salvar')
+
+    def __init__(self, original_email, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.original_email = original_email
+
+    def validate_email(self, email):
+        if email.data != self.original_email:
+            user = User.query.filter_by(email=self.email.data).first()
+            if user is not None:
+                raise ValidationError('Este email já está em uso.')

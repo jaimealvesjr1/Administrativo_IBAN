@@ -31,19 +31,18 @@
                     <td>{{ user.email }}</td>
                     <td>
                         {% if user.has_permission('admin') %}
-                            <span class="badge bg-danger me-1">Admin</span>
-                        {% endif %}
-                        {% if user.has_permission('financeiro') %}
-                            <span class="badge bg-info me-1">Financeiro</span>
+                            <span class="badge bg-danger me-1">Administrador</span>
+                        {% elif user.has_permission('financeiro') %}
+                            <span class="badge bg-info me-1">Tesoureiro</span>
                         {% endif %}
                         
                         {% if user.membro %}
                             {% set cargos_lideranca = user.membro.get_cargo_lideranca().split(', ') %}
-                            {% for cargo in cargos_lideranca %}
-                                {% if cargo != 'Nenhum' %}
+                            {% if cargos_lideranca|length > 0 and cargos_lideranca[0] != 'Nenhum' %}
+                                {% for cargo in cargos_lideranca %}
                                     <span class="badge bg-success me-1">{{ cargo }}</span>
-                                {% endif %}
-                            {% endfor %}
+                                {% endfor %}
+                            {% endif %}
                         {% endif %}
 
                         {% if not user.has_permission('admin') and not user.has_permission('financeiro') and (not user.membro or user.membro.get_cargo_lideranca() == 'Nenhum') %}
@@ -51,8 +50,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{{ url_for('admin_users.edit_user_permissions', user_id=user.id) }}" class="btn btn-sm btn-outline-primary me-2">Editar</a>
-                        <a href="{{ url_for('admin_users.admin_reset_password', user_id=user.id) }}" class="btn btn-sm btn-outline-warning">Redefinir Senha</a>
+                        <a href="{{ url_for('admin_users.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-primary me-2">Editar</a>
                         {% if user.id != current_user.id %}
                         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" data-user-id="{{ user.id }}" data-user-email="{{ user.email }}">
                             Excluir

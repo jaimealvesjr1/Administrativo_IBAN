@@ -1,0 +1,61 @@
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit %}
+{% block title %}Editar Usuário · IBAN{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+        <h2 class="text-center"><strong>Editar Usuário<br>{{ user.membro.nome_completo if user.membro else user.email }}</strong></h2>
+
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <p class="text-muted text-center mb-4">Atualize as informações de acesso, senha e permissões do usuário.</p>
+
+            <div class="mb-3">
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-control") }}
+                {% if form.email.errors %}
+                    {% for error in form.email.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                {% endif %}
+            </div>
+
+            <hr class="my-4">
+
+            <h5 class="card-title mb-3">Redefinir Senha</h5>
+            <p class="text-muted small">Preencha apenas se quiser alterar a senha atual. Deixe em branco para manter a mesma.</p>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    {{ form.password.label(class="form-label") }}
+                    {{ form.password(class="form-control") }}
+                    {% if form.password.errors %}
+                        {% for error in form.password.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    {{ form.password2.label(class="form-label") }}
+                    {{ form.password2(class="form-control") }}
+                    {% if form.password2.errors %}
+                        {% for error in form.password2.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <h5 class="card-title mb-3">Permissões</h5>
+            <p class="text-muted small">Selecione as permissões que este usuário deve ter.</p>
+            <div class="mb-3">
+                <div class="form-check">
+                    {{ form.permissions }}
+                </div>
+            </div>
+            
+            {{ submit('Salvar') }}
+        </form>
+        <div class="text-end mt-3">
+            <a href="{{ url_for('admin_users.list_users') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -3,6 +3,7 @@ from datetime import datetime, date, timedelta
 from sqlalchemy import String, func
 from sqlalchemy.orm import relationship
 from flask import url_for
+from app.ctm.models import Presenca, AulaRealizada
 
 class Membro(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -26,7 +27,8 @@ class Membro(db.Model):
     batizado_aclamado = db.Column(db.Boolean, nullable=False, default=False)
 
     presencas = db.relationship('Presenca', backref='membro', lazy=True)
-
+    pg_participante = relationship('PequenoGrupo', back_populates='participantes', foreign_keys='Membro.pg_id')
+    
     areas_supervisionadas = relationship('Area', secondary='area_supervisores', back_populates='supervisores')
     setores_supervisionados = relationship('Setor', secondary='setor_supervisores', back_populates='supervisores')
     pgs_facilitados = relationship('PequenoGrupo', back_populates='facilitador', foreign_keys='PequenoGrupo.facilitador_id')
@@ -52,6 +54,14 @@ class Membro(db.Model):
             Contribuicao.membro_id == self.id,
             Contribuicao.tipo == 'Dízimo',
             Contribuicao.data_lanc >= trinta_dias_atras
+        ).first() is not None
+
+    @property
+    def presente_ctm_ultimos_30d(self):
+        trinta_dias_atras = datetime.now() - timedelta(days=30)
+        return db.session.query(Presenca).join(AulaRealizada).filter(
+            Presenca.membro_id == self.id,
+            AulaRealizada.data >= trinta_dias_atras
         ).first() is not None
 
     def __repr__(self):

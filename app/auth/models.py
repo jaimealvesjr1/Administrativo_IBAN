@@ -46,61 +46,45 @@ class User(db.Model, UserMixin):
 
         membro_logado = self.membro
 
-        # Permissões para ÁREA
         if isinstance(entity, Area):
-            # Coordenador da área tem todas as permissões sobre sua área
-            if entity.coordenador_id == membro_logado.id:
+            if membro_logado in entity.supervisores:
                 return True
             return False
 
-        # Permissões para SETOR
         if isinstance(entity, Setor):
-            # Supervisor do setor tem todas as permissões sobre seu setor
-            if entity.supervisor_id == membro_logado.id:
+            if membro_logado in entity.supervisores:
                 return True
-            # Coordenador da área pai pode editar ou visualizar
-            if entity.area and entity.area.coordenador_id == membro_logado.id:
-                # Coordenador pode editar e gerenciar metas de setores abaixo dele
+            if entity.area and membro_logado in entity.area.supervisores:
                 if action in ['edit', 'manage_metas_setor', 'view']:
                     return True
             return False
 
-        # Permissões para PEQUENO GRUPO
         if isinstance(entity, PequenoGrupo):
-            # Facilitador pode ver, editar, gerenciar participantes e metas
             if entity.facilitador_id == membro_logado.id:
                 if action in ['view', 'edit', 'manage_participants', 'manage_metas_pg']:
                     return True
-            # Anfitrião pode ver e gerenciar participantes e metas
             if entity.anfitriao_id == membro_logado.id:
                 if action in ['view', 'manage_participants', 'manage_metas_pg']:
                     return True
-            # Supervisor do setor pai pode ver, editar, gerenciar participantes e metas
-            if entity.setor and entity.setor.supervisor_id == membro_logado.id:
+            if entity.setor and membro_logado in entity.setor.supervisores:
                 if action in ['view', 'edit', 'manage_participants', 'manage_metas_pg']:
                     return True
-            # Coordenador da área pai pode apenas visualizar
-            if action == 'view' and entity.setor and entity.setor.area and entity.setor.area.coordenador_id == membro_logado.id:
+            if action == 'view' and entity.setor and entity.setor.area and membro_logado in entity.setor.area.supervisores:
                 return True
             return False
         
-        # Permissões para MEMBRO (perfil individual)
         if isinstance(entity, Membro):
-            # O próprio membro pode ver seu perfil
             if entity.id == membro_logado.id:
                 return True
-            # Facilitador/Anfitrião podem ver os participantes do seu PG
             if membro_logado.pgs_facilitados.filter_by(id=entity.pg_id).first() or \
                membro_logado.pgs_anfitriados.filter_by(id=entity.pg_id).first():
                 return True
-            # Supervisor pode ver membros dos PGs de seu setor
             for setor in membro_logado.setores_supervisionados:
-                if entity.pg_participante in setor.pequenos_grupos.with_parent(setor).all():
+                if entity.pg_participante in setor.pequenos_grupos.all():
                     return True
-            # Coordenador pode ver membros dos PGs de sua área
-            for area in membro_logado.areas_coordenadas:
+            for area in membro_logado.areas_supervisionadas:
                 for setor in area.setores:
-                    if entity.pg_participante in setor.pequenos_grupos.with_parent(setor).all():
+                    if entity.pg_participante in setor.pequenos_grupos.all():
                         return True
             return False
             

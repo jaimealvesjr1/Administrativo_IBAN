@@ -1,0 +1,39 @@
+{% set show_navbar = true %}
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit, danger %}
+
+{% block title %}{% if aula %}Editar Aula{% else %}Criar Aula Modelo{% endif %} · CTM{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+        <h2 class="text-center">
+            <strong>{% if aula %}Editar Aula {{ aula.ordem }} - {{ aula.tema }}{% else %}Criar Nova Aula Modelo{% endif %}</strong>
+        </h2>
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            
+            <div class="mb-3">
+                {{ form.tema.label(class="form-label") }}
+                {{ form.tema(class="form-control") }}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.ordem.label(class="form-label") }}
+                {{ form.ordem(class="form-control") }}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.classe_id.label(class="form-label") }}
+                {{ form.classe_id(class="form-select") }}
+            </div>
+
+            {{ submit('Salvar Aula') }}
+            <div class="text-end mt-3">
+                <a href="{{ url_for('ctm.listar_ctm_unificada') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -28,6 +28,9 @@ def financeiro_required(f):
 def leader_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        if current_user.is_authenticated and current_user.has_permission('admin'):
+            return f(*args, **kwargs)
+
         if not current_user.is_authenticated or not current_user.is_leader():
             flash('Você não tem permissão de liderança para acessar esta página.', 'danger')
             return redirect(url_for('main.index'))

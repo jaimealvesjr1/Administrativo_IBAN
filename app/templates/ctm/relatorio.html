@@ -6,66 +6,65 @@
 <div class="container">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><strong>Relatório de Presenças</strong></h2>
-    <a href="{{ url_for('ctm.download_excel_relatorio', campus=campus_filtro, status=status_filtro) }}" class="btn btn-success">
+    {% if turma_selecionada %}
+    <a href="{{ url_for('ctm.download_excel_relatorio', turma_id=turma_id_selecionada) }}" class="btn btn-success">
       <i class="bi bi-download"></i> Baixar Excel
     </a>
+    {% endif %}
   </div>
+
   <form method="get" class="row g-3 mb-4" action="{{ url_for('ctm.relatorio_ctm') }}">
-    <div class="col-md-4">
-      <label for="status" class="form-label">Filtrar por Status:</label>
-      <select name="status" id="status" class="form-select">
-        <option value="">Todos</option>
-        {% for s in lista_funcoes %}
-          <option value="{{ s }}" {% if s == status_filtro %}selected{% endif %}>{{ s }}</option>
+    <div class="col-md-6">
+      <label for="turma_id" class="form-label">Filtrar por Turma:</label>
+      <select name="turma_id" id="turma_id" class="form-select">
+        <option value="">Selecione uma Turma</option>
+        {% for turma in lista_turmas %}
+          <option value="{{ turma.id }}" {% if turma.id == turma_id_selecionada|int %}selected{% endif %}>{{ turma.nome }} - {{ turma.classe.nome }}</option>
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-4">
-      <label for="campus" class="form-label">Filtrar por Campus:</label>
-      <select name="campus" id="campus" class="form-select">
-        <option value="">Todos</option>
-        {% for c in lista_campus %}
-          <option value="{{ c }}" {% if c == campus_filtro %}selected{% endif %}>{{ c }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-4 d-flex align-items-end">
+    <div class="col-md-6 d-flex align-items-end">
       <button type="submit" class="btn btn-primary me-2">Filtrar</button>
       <a href="{{ url_for('ctm.relatorio_ctm') }}" class="btn btn-outline-secondary">Limpar Filtros</a>
     </div>
   </form>
 
-  {% if relatorio %}
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped">
-        <thead class="table-light">
-          <tr>
-            <th>Nome</th>
-            {% for data_formatada in datas_formatadas %}
-              <th>{{ data_formatada }}</th>
-            {% endfor %}
-            <th>Faltas</th>
-            <th>% Presença</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for linha in relatorio %}
+  {% if turma_selecionada %}
+    <h4>Turma: {{ turma_selecionada.nome }} ({{ turma_selecionada.classe.nome }})</h4>
+    {% if relatorio %}
+      <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+          <thead class="table-light">
             <tr>
-              <td class="text-start fw-medium">{{ linha['Nome'] }}</td>
+              <th>Nome</th>
               {% for data_formatada in datas_formatadas %}
-                <td class="{{ 'ok' if linha[mapa_datas[data_formatada]] == '✔️' else 'falta' }}">
-                  {{ linha[mapa_datas[data_formatada]] }}
-                </td>
+                <th>{{ data_formatada }}</th>
               {% endfor %}
-              <td class="fw-bold">{{ linha['Faltas'] }}</td>
-              <td class="fw-bold">{{ linha['% Presença'] }}</td>
+              <th>Faltas</th>
+              <th>% Presença</th>
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {% for linha in relatorio %}
+              <tr>
+                <td class="text-start fw-medium">{{ linha['Nome'] }}</td>
+                {% for data_formatada in datas_formatadas %}
+                  <td class="{{ 'ok' if linha[mapa_datas[data_formatada]] == '✔️' else 'falta' }}">
+                    {{ linha[mapa_datas[data_formatada]] }}
+                  </td>
+                {% endfor %}
+                <td class="fw-bold">{{ linha['Faltas'] }}</td>
+                <td class="fw-bold">{{ linha['% Presença'] }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>Nenhum relatório de presença disponível para a turma selecionada.</p>
+    {% endif %}
   {% else %}
-    <p>Nenhum relatório de presença disponível com os filtros selecionados.</p>
+    <p>Selecione uma turma para gerar o relatório de presença.</p>
   {% endif %}
 </div>
 {% endblock %}

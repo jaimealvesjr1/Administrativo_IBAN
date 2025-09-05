@@ -8,7 +8,8 @@ from app.auth.models import User
 from app.jornada.models import registrar_evento_jornada, JornadaEvento
 from config import Config
 from app.decorators import admin_required, group_permission_required, leader_required
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
+from app.ctm.models import TurmaCTM, AulaRealizada, Presenca, ConclusaoCTM
 
 grupos_bp = Blueprint('grupos', __name__, template_folder='templates')
 ano=Config.ANO_ATUAL
@@ -20,54 +21,88 @@ versao=Config.VERSAO_APP
 @login_required
 @leader_required
 def listar_grupos_unificada():
+    busca = request.args.get('busca', '')
+    setor_filtro = request.args.get('setor_filtro', '')
+    area_filtro = request.args.get('area_filtro', '')
+    tipo_selecionado = request.args.get('tipo', 'pgs')
+
     if current_user.has_permission('admin'):
-        areas = Area.query.order_by(Area.nome).all()
-        setores = Setor.query.order_by(Setor.nome).all()
-        pgs = PequenoGrupo.query.order_by(PequenoGrupo.nome).all()
+        areas_query = Area.query.order_by(Area.nome)
+        setores_query = Setor.query.order_by(Setor.nome)
+        pgs_query = PequenoGrupo.query.order_by(PequenoGrupo.nome)
     elif current_user.membro:
-        areas_supervisionadas = current_user.membro.areas_supervisionadas
-        setores_supervisionados = current_user.membro.setores_supervisionados
-        pgs_liderados = PequenoGrupo.query.filter(
-            (PequenoGrupo.facilitador_id == current_user.membro.id) |
-            (PequenoGrupo.anfitriao_id == current_user.membro.id)
-        ).all()
+        membro_logado = current_user.membro
 
-        areas = list(areas_supervisionadas)
-        setores = list(setores_supervisionados)
-        pgs = list(pgs_liderados)
+        areas_do_lider = list(membro_logado.areas_supervisionadas)
+        setores_do_lider = list(membro_logado.setores_supervisionados)
+        pgs_do_lider = list(PequenoGrupo.query.filter(
+            db.or_(
+                PequenoGrupo.facilitador_id == membro_logado.id,
+                PequenoGrupo.anfitriao_id == membro_logado.id
+            )
+        ).all())
 
-        for area in areas_supervisionadas:
-            for setor in area.setores:
-                if setor not in setores:
-                    setores.append(setor)
-                for pg in setor.pequenos_grupos:
-                    if pg not in pgs:
-                        pgs.append(pg)
+        for area in areas_do_lider:
+            for setor_na_area in area.setores:
+                if setor_na_area not in setores_do_lider:
+                    setores_do_lider.append(setor_na_area)
+                for pg_no_setor in setor_na_area.pequenos_grupos:
+                    if pg_no_setor not in pgs_do_lider:
+                        pgs_do_lider.append(pg_no_setor)
 
-        for setor in setores_supervisionados:
-            for pg in setor.pequenos_grupos:
-                if pg not in pgs:
-                    pgs.append(pg)
+        area_ids = [a.id for a in areas_do_lider]
+        setor_ids = [s.id for s in setores_do_lider]
+        pg_ids = [pg.id for pg in pgs_do_lider]
 
-        areas = sorted(areas, key=lambda a: a.nome)
-        setores = sorted(setores, key=lambda s: s.nome)
-        pgs = sorted(pgs, key=lambda p: p.nome)
+        areas_query = db.session.query(Area).filter(Area.id.in_(area_ids)).order_by(Area.nome)
+        setores_query = db.session.query(Setor).filter(Setor.id.in_(setor_ids)).order_by(Setor.nome)
+        pgs_query = db.session.query(PequenoGrupo).filter(PequenoGrupo.id.in_(pg_ids)).order_by(PequenoGrupo.nome)
 
     else:
         flash('Você não tem permissão para visualizar grupos.', 'danger')
         return redirect(url_for('main.index'))
 
-    tipo_selecionado = request.args.get('tipo', 'pgs')
+    if busca:
+        if tipo_selecionado == 'areas':
+            areas_query = areas_query.filter(Area.nome.ilike(f'%{busca}%'))
+        elif tipo_selecionado == 'setores':
+            setores_query = setores_query.filter(Setor.nome.ilike(f'%{busca}%'))
+        elif tipo_selecionado == 'pgs':
+            pgs_query = pgs_query.filter(PequenoGrupo.nome.ilike(f'%{busca}%'))
+
+    if area_filtro:
+        if tipo_selecionado == 'setores':
+            setores_query = setores_query.filter(Setor.area_id == area_filtro)
+        elif tipo_selecionado == 'pgs':
+            pgs_query = pgs_query.filter(PequenoGrupo.setor.has(Setor.area_id == area_filtro))
+    
+    if setor_filtro:
+        if tipo_selecionado == 'pgs':
+            pgs_query = pgs_query.filter(PequenoGrupo.setor_id == setor_filtro)
+
+    areas = areas_query.all()
+    setores = setores_query.all()
+    pgs = pgs_query.all()
+
+    todas_areas = Area.query.order_by(Area.nome).all()
+    todos_setores = Setor.query.order_by(Setor.nome).all()
+    
     return render_template('grupos/listagem_unificada.html',
                            areas=areas,
                            setores=setores,
                            pgs=pgs,
                            tipo_selecionado=tipo_selecionado,
+                           busca=busca,
+                           setor_filtro=setor_filtro,
+                           area_filtro=area_filtro,
+                           todas_areas=todas_areas,
+                           todos_setores=todos_setores,
                            ano=ano, versao=versao,
                            config=Config)
 
 @grupos_bp.route('/areas')
 @login_required
+@admin_required
 def listar_areas():
     return redirect(url_for('grupos.listar_grupos_unificada', tipo='areas'))
 
@@ -114,7 +149,37 @@ def criar_area():
 def detalhes_area(area_id):
     area = Area.query.get_or_404(area_id)
     jornada_eventos = area.jornada_eventos_area.order_by(JornadaEvento.data_evento.desc()).all()
-    return render_template('grupos/areas/detalhes.html', area=area, jornada_eventos=jornada_eventos, config=Config, ano=ano, versao=versao)
+    
+    dizimistas_por_setor = []
+    ctm_por_setor = []
+    membros_por_setor = []
+
+    for setor in area.setores:
+        membros_do_setor = setor.membros_do_setor_completos
+        num_dizimistas = sum(1 for membro in membros_do_setor if membro.contribuiu_dizimo_ultimos_30d)
+        dizimistas_por_setor.append({
+            'setor_nome': setor.nome,
+            'count': num_dizimistas
+        })
+
+        num_ctm_frequentes = sum(1 for membro in membros_do_setor if membro.presente_ctm_ultimos_30d)
+        ctm_por_setor.append({
+            'setor_nome': setor.nome,
+            'count': num_ctm_frequentes
+        })
+
+        membros_por_setor.append({
+            'setor_nome': setor.nome,
+            'count': len(membros_do_setor)
+        })
+
+    return render_template('grupos/areas/detalhes.html',
+                           area=area,
+                           jornada_eventos=jornada_eventos,
+                           dizimistas_por_setor=dizimistas_por_setor,
+                           ctm_por_setor=ctm_por_setor,
+                           membros_por_setor=membros_por_setor,
+                           config=Config, ano=ano, versao=versao)
 
 @grupos_bp.route('/areas/editar/<int:area_id>', methods=['GET', 'POST'])
 @login_required
@@ -365,9 +430,43 @@ def criar_pg():
 @group_permission_required(PequenoGrupo, 'view')
 def detalhes_pg(pg_id):
     pg = PequenoGrupo.query.get_or_404(pg_id)
-    membros_disponiveis = Membro.query.filter(Membro.id != pg.facilitador_id, Membro.id != pg.anfitriao_id, Membro.pg_id == None).order_by(Membro.nome_completo).all()
+    
+    participantes_pg_ids = [m.id for m in pg.membros_completos]
+    ctm_dados_alunos = []
+
+    for membro in pg.membros_completos:
+        if membro.turmas_ctm:
+            for turma_ctm in membro.turmas_ctm:
+                total_aulas = AulaRealizada.query.filter_by(turma_id=turma_ctm.id).count()
+                
+                total_presencas = Presenca.query.filter(
+                    and_(
+                        Presenca.membro_id == membro.id,
+                        Presenca.aula_realizada.has(AulaRealizada.turma_id == turma_ctm.id)
+                    )
+                ).count()
+                
+                conclusao = ConclusaoCTM.query.filter_by(membro_id=membro.id, turma_id=turma_ctm.id).first()
+                status_conclusao = conclusao.status_conclusao if conclusao else 'Em andamento'
+                
+                ctm_dados_alunos.append({
+                    'membro': membro,
+                    'turma': turma_ctm,
+                    'classe': turma_ctm.classe,
+                    'total_aulas': total_aulas,
+                    'total_presencas': total_presencas,
+                    'status_conclusao': status_conclusao
+                })
+
     jornada_eventos = pg.jornada_eventos_pg.order_by(JornadaEvento.data_evento.desc()).all()
-    return render_template('grupos/pgs/detalhes.html', pg=pg, membros_disponiveis=membros_disponiveis, jornada_eventos=jornada_eventos, config=Config, ano=ano, versao=versao)
+    membros_disponiveis = Membro.query.filter(Membro.id.notin_(participantes_pg_ids), Membro.pg_id == None).order_by(Membro.nome_completo).all()
+
+    return render_template('grupos/pgs/detalhes.html',
+                           pg=pg,
+                           ctm_dados_alunos=ctm_dados_alunos,
+                           membros_disponiveis=membros_disponiveis,
+                           jornada_eventos=jornada_eventos,
+                           config=Config, ano=ano, versao=versao)
 
 @grupos_bp.route('/pgs/editar/<int:pg_id>', methods=['GET', 'POST'])
 @login_required

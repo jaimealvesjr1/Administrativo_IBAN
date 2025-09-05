@@ -1,0 +1,54 @@
+{% extends "base/layout.html" %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit %}
+
+{% block title %}{% if aula_realizada %}Editar Aula{% else %}Criar Aula Realizada{% endif %} · CTM{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+        <h2 class="text-center">
+            <strong>{% if aula_realizada %}Editar Aula Realizada{% else %}Criar Nova Aula Realizada{% endif %}</strong>
+        </h2>
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            
+            {% if form.errors %}
+                <div class="alert alert-danger mt-3" role="alert">
+                    <strong>Erro de Validação:</strong>
+                    <ul>
+                        {% for field, errors in form.errors.items() %}
+                            <li>{{ form[field].label.text }}: {{ errors|join(', ') }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <div class="mb-3">
+                {{ form.data.label(class="form-label") }}
+                {{ form.data(class="form-control", type="date") }}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.turma_id.label(class="form-label") }}
+                {{ form.turma_id(class="form-select") }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.aula_modelo_id.label(class="form-label") }}
+                {{ form.aula_modelo_id(class="form-select") }}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.chave.label(class="form-label") }}
+                {{ form.chave(class="form-control") }}
+            </div>
+
+            {{ submit('Salvar Alterações' if aula_realizada else 'Salvar Aula Realizada') }}
+            <div class="text-end mt-3">
+                <a href="{{ url_for('ctm.listar_ctm_unificada', tipo='aulas_realizadas') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

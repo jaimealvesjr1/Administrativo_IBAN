@@ -10,7 +10,6 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><strong>Área {{ area.nome }}</strong></h2>
         <div class="btn-group">
-            <a href="{{ url_for('grupos.editar_area', area_id=area.id) }}" class="btn btn-primary">Editar Cadastro</a>
             <a href="{{ url_for('grupos.listar_grupos_unificada') }}" class="btn btn-outline-secondary">Voltar à Lista</a>
         </div>
     </div>
@@ -82,28 +81,47 @@
                 <a href="{{ url_for('grupos.gerenciar_metas_setores_da_area', area_id=area.id) }}" class="btn btn-secondary">Distribuir Metas</a>
                 </div>
             </div>
+        </div>
+        <div class="col-md-8">
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">Membros por Campus</h5>
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Dizimistas por Setor (Últimos 30 dias)</h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="campusFrequenciaChart"></canvas>
+                    <canvas id="dizimistasChart"></canvas>
                 </div>
             </div>
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">Dizimistas nos Últimos 30 Dias</h5>
+                    <h5 class="mb-0">Distribuição de Membros</h5>
                 </div>
                 <div class="card-body">
-                    <div class="text-center">
-                        <canvas id="dizimistasChart" style="max-height: 250px;"></canvas>
-                        <p class="mt-2"><strong>Total de Participantes:</strong> {{ area.num_participantes_totais_agregado }}</p>
+                    <ul class="nav nav-pills nav-fill mb-3" id="pills-tab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pills-campus-tab" data-bs-toggle="pill" data-bs-target="#pills-campus" type="button" role="tab" aria-controls="pills-campus" aria-selected="true">Por Campus</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-setor-tab" data-bs-toggle="pill" data-bs-target="#pills-setor" type="button" role="tab" aria-controls="pills-setor" aria-selected="false">Por Setor</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="pills-tabContent">
+                        <div class="tab-pane fade show active" id="pills-campus" role="tabpanel" aria-labelledby="pills-campus-tab">
+                            <canvas id="campusFrequenciaChart"></canvas>
+                        </div>
+                        <div class="tab-pane fade" id="pills-setor" role="tabpanel" aria-labelledby="pills-setor-tab">
+                            <canvas id="setorMembrosChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-8">
-            {{ render_jornada_timeline(jornada_eventos) }}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Participantes CTM por Setor</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="ctmFrequentesChart"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -113,31 +131,29 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     $(document).ready(function() {
-        var dizimistasData = {{ area.distribuicao_dizimistas_30d|tojson|safe }}; 
-        var dizimistasLabels = ['Dizimistas', 'Não Dizimistas'];
-        var dizimistasCounts = [dizimistasData.dizimistas, dizimistasData.nao_dizimistas];
+        var dizimistasData = {{ dizimistas_por_setor|tojson|safe }};
+        var dizimistasLabels = dizimistasData.map(item => item.setor_nome);
+        var dizimistasCounts = dizimistasData.map(item => item.count);
         
         var ctxDizimistas = document.getElementById('dizimistasChart').getContext('2d');
         new Chart(ctxDizimistas, {
-            type: 'pie',
+            type: 'bar',
             data: {
                 labels: dizimistasLabels,
                 datasets: [{
+                    label: 'Número de Dizimistas',
                     data: dizimistasCounts,
-                    backgroundColor: ['#42f56c', '#f54242'],
-                    hoverBackgroundColor: ['#4bc0c0', '#ff6384']
+                    backgroundColor: 'rgba(25, 135, 84, 0.6)',
+                    borderColor: 'rgba(25, 135, 84, 1)',
+                    borderWidth: 1
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
-                    title: {
-                        display: false,
-                        text: 'Proporção de Dizimistas nos Últimos 30 Dias'
+                scales: {
+                    y: {
+                        beginAtZero: true
                     }
                 }
             }
@@ -178,6 +194,62 @@
                             display: false,
                         },
                         ticks: {stepSize: 1}
+                    }
+                }
+            }
+        });
+        var ctmData = {{ ctm_por_setor|tojson|safe }};
+        var ctmLabels = ctmData.map(item => item.setor_nome);
+        var ctmCounts = ctmData.map(item => item.count);
+        
+        var ctxCTM = document.getElementById('ctmFrequentesChart').getContext('2d');
+        new Chart(ctxCTM, {
+            type: 'bar',
+            data: {
+                labels: ctmLabels,
+                datasets: [{
+                    label: 'Frequentes no CTM',
+                    data: ctmCounts,
+                    backgroundColor: 'rgba(13, 202, 240, 0.6)',
+                    borderColor: 'rgba(13, 202, 240, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        var setorLabels = {{ membros_por_setor|tojson|safe }}.map(item => item.setor_nome);
+        var setorData = {{ membros_por_setor|tojson|safe }}.map(item => item.count);
+        
+        var ctxSetor = document.getElementById('setorMembrosChart').getContext('2d');
+        new Chart(ctxSetor, {
+            type: 'bar',
+            data: {
+                labels: setorLabels,
+                datasets: [{
+                    label: 'Número de Membros',
+                    data: setorData,
+                    backgroundColor: 'rgba(108, 117, 125, 0.6)',
+                    borderColor: 'rgba(108, 117, 125, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
                     }
                 }
             }

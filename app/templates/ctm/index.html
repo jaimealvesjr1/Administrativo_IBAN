@@ -1,0 +1,109 @@
+{% set show_navbar = true %}
+{% extends "base/layout.html" %}
+{% from 'base/components/buttons.html' import primary %}
+
+{% block title %}Painel CTM · IBAN{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><strong>Painel Administrativo do CTM</strong></h2>
+        <a href="{{ url_for('ctm.listar_ctm_unificada') }}" class="btn btn-primary">Acessar Cadastros</a>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
+        <div class="col">
+            <div class="card text-white bg-primary shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Classes Cadastradas</h5>
+                    <h1 class="card-text display-4">{{ classes_total }}</h1>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-white bg-success shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Turmas Ativas</h5>
+                    <h1 class="card-text display-4">{{ turmas_total }}</h1>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-white bg-info shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Aulas Modelo</h5>
+                    <h1 class="card-text display-4">{{ aulas_modelo_total }}</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-lg p-4 rounded-4 mt-4">
+                <h3 class="mb-3 text-center">Distribuição de Alunos por Turma e Campus</h3>
+                <div style="height: 400px;"><canvas id="alunosPorTurmaChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const campusPorTurma = {{ campus_por_turma|tojson|safe }};
+        const campusColors = {{ config.CAMPUS|tojson|safe }};
+        const turmas = Object.keys(campusPorTurma);
+        const datasets = [];
+        const allCampus = [...new Set(turmas.flatMap(turma => Object.keys(campusPorTurma[turma])))];
+
+        allCampus.forEach(campus => {
+            datasets.push({
+                label: campus,
+                data: turmas.map(turma => campusPorTurma[turma][campus] || 0),
+                backgroundColor: campusColors[campus] || '#6c757d',
+                borderColor: campusColors[campus] || '#6c757d',
+                borderWidth: 1
+            });
+        });
+
+        const ctx = document.getElementById('alunosPorTurmaChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: turmas,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Total de Alunos'
+                        },
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

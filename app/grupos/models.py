@@ -125,29 +125,33 @@ class Setor(db.Model):
 
     @property
     def num_facilitadores_treinamento_atuais_agregado(self):
-        count = sum(pg.num_facilitadores_treinamento_atuais for pg in self.pequenos_grupos.all())
-        count += sum(1 for supervisor in self.supervisores if supervisor.status_treinamento_pg == 'Facilitador em Treinamento')
+        membros_setor = set(self.membros_do_setor_completos)
+        count = sum(1 for membro in membros_setor if membro.status_treinamento_pg == 'Facilitador em Treinamento')
         return count
 
     @property
     def num_anfitrioes_treinamento_atuais_agregado(self):
-        count = sum(pg.num_anfitrioes_treinamento_atuais for pg in self.pequenos_grupos.all())
-        count += sum(1 for supervisor in self.supervisores if supervisor.status_treinamento_pg == 'Anfitrião em Treinamento')
+        membros_setor = set(self.membros_do_setor_completos)
+        count = sum(1 for membro in membros_setor if membro.status_treinamento_pg == 'Anfitrião em Treinamento')
         return count
 
     @property
     def num_ctm_participantes_atuais_agregado(self):
-        count = sum(pg.num_ctm_participantes_atuais for pg in self.pequenos_grupos.all())
-        count += sum(1 for supervisor in self.supervisores if supervisor.participou_ctm)
+        membros_setor = set(self.membros_do_setor_completos)
+        count = sum(1 for membro in membros_setor if membro.presente_ctm_ultimos_30d)
         return count
 
     @property
     def num_encontro_deus_participantes_atuais_agregado(self):
-        return sum(pg.num_encontro_deus_participantes_atuais for pg in self.pequenos_grupos.all())
+        membros_setor = set(self.membros_do_setor_completos)
+        count = sum(1 for membro in membros_setor if membro.participou_encontro_deus)
+        return count
 
     @property
     def num_batizados_aclamados_atuais_agregado(self):
-        return sum(pg.num_batizados_aclamados_atuais for pg in self.pequenos_grupos.all())
+        membros_setor = set(self.membros_do_setor_completos)
+        count = sum(1 for membro in membros_setor if membro.batizado_aclamado)
+        return count
 
     @property
     def num_multiplicacoes_pg_atuais_agregado(self):
@@ -155,9 +159,9 @@ class Setor(db.Model):
 
     @property
     def num_dizimistas_atuais_agregado(self):
-        num_dizimistas_pgs = sum(pg.num_dizimistas_atuais for pg in self.pequenos_grupos.all())
-        num_dizimistas_supervisores = sum(1 for supervisor in self.supervisores if supervisor.contribuiu_dizimo_ultimos_30d)
-        return num_dizimistas_pgs + num_dizimistas_supervisores
+        membros_setor = set(self.membros_do_setor_completos)
+        count = sum(1 for membro in membros_setor if membro.contribuiu_dizimo_ultimos_30d)
+        return count
     
     @property
     def num_participantes_totais_agregado(self):
@@ -173,7 +177,14 @@ class Setor(db.Model):
         except Exception as e:
             print(f"ERRO ao calcular distribuição de dizimistas: {e}")
             return {'dizimistas': 0, 'nao_dizimistas': 0}
-
+        
+    @property
+    def distribuicao_frequencia_ctm(self):
+        membros_do_setor = self.membros_do_setor_completos
+        frequentes_ctm = sum(1 for membro in membros_do_setor if membro.presente_ctm_ultimos_30d)
+        nao_frequentes_ctm = len(membros_do_setor) - frequentes_ctm
+        return {'frequentes_ctm': frequentes_ctm, 'nao_frequentes_ctm': nao_frequentes_ctm}
+    
     def __repr__(self):
         return f'<Setor: {self.nome} | Área: {self.area.nome}>'
 
@@ -189,10 +200,10 @@ class PequenoGrupo(db.Model):
     horario_reuniao = db.Column(db.String(10), nullable=False)
     data_multiplicacao = db.Column(db.DateTime, default=datetime.utcnow)
 
-    facilitador = db.relationship('Membro', back_populates='pgs_facilitados', foreign_keys=[facilitador_id])
-    anfitriao = db.relationship('Membro', back_populates='pgs_anfitriados', foreign_keys=[anfitriao_id])
-    participantes = db.relationship('Membro', backref='pg_participante', lazy='dynamic', foreign_keys='Membro.pg_id')
-
+    facilitador = db.relationship('Membro', foreign_keys=[facilitador_id], back_populates='pgs_facilitados')
+    anfitriao = db.relationship('Membro', foreign_keys=[anfitriao_id], back_populates='pgs_anfitriados')
+    participantes = db.relationship('Membro', foreign_keys='Membro.pg_id', back_populates='pg_participante', lazy='dynamic')
+    
     meta_facilitadores_treinamento = db.Column(db.Integer, default=0)
     meta_anfitrioes_treinamento = db.Column(db.Integer, default=0)
     meta_ctm_participantes = db.Column(db.Integer, default=0)
@@ -202,15 +213,25 @@ class PequenoGrupo(db.Model):
 
     @property
     def num_facilitadores_treinamento_atuais(self):
-        return self.participantes.filter_by(status_treinamento_pg='Facilitador em Treinamento').count()
+        from app.membresia.models import Membro
+        membros_completos = self.membros_completos
+        count = sum(1 for membro in membros_completos if membro.status_treinamento_pg == 'Facilitador em Treinamento')
+        
+        return count
 
     @property
     def num_anfitrioes_treinamento_atuais(self):
-        return self.participantes.filter_by(status_treinamento_pg='Anfitrião em Treinamento').count()
+        from app.membresia.models import Membro
+        membros_completos = self.membros_completos
+        count = sum(1 for membro in membros_completos if membro.status_treinamento_pg == 'Anfitrião em Treinamento')
+        
+        return count
 
     @property
     def num_ctm_participantes_atuais(self):
-        return db.session.query(Membro).filter(Membro.pg_id == self.id, Membro.participou_ctm == True).count()
+        membros_completos = self.membros_completos
+        count = sum(1 for membro in membros_completos if membro.presente_ctm_ultimos_30d)
+        return count
 
     @property
     def num_encontro_deus_participantes_atuais(self):

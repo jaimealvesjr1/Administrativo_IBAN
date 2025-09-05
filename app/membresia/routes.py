@@ -1,9 +1,10 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify
 from flask_login import login_required, current_user
 from app.extensions import db
 from .models import Membro
 from .forms import MembroForm, CadastrarNaoMembroForm, EditarMembroForm
 from app.jornada.models import JornadaEvento, registrar_evento_jornada
+from app.ctm.models import ConclusaoCTM
 from config import Config
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, and_, or_
@@ -72,9 +73,14 @@ def index():
     chart_labels_campus = [campus for campus, _ in membros_por_campus_data]
     chart_data_campus = [count for _, count in membros_por_campus_data]
 
-    membros_por_status_chart_data = db.session.query(Membro.status, func.count(Membro.id)).filter_by(ativo=True).group_by(Membro.status).all()
-    chart_labels_status = [status for status, _ in membros_por_status_chart_data]
-    chart_data_status = [count for _, count in membros_por_status_chart_data]
+    status_alvo = ["Líder", "Supervisor", "Não-Membro"]
+    membros_por_status_db = db.session.query(Membro.status, func.count(Membro.id)).filter_by(ativo=True).group_by(Membro.status).all()
+    resumo_membros_por_status = {status: 0 for status in status_alvo}
+    for status, count in membros_por_status_db:
+        if status in resumo_membros_por_status:
+            resumo_membros_por_status[status] = count
+    chart_labels_status = list(resumo_membros_por_status.keys())
+    chart_data_status = list(resumo_membros_por_status.values())
 
     campus_colors = Config.CAMPUS
     status_colors = Config.STATUS
@@ -111,8 +117,6 @@ def editar_proprio_perfil():
         membro.data_nascimento = form.data_nascimento.data
         membro.campus = form.campus.data
 
-        # CORRIGIDO: Lógica de upload agora verifica o tipo de dado
-        # O campo só é processado se for um objeto de arquivo (FileStorage) e tiver um nome de arquivo.
         if isinstance(form.foto_perfil.data, FileStorage) and form.foto_perfil.data.filename:
             if old_foto_perfil and old_foto_perfil != 'default.jpg':
                 old_filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], old_foto_perfil)
@@ -240,15 +244,16 @@ def editar_membro(id):
             
             form.populate_obj(membro)
             membro.status = form.status.data if hasattr(form, 'status') else membro.status
-
+            membro.ativo = True
         else:
             form.populate_obj(membro)
             membro.data_recepcao = None
             membro.tipo_recepcao = None
             membro.obs_recepcao = None
             membro.status = 'Não-Membro'
+            membro.ativo = True
 
-        if form.foto_perfil.data and form.foto_perfil.data.filename:
+        if isinstance(form.foto_perfil.data, FileStorage) and form.foto_perfil.data.filename:
             if old_foto_perfil and old_foto_perfil != 'default.jpg':
                 old_filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], old_foto_perfil)
                 if os.path.exists(old_filepath):
@@ -260,7 +265,7 @@ def editar_membro(id):
             else:
                 flash('Tipo de arquivo de imagem não permitido ou inválido!', 'danger')
                 return render_template('membresia/cadastro.html', form=form, editar=True, membro=membro, ano=ano, versao=versao)
-
+        
         try:
             db.session.commit()
             flash(f'Registro de {membro.nome_completo} atualizado com sucesso!', 'success')
@@ -295,13 +300,42 @@ def editar_membro(id):
             flash(f'Erro ao atualizar membro: {e}', 'danger')
             
     return render_template('membresia/cadastro.html',
-                            form=form, editar=True, membro=membro, ano=ano, versao=versao)
+                           form=form, editar=True, membro=membro, ano=ano, versao=versao)
+
+@membresia_bp.route('/buscar_membros_ctm')
+@login_required
+def buscar_membros_ctm():
+    search_term = request.args.get('term', '')
+    turma_id = request.args.get('turma_id', '')
+    
+    query = Membro.query.filter(
+        Membro.nome_completo.ilike(f'%{search_term}%'),
+        Membro.ativo == True
+    )
+
+    if turma_id:
+        query = query.filter(~Membro.turmas_ctm.any(id=turma_id))
+
+    membros = query.order_by(Membro.nome_completo).limit(20).all()
+    
+    results = []
+    for membro in membros:
+        results.append({
+            'id': membro.id,
+            'text': membro.nome_completo
+        })
+    
+    return jsonify(items=results)
 
 @membresia_bp.route('/<int:id>/desligar', methods=['POST'])
 @login_required
 @admin_required
 def desligar_membro(id):
     membro = Membro.query.get_or_404(id)
+
+    if len(membro.pgs_facilitados) > 0 or len(membro.pgs_anfitriados) > 0:
+        flash(f'Não é possível desligar {membro.nome_completo} pois ele(a) é líder de um PG.', 'danger')
+        return redirect(url_for('membresia.perfil', id=membro.id))
 
     membro.ativo = False
     membro.status = 'Desligado'
@@ -320,7 +354,7 @@ def desligar_membro(id):
 
         registrar_evento_jornada(
             tipo_acao='DESLIGAMENTO',
-            descricao_detalhada='Membro(a) foi desligado(a).',
+            descricao_detalhada=f'Membro(a) {membro.nome_completo} foi desligado(a).',
             usuario_executor=current_user,
             membros=[membro]
         )
@@ -330,7 +364,6 @@ def desligar_membro(id):
         db.session.rollback()
         flash(f'Erro ao desligar membro: {e}', 'danger')
     return redirect(url_for('membresia.index'))
-
 
 @membresia_bp.route('/cadastro_nao_membro', methods=['GET', 'POST'])
 def cadastro_nao_membro():
@@ -387,9 +420,16 @@ def listar_nao_membros():
 def perfil(id):
     membro = Membro.query.get_or_404(id)
     jornada_eventos = membro.jornada_eventos_membro.order_by(JornadaEvento.data_evento.desc()).all()
+    
+    historico_ctm = ConclusaoCTM.query.filter_by(membro_id=membro.id).all()
 
     return render_template('membresia/perfil.html',
-                            membro=membro, jornada_eventos=jornada_eventos, jornada_config=current_app.config.get('JORNADA', {}), ano=ano, versao=versao)
+                           membro=membro, 
+                           jornada_eventos=jornada_eventos,
+                           historico_ctm=historico_ctm,
+                           jornada_config=current_app.config.get('JORNADA', {}), 
+                           ano=ano, 
+                           versao=versao)
 
 @membresia_bp.route('/membros/<int:membro_id>')
 @login_required
