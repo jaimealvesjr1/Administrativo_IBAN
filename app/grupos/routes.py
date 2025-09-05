@@ -149,25 +149,25 @@ def criar_area():
 def detalhes_area(area_id):
     area = Area.query.get_or_404(area_id)
     jornada_eventos = area.jornada_eventos_area.order_by(JornadaEvento.data_evento.desc()).all()
-    
-    dizimistas_por_setor = []
+
+    dizimistas_por_setor_chart = { 'labels': [], 'dizimistas': [], 'nao_dizimistas': [] }
     ctm_por_setor = []
     membros_por_setor = []
 
     for setor in area.setores:
         membros_do_setor = setor.membros_do_setor_completos
         num_dizimistas = sum(1 for membro in membros_do_setor if membro.contribuiu_dizimo_ultimos_30d)
-        dizimistas_por_setor.append({
-            'setor_nome': setor.nome,
-            'count': num_dizimistas
-        })
+        num_nao_dizimistas = len(membros_do_setor) - num_dizimistas
+
+        dizimistas_por_setor_chart['labels'].append(setor.nome)
+        dizimistas_por_setor_chart['dizimistas'].append(num_dizimistas)
+        dizimistas_por_setor_chart['nao_dizimistas'].append(num_nao_dizimistas)
 
         num_ctm_frequentes = sum(1 for membro in membros_do_setor if membro.presente_ctm_ultimos_30d)
         ctm_por_setor.append({
             'setor_nome': setor.nome,
             'count': num_ctm_frequentes
         })
-
         membros_por_setor.append({
             'setor_nome': setor.nome,
             'count': len(membros_do_setor)
@@ -176,10 +176,10 @@ def detalhes_area(area_id):
     return render_template('grupos/areas/detalhes.html',
                            area=area,
                            jornada_eventos=jornada_eventos,
-                           dizimistas_por_setor=dizimistas_por_setor,
-                           ctm_por_setor=ctm_por_setor,
-                           membros_por_setor=membros_por_setor,
-                           config=Config, ano=ano, versao=versao)
+                            dizimistas_por_setor=dizimistas_por_setor_chart,
+                            ctm_por_setor=ctm_por_setor,
+                            membros_por_setor=membros_por_setor,
+                            config=Config, ano=ano, versao=versao)
 
 @grupos_bp.route('/areas/editar/<int:area_id>', methods=['GET', 'POST'])
 @login_required

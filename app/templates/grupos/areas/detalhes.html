@@ -132,27 +132,41 @@
 <script>
     $(document).ready(function() {
         var dizimistasData = {{ dizimistas_por_setor|tojson|safe }};
-        var dizimistasLabels = dizimistasData.map(item => item.setor_nome);
-        var dizimistasCounts = dizimistasData.map(item => item.count);
-        
+        var dizimistasLabels = dizimistasData.labels;
+        var dizimistasCounts = dizimistasData.dizimistas;
+        var naoDizimistasCounts = dizimistasData.nao_dizimistas;
+
         var ctxDizimistas = document.getElementById('dizimistasChart').getContext('2d');
         new Chart(ctxDizimistas, {
             type: 'bar',
             data: {
                 labels: dizimistasLabels,
-                datasets: [{
-                    label: 'Número de Dizimistas',
-                    data: dizimistasCounts,
-                    backgroundColor: 'rgba(25, 135, 84, 0.6)',
-                    borderColor: 'rgba(25, 135, 84, 1)',
-                    borderWidth: 1
-                }]
+                datasets: [
+                    {
+                        label: 'Dizimistas',
+                        data: dizimistasCounts,
+                        backgroundColor: 'rgba(40, 167, 69, 0.8)',
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Não Dizimistas',
+                        data: naoDizimistasCounts,
+                        backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                        borderColor: 'rgba(220, 53, 69, 1)',
+                        borderWidth: 1
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
+                    x: {
+                        stacked: true
+                    },
                     y: {
+                        stacked: true,
                         beginAtZero: true
                     }
                 }

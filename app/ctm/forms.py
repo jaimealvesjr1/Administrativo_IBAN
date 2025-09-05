@@ -74,17 +74,23 @@ class AulaRealizadaForm(FlaskForm):
     chave = StringField('Palavra-Chave para Confirmação', validators=[DataRequired()])
     submit = SubmitField('Cadastrar Aula Realizada')
 
+    def validate_chave(self, field):
+        chave_formatada = field.data.strip().lower().replace(" ", "")
+        aula = AulaRealizada.query.filter_by(turma_id=self.turma_id.data, data=self.data.data, chave=chave_formatada).first()
+        if aula and (not self.obj or aula.id != self.obj.id):
+            raise ValidationError('Já existe uma aula cadastrada para esta data e turma com esta palavra-chave.')
+
+    def validate_data(self, field):
+        turma_id = self.turma_id.data
+        if turma_id and AulaRealizada.query.filter_by(data=field.data, turma_id=turma_id).first():
+            raise ValidationError('Já existe uma aula cadastrada para esta data nesta turma.')
+
     def __init__(self, *args, **kwargs):
         super(AulaRealizadaForm, self).__init__(*args, **kwargs)
         self.turma_id.choices = [('', 'Selecione a Turma')] + \
                                  [(t.id, f"{t.nome} - {t.classe.nome}") for t in TurmaCTM.query.filter_by(ativa=True).order_by(TurmaCTM.nome).all()]
         self.aula_modelo_id.choices = [('', 'Selecione a Aula Modelo')] + \
                                      [(a.id, f"{a.ordem} - {a.tema} ({a.classe.nome})") for a in AulaModelo.query.order_by(AulaModelo.classe_id, AulaModelo.ordem).all()]
-
-    def validate_data(self, field):
-        turma_id = self.turma_id.data
-        if turma_id and AulaRealizada.query.filter_by(data=field.data, turma_id=turma_id).first():
-            raise ValidationError('Já existe uma aula cadastrada para esta data nesta turma.')
 
 class PresencaForm(FlaskForm):
     membro_id = SelectField('Nome do Aluno', coerce=coerce_to_int_or_none, validators=[DataRequired()])

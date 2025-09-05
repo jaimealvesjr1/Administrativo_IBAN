@@ -106,6 +106,23 @@ def editar_classe(classe_id):
         classe.nome = form.nome.data
         classe.supervisor_id = form.supervisor_id.data
         
+        num_aulas_novas = form.num_aulas_ciclo.data
+        num_aulas_atuais = AulaModelo.query.filter_by(classe_id=classe.id).count()
+        
+        if num_aulas_novas > num_aulas_atuais:
+            for i in range(num_aulas_atuais + 1, num_aulas_novas + 1):
+                nova_aula = AulaModelo(tema=f'Tema da Aula {i}', ordem=i, classe_id=classe.id)
+                db.session.add(nova_aula)
+        elif num_aulas_novas < num_aulas_atuais:
+            aulas_a_remover = AulaModelo.query.filter_by(classe_id=classe.id)\
+                                                .order_by(AulaModelo.ordem.desc())\
+                                                .limit(num_aulas_atuais - num_aulas_novas).all()
+            for aula in aulas_a_remover:
+                if aula.realizadas:
+                    flash(f'Não é possível reduzir o número de aulas. A aula "{aula.tema}" já possui aulas realizadas vinculadas.', 'danger')
+                    db.session.rollback()
+                    return render_template('ctm/form_classe.html', form=form, classe=classe, versao=versao, ano=ano)
+                db.session.delete(aula)
         try:
             db.session.commit()
             flash('Classe atualizada com sucesso!', 'success')
@@ -295,7 +312,13 @@ def criar_aula_modelo():
 def criar_aula_realizada():
     form = AulaRealizadaForm()
     if form.validate_on_submit():
-        aula_realizada = AulaRealizada(data=form.data.data, turma_id=form.turma_id.data, chave=form.chave.data, aula_modelo_id=form.aula_modelo_id.data)
+        chave_formatada = form.chave.data.strip().lower().replace(" ", "")
+        aula_realizada = AulaRealizada(
+            data=form.data.data, 
+            turma_id=form.turma_id.data, 
+            chave=chave_formatada,
+            aula_modelo_id=form.aula_modelo_id.data
+        )
         db.session.add(aula_realizada)
         try:
             db.session.commit()
@@ -348,7 +371,7 @@ def editar_aula_realizada(aula_realizada_id):
         aula_realizada.data = form.data.data
         aula_realizada.turma_id = form.turma_id.data
         aula_realizada.aula_modelo_id = form.aula_modelo_id.data
-        aula_realizada.chave = form.chave.data
+        aula_realizada.chave = form.chave.data.strip().lower().replace(" ", "")
         
         try:
             db.session.commit()
@@ -632,7 +655,7 @@ def registrar_presenca_aluno():
     if request.method == 'POST':
         if form.validate_on_submit():            
             membro_id_selecionado = form.membro_id.data
-            palavra_chave_digitada = form.palavra_chave_aula.data.strip().lower()
+            palavra_chave_digitada = form.palavra_chave_aula.data.strip().lower().replace(" ", "")
             avaliacao = form.avaliacao.data
 
             membro_obj = Membro.query.get(membro_id_selecionado)
