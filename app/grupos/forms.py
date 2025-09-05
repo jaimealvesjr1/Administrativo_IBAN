@@ -1,20 +1,14 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, SelectField, IntegerField, SelectMultipleField
+from wtforms import StringField, SubmitField, SelectField, IntegerField, SelectMultipleField, DateField
 from wtforms.validators import DataRequired, Length, ValidationError, NumberRange
 from app.grupos.models import Area, Setor, PequenoGrupo
 from app.membresia.models import Membro
 from app.extensions import db
+from datetime import date
 
 class AreaForm(FlaskForm):
     nome = StringField('Nome da Área', validators=[DataRequired(), Length(min=2, max=80)])
     supervisores = SelectMultipleField('Supervisores da Área', coerce=int, validators=[DataRequired()])
-
-    meta_facilitadores_treinamento = IntegerField('Facilitadores em Treinamento', default=0, validators=[NumberRange(min=0)])
-    meta_anfitrioes_treinamento = IntegerField('Anfitriões em Treinamento', default=0, validators=[NumberRange(min=0)])
-    meta_ctm_participantes = IntegerField('Participantes frequentes no CTM', default=0, validators=[NumberRange(min=0)])
-    meta_encontro_deus_participantes = IntegerField('Encontro com Deus', default=0, validators=[NumberRange(min=0)])
-    meta_batizados_aclamados = IntegerField('Número de Batismos/Aclamações', default=0, validators=[NumberRange(min=0)])
-    meta_multiplicacoes_pg = IntegerField('Multiplicações de PG', default=0, validators=[NumberRange(min=0)])
     submit = SubmitField('Salvar Área')
 
     def __init__(self, *args, **kwargs):
@@ -98,21 +92,17 @@ class PequenoGrupoForm(FlaskForm):
         if setor.data == 0:
             raise ValidationError('Por favor, selecione um Setor válido.')
 
-class PequenoGrupoMetasForm(FlaskForm):
-    meta_facilitadores_treinamento = IntegerField('Facilitadores em Treinamento', default=0, validators=[NumberRange(min=0)])
-    meta_anfitrioes_treinamento = IntegerField('Anfitriões em Treinamento', default=0, validators=[NumberRange(min=0)])
-    meta_ctm_participantes = IntegerField('Participantes frequentes no CTM', default=0, validators=[NumberRange(min=0)])
-    meta_encontro_deus_participantes = IntegerField('Participantes no Encontro com Deus', default=0, validators=[NumberRange(min=0)])
-    meta_batizados_aclamados = IntegerField('Batizados/Aclamados', default=0, validators=[NumberRange(min=0)])
-    meta_multiplicacoes_pg = IntegerField('Multiplicações de PGs', default=0, validators=[NumberRange(min=0)])
+class AreaMetasForm(FlaskForm):
+    meta_facilitadores_treinamento_pg = IntegerField('Facilitadores em Treinamento por PG', default=0, validators=[NumberRange(min=0)])
+    meta_anfitrioes_treinamento_pg = IntegerField('Anfitriões em Treinamento por PG', default=0, validators=[NumberRange(min=0)])
+    meta_ctm_participantes_pg = IntegerField('Participantes frequentes no CTM por PG', default=0, validators=[NumberRange(min=0)])
+    meta_encontro_deus_participantes_pg = IntegerField('Encontro com Deus por PG', default=0, validators=[NumberRange(min=0)])
+    meta_batizados_aclamados_pg = IntegerField('Batizados/Aclamados por PG', default=0, validators=[NumberRange(min=0)])
+    meta_multiplicacoes_pg_pg = IntegerField('Multiplicações de PGs por PG', default=0, validators=[NumberRange(min=0)])
+    
+    data_fim = DateField('Data de Validade da Meta', validators=[DataRequired()])
     submit = SubmitField('Salvar Metas')
 
-
-class SetorMetasForm(FlaskForm):
-    meta_facilitadores_treinamento = IntegerField('Facilitadores em Treinamento', default=0, validators=[NumberRange(min=0)])
-    meta_anfitrioes_treinamento = IntegerField('Anfitriões em Treinamento', default=0, validators=[NumberRange(min=0)])
-    meta_ctm_participantes = IntegerField('Participantes frequentes no CTM', default=0, validators=[NumberRange(min=0)])
-    meta_encontro_deus_participantes = IntegerField('Participantes no Encontro com Deus', default=0, validators=[NumberRange(min=0)])
-    meta_batizados_aclamados = IntegerField('Número de Batizados/Aclamados', default=0, validators=[NumberRange(min=0)])
-    meta_multiplicacoes_pg = IntegerField('Multiplicações de PGs', default=0, validators=[NumberRange(min=0)])
-    submit = SubmitField('Salvar Metas')
+    def validate_data_fim(self, field):
+        if field.data <= date.today():
+            raise ValidationError('A data de validade deve ser no futuro.')

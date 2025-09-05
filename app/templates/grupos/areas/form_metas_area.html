@@ -1,0 +1,71 @@
+{% extends "base/layout.html" %}
+{% from "base/components/forms.html" import field %}
+{% from "base/components/buttons.html" import submit %}
+
+{% block title %}Gerenciar Metas · Área {{ area.nome }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 800px;">
+        <h2 class="text-center"><strong>Metas do Ciclo Celular<br>Área {{ area.nome }}</strong></h2>
+        
+        <form method="post" novalidate>
+            {{ form.hidden_tag() }}
+
+            {% if not pode_editar %}
+            <div class="alert alert-warning text-center mt-3">
+                As metas estão bloqueadas para edição até a data de validade.<br>
+                <strong>Data de Fim: {{ meta_vigente.data_fim.strftime('%d/%m/%Y') }}</strong>
+            </div>
+            {% endif %}
+
+            <p class="text-muted text-center mt-3 mb-4">Defina as metas para cada Pequeno Grupo e a data de validade para este ciclo.</p>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    {{ form.meta_facilitadores_treinamento_pg.label(class="form-label") }}
+                    {{ form.meta_facilitadores_treinamento_pg(class="form-control", disabled=not pode_editar) }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ form.meta_anfitrioes_treinamento_pg.label(class="form-label") }}
+                    {{ form.meta_anfitrioes_treinamento_pg(class="form-control", disabled=not pode_editar) }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ form.meta_ctm_participantes_pg.label(class="form-label") }}
+                    {{ form.meta_ctm_participantes_pg(class="form-control", disabled=not pode_editar) }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ form.meta_encontro_deus_participantes_pg.label(class="form-label") }}
+                    {{ form.meta_encontro_deus_participantes_pg(class="form-control", disabled=not pode_editar) }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ form.meta_batizados_aclamados_pg.label(class="form-label") }}
+                    {{ form.meta_batizados_aclamados_pg(class="form-control", disabled=not pode_editar) }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ form.meta_multiplicacoes_pg_pg.label(class="form-label") }}
+                    {{ form.meta_multiplicacoes_pg_pg(class="form-control", disabled=not pode_editar) }}
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="mb-3">
+                {{ form.data_fim.label(class="form-label") }}
+                {{ form.data_fim(class="form-control", disabled=not pode_editar) }}
+            </div>
+
+            <div class="d-grid gap-2 mt-4">
+                {% if pode_editar %}
+                    {{ submit('Salvar Metas') }}
+                {% else %}
+                    <button class="btn btn-secondary" type="button" disabled>Metas Bloqueadas</button>
+                {% endif %}
+            </div>
+            <div class="text-end mt-3">
+                <a href="{{ url_for('grupos.detalhes_area', area_id=area.id) }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

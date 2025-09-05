@@ -13,6 +13,20 @@ setor_supervisores = db.Table('setor_supervisores',
     db.Column('setor_id', db.Integer, db.ForeignKey('setor.id'), primary_key=True),
     db.Column('supervisor_id', db.Integer, db.ForeignKey('membro.id'), primary_key=True))
 
+class AreaMetaVigente(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    data_inicio = db.Column(db.DateTime, default=datetime.utcnow)
+    data_fim = db.Column(db.Date, nullable=False)
+    ativa = db.Column(db.Boolean, default=True)
+    area_id = db.Column(db.Integer, db.ForeignKey('area.id'), nullable=False)
+
+    meta_facilitadores_treinamento_pg = db.Column(db.Integer, default=0)
+    meta_anfitrioes_treinamento_pg = db.Column(db.Integer, default=0)
+    meta_ctm_participantes_pg = db.Column(db.Integer, default=0)
+    meta_encontro_deus_participantes_pg = db.Column(db.Integer, default=0)
+    meta_batizados_aclamados_pg = db.Column(db.Integer, default=0)
+    meta_multiplicacoes_pg_pg = db.Column(db.Integer, default=0)
+
 class Area(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(80), unique=True, nullable=False)
@@ -21,12 +35,37 @@ class Area(db.Model):
     supervisores = relationship('Membro', secondary=area_supervisores, back_populates='areas_supervisionadas')
     setores = db.relationship('Setor', backref='area', lazy='dynamic', cascade='all, delete-orphan')
 
-    meta_facilitadores_treinamento = db.Column(db.Integer, default=0)
-    meta_anfitrioes_treinamento = db.Column(db.Integer, default=0)
-    meta_ctm_participantes = db.Column(db.Integer, default=0)
-    meta_encontro_deus_participantes = db.Column(db.Integer, default=0)
-    meta_batizados_aclamados = db.Column(db.Integer, default=0)
-    meta_multiplicacoes_pg = db.Column(db.Integer, default=0)
+    metas_vigentes = db.relationship('AreaMetaVigente', backref='area', lazy=True, cascade='all, delete-orphan')
+
+    @property
+    def meta_vigente(self):
+        return AreaMetaVigente.query.filter_by(area_id=self.id, ativa=True).order_by(AreaMetaVigente.data_inicio.desc()).first()
+
+    @property
+    def meta_facilitadores_treinamento(self):
+        return self.meta_vigente.meta_facilitadores_treinamento_pg * self.num_pequenos_grupos if self.meta_vigente else 0
+    @property
+    def meta_anfitrioes_treinamento(self):
+        return self.meta_vigente.meta_anfitrioes_treinamento_pg * self.num_pequenos_grupos if self.meta_vigente else 0
+    @property
+    def meta_ctm_participantes(self):
+        return self.meta_vigente.meta_ctm_participantes_pg * self.num_pequenos_grupos if self.meta_vigente else 0
+    @property
+    def meta_encontro_deus_participantes(self):
+        return self.meta_vigente.meta_encontro_deus_participantes_pg * self.num_pequenos_grupos if self.meta_vigente else 0
+    @property
+    def meta_batizados_aclamados(self):
+        return self.meta_vigente.meta_batizados_aclamados_pg * self.num_pequenos_grupos if self.meta_vigente else 0
+    @property
+    def meta_multiplicacoes_pg(self):
+        return self.meta_vigente.meta_multiplicacoes_pg_pg * self.num_pequenos_grupos if self.meta_vigente else 0
+
+    @property
+    def num_pequenos_grupos(self):
+        count = 0
+        for setor in self.setores:
+            count += setor.pequenos_grupos.count()
+        return count
 
     @property
     def membros_da_area_completos(self):
@@ -64,7 +103,16 @@ class Area(db.Model):
 
     @property
     def num_multiplicacoes_pg_atuais_agregado(self):
-        return sum(setor.num_multiplicacoes_pg_atuais_agregado for setor in self.setores.all())
+        if not self.meta_vigente:
+            return 0
+        
+        pgs_multiplicados = 0
+        data_inicio_meta = self.meta_vigente.data_inicio
+        
+        for setor in self.setores.all():
+            pgs_multiplicados += setor.pequenos_grupos.filter(PequenoGrupo.data_multiplicacao >= data_inicio_meta).count()
+            
+        return pgs_multiplicados
     
     @property
     def num_participantes_totais_agregado(self):
@@ -108,12 +156,30 @@ class Setor(db.Model):
     supervisores = relationship('Membro', secondary=setor_supervisores, back_populates='setores_supervisionados')
     pequenos_grupos = db.relationship('PequenoGrupo', backref='setor', lazy='dynamic', cascade='all, delete-orphan')
 
-    meta_facilitadores_treinamento = db.Column(db.Integer, default=0)
-    meta_anfitrioes_treinamento = db.Column(db.Integer, default=0)
-    meta_ctm_participantes = db.Column(db.Integer, default=0)
-    meta_encontro_deus_participantes = db.Column(db.Integer, default=0)
-    meta_batizados_aclamados = db.Column(db.Integer, default=0)
-    meta_multiplicacoes_pg = db.Column(db.Integer, default=0)
+    @property
+    def meta_facilitadores_treinamento(self):
+        meta_pg_unitario = self.area.meta_vigente.meta_facilitadores_treinamento_pg if self.area and self.area.meta_vigente else 0
+        return meta_pg_unitario * self.pequenos_grupos.count()
+    @property
+    def meta_anfitrioes_treinamento(self):
+        meta_pg_unitario = self.area.meta_vigente.meta_anfitrioes_treinamento_pg if self.area and self.area.meta_vigente else 0
+        return meta_pg_unitario * self.pequenos_grupos.count()
+    @property
+    def meta_ctm_participantes(self):
+        meta_pg_unitario = self.area.meta_vigente.meta_ctm_participantes_pg if self.area and self.area.meta_vigente else 0
+        return meta_pg_unitario * self.pequenos_grupos.count()
+    @property
+    def meta_encontro_deus_participantes(self):
+        meta_pg_unitario = self.area.meta_vigente.meta_encontro_deus_participantes_pg if self.area and self.area.meta_vigente else 0
+        return meta_pg_unitario * self.pequenos_grupos.count()
+    @property
+    def meta_batizados_aclamados(self):
+        meta_pg_unitario = self.area.meta_vigente.meta_batizados_aclamados_pg if self.area and self.area.meta_vigente else 0
+        return meta_pg_unitario * self.pequenos_grupos.count()
+    @property
+    def meta_multiplicacoes_pg(self):
+        meta_pg_unitario = self.area.meta_vigente.meta_multiplicacoes_pg_pg if self.area and self.area.meta_vigente else 0
+        return meta_pg_unitario * self.pequenos_grupos.count()
 
     @property
     def membros_do_setor_completos(self):
@@ -155,7 +221,12 @@ class Setor(db.Model):
 
     @property
     def num_multiplicacoes_pg_atuais_agregado(self):
-        return self.pequenos_grupos.count()
+        if not self.area.meta_vigente:
+            return 0
+        
+        data_inicio_meta = self.area.meta_vigente.data_inicio
+        
+        return self.pequenos_grupos.filter(PequenoGrupo.data_multiplicacao >= data_inicio_meta).count()
 
     @property
     def num_dizimistas_atuais_agregado(self):
@@ -204,12 +275,24 @@ class PequenoGrupo(db.Model):
     anfitriao = db.relationship('Membro', foreign_keys=[anfitriao_id], back_populates='pgs_anfitriados')
     participantes = db.relationship('Membro', foreign_keys='Membro.pg_id', back_populates='pg_participante', lazy='dynamic')
     
-    meta_facilitadores_treinamento = db.Column(db.Integer, default=0)
-    meta_anfitrioes_treinamento = db.Column(db.Integer, default=0)
-    meta_ctm_participantes = db.Column(db.Integer, default=0)
-    meta_encontro_deus_participantes = db.Column(db.Integer, default=0)
-    meta_batizados_aclamados = db.Column(db.Integer, default=0)
-    meta_multiplicacoes_pg = db.Column(db.Integer, default=0)
+    @property
+    def meta_facilitadores_treinamento(self):
+        return self.setor.area.meta_vigente.meta_facilitadores_treinamento_pg if self.setor and self.setor.area and self.setor.area.meta_vigente else 0
+    @property
+    def meta_anfitrioes_treinamento(self):
+        return self.setor.area.meta_vigente.meta_anfitrioes_treinamento_pg if self.setor and self.setor.area and self.setor.area.meta_vigente else 0
+    @property
+    def meta_ctm_participantes(self):
+        return self.setor.area.meta_vigente.meta_ctm_participantes_pg if self.setor and self.setor.area and self.setor.area.meta_vigente else 0
+    @property
+    def meta_encontro_deus_participantes(self):
+        return self.setor.area.meta_vigente.meta_encontro_deus_participantes_pg if self.setor and self.setor.area and self.setor.area.meta_vigente else 0
+    @property
+    def meta_batizados_aclamados(self):
+        return self.setor.area.meta_vigente.meta_batizados_aclamados_pg if self.setor and self.setor.area and self.setor.area.meta_vigente else 0
+    @property
+    def meta_multiplicacoes_pg(self):
+        return self.setor.area.meta_vigente.meta_multiplicacoes_pg_pg if self.setor and self.setor.area and self.setor.area.meta_vigente else 0
 
     @property
     def num_facilitadores_treinamento_atuais(self):

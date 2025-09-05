@@ -1,6 +1,7 @@
 {% set show_navbar = true %}
 {% extends "base/layout.html" %}
 {% from 'base/components/jornada_timeline.html' import render_jornada_timeline %}
+{% from 'base/components/buttons.html' import primary %}
 {% from 'macros/filters.html' import render_meta_card %}
 
 {% block title %}Área {{ area.nome }} · IBAN{% endblock %}
@@ -14,10 +15,19 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12 text-center ">
+        <div class="col-md-12 text-center">
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-warning text-white">
+                <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Metas da Área</h5>
+                    {% if current_user.has_permission('admin') %}
+                        <a href="{{ url_for('grupos.admin_gerenciar_metas_da_area', area_id=area.id) }}" class="btn btn-sm btn-light">
+                            <i class="bi bi-gear-fill me-1"></i> Gerenciar Metas (Admin)
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('grupos.gerenciar_metas_da_area', area_id=area.id) }}" class="btn btn-sm btn-light">
+                            <i class="bi bi-gear-fill me-1"></i> Gerenciar Metas
+                        </a>
+                    {% endif %}
                 </div>
                 <div class="card-body">
                     <div class="row row-cols-1 row-cols-md-6 g-2">
@@ -78,7 +88,6 @@
                 {% else %}
                     <p>Nenhum Setor vinculado a esta Área ainda.</p>
                 {% endif %}
-                <a href="{{ url_for('grupos.gerenciar_metas_setores_da_area', area_id=area.id) }}" class="btn btn-secondary">Distribuir Metas</a>
                 </div>
             </div>
         </div>

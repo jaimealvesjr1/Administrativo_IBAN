@@ -1,8 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
 from flask_login import login_required, current_user
 from app.extensions import db
-from app.grupos.models import Area, Setor, PequenoGrupo
-from app.grupos.forms import AreaForm, SetorForm, PequenoGrupoForm, PequenoGrupoMetasForm, SetorMetasForm
+from app.grupos.models import Area, Setor, PequenoGrupo, AreaMetaVigente
+from app.grupos.forms import AreaForm, SetorForm, PequenoGrupoForm, AreaMetasForm
 from app.membresia.models import Membro
 from app.auth.models import User
 from app.jornada.models import registrar_evento_jornada, JornadaEvento
@@ -10,6 +10,7 @@ from config import Config
 from app.decorators import admin_required, group_permission_required, leader_required
 from sqlalchemy import or_, and_
 from app.ctm.models import TurmaCTM, AulaRealizada, Presenca, ConclusaoCTM
+from datetime import date, datetime
 
 grupos_bp = Blueprint('grupos', __name__, template_folder='templates')
 ano=Config.ANO_ATUAL
@@ -114,12 +115,6 @@ def criar_area():
     if form.validate_on_submit():
         nova_area = Area(
             nome=form.nome.data,
-            meta_facilitadores_treinamento=form.meta_facilitadores_treinamento.data,
-            meta_anfitrioes_treinamento=form.meta_anfitrioes_treinamento.data,
-            meta_ctm_participantes=form.meta_ctm_participantes.data,
-            meta_encontro_deus_participantes=form.meta_encontro_deus_participantes.data,
-            meta_batizados_aclamados=form.meta_batizados_aclamados.data,
-            meta_multiplicacoes_pg=form.meta_multiplicacoes_pg.data
         )
         for supervisor_id in form.supervisores.data:
             supervisor = Membro.query.get(supervisor_id)
@@ -190,13 +185,6 @@ def editar_area(area_id):
 
     if form.validate_on_submit():
         area.nome = form.nome.data
-        
-        area.meta_facilitadores_treinamento = form.meta_facilitadores_treinamento.data
-        area.meta_anfitrioes_treinamento = form.meta_anfitrioes_treinamento.data
-        area.meta_ctm_participantes = form.meta_ctm_participantes.data
-        area.meta_encontro_deus_participantes = form.meta_encontro_deus_participantes.data
-        area.meta_batizados_aclamados = form.meta_batizados_aclamados.data
-        area.meta_multiplicacoes_pg = form.meta_multiplicacoes_pg.data
         
         supervisores_antigos_ids = {s.id for s in area.supervisores}
         supervisores_novos_ids = set(form.supervisores.data)
@@ -642,66 +630,114 @@ def atualizar_indicadores(pg_id, membro_id):
         flash(f'Erro ao atualizar indicadores: {e}', 'danger')
     return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
 
-@grupos_bp.route('/setores/<int:setor_id>/gerenciar_metas_pgs', methods=['GET', 'POST'])
-@login_required
-@group_permission_required(Setor, 'edit', 'supervisores')
-def gerenciar_metas_pgs_do_setor(setor_id):
-    setor = Setor.query.get_or_404(setor_id)
-    pgs = setor.pequenos_grupos.all()
-    forms = {pg.id: PequenoGrupoMetasForm(prefix=str(pg.id), obj=pg) for pg in pgs}
-    if request.method == 'POST':
-        todos_validos = True
-        for pg_id, form in forms.items():
-            if not form.validate():
-                todos_validos = False
-                break
-        if todos_validos:
-            try:
-                for pg_id, form in forms.items():
-                    pg = PequenoGrupo.query.get(pg_id)
-                    pg.meta_facilitadores_treinamento = form.meta_facilitadores_treinamento.data
-                    pg.meta_anfitrioes_treinamento = form.meta_anfitrioes_treinamento.data
-                    pg.meta_ctm_participantes = form.meta_ctm_participantes.data
-                    pg.meta_encontro_deus_participantes = form.meta_encontro_deus_participantes.data
-                    pg.meta_batizados_aclamados = form.meta_batizados_aclamados.data
-                    pg.meta_multiplicacoes_pg = form.meta_multiplicacoes_pg.data
-                    db.session.add(pg)
-                db.session.commit()
-                flash('Metas dos Pequenos Grupos atualizadas com sucesso!', 'success')
-                return redirect(url_for('grupos.detalhes_setor', setor_id=setor.id))
-            except Exception as e:
-                db.session.rollback()
-                flash(f'Erro ao atualizar metas: {e}', 'danger')
-    return render_template('grupos/setores/gerenciar_metas_pgs.html', setor=setor, pgs=pgs, forms=forms, config=Config, ano=ano, versao=versao)
-
-@grupos_bp.route('/areas/<int:area_id>/gerenciar_metas_setores', methods=['GET', 'POST'])
+@grupos_bp.route('/areas/<int:area_id>/gerenciar_metas', methods=['GET', 'POST'])
 @login_required
 @group_permission_required(Area, 'edit', 'supervisores')
-def gerenciar_metas_setores_da_area(area_id):
+def gerenciar_metas_da_area(area_id):
     area = Area.query.get_or_404(area_id)
-    setores = area.setores.all()
-    forms = {setor.id: SetorMetasForm(prefix=str(setor.id), obj=setor) for setor in setores}
-    if request.method == 'POST':
-        todos_validos = True
-        for setor_id, form in forms.items():
-            if not form.validate():
-                todos_validos = False
-                break
-        if todos_validos:
-            try:
-                for setor_id, form in forms.items():
-                    setor = Setor.query.get(setor_id)
-                    setor.meta_facilitadores_treinamento = form.meta_facilitadores_treinamento.data
-                    setor.meta_anfitrioes_treinamento = form.meta_anfitrioes_treinamento.data
-                    setor.meta_ctm_participantes = form.meta_ctm_participantes.data
-                    setor.meta_encontro_deus_participantes = form.meta_encontro_deus_participantes.data
-                    setor.meta_batizados_aclamados = form.meta_batizados_aclamados.data
-                    setor.meta_multiplicacoes_pg = form.meta_multiplicacoes_pg.data
-                    db.session.add(setor)
-                db.session.commit()
-                flash('Metas dos Setores atualizadas com sucesso!', 'success')
-                return redirect(url_for('grupos.detalhes_area', area_id=area.id))
-            except Exception as e:
-                db.session.rollback()
-                flash(f'Erro ao atualizar metas: {e}', 'danger')
-    return render_template('grupos/areas/gerenciar_metas_setores.html', area=area, setores=setores, forms=forms, config=Config, ano=ano, versao=versao)
+    meta_vigente = area.meta_vigente
+    
+    pode_editar = True
+    if meta_vigente and meta_vigente.data_fim >= date.today():
+        pode_editar = False
+        flash(f'As metas atuais são válidas até {meta_vigente.data_fim.strftime("%d/%m/%Y")}. Não é possível editar antes desta data.', 'warning')
+
+    form = AreaMetasForm()
+
+    if form.validate_on_submit() and pode_editar:
+        if meta_vigente:
+            meta_vigente.ativa = False
+            db.session.add(meta_vigente)
+
+        nova_meta = AreaMetaVigente(
+            meta_facilitadores_treinamento_pg=form.meta_facilitadores_treinamento_pg.data,
+            meta_anfitrioes_treinamento_pg=form.meta_anfitrioes_treinamento_pg.data,
+            meta_ctm_participantes_pg=form.meta_ctm_participantes_pg.data,
+            meta_encontro_deus_participantes_pg=form.meta_encontro_deus_participantes_pg.data,
+            meta_batizados_aclamados_pg=form.meta_batizados_aclamados_pg.data,
+            meta_multiplicacoes_pg_pg=form.meta_multiplicacoes_pg_pg.data,
+            data_fim=form.data_fim.data,
+            area_id=area.id
+        )
+        db.session.add(nova_meta)
+
+        try:
+            db.session.commit()
+            flash('Metas da área atualizadas e propagadas para os grupos abaixo!', 'success')
+            return redirect(url_for('grupos.detalhes_area', area_id=area.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao salvar as metas: {e}', 'danger')
+
+    elif request.method == 'GET':
+        if meta_vigente:
+            form.meta_facilitadores_treinamento_pg.data = meta_vigente.meta_facilitadores_treinamento_pg
+            form.meta_anfitrioes_treinamento_pg.data = meta_vigente.meta_anfitrioes_treinamento_pg
+            form.meta_ctm_participantes_pg.data = meta_vigente.meta_ctm_participantes_pg
+            form.meta_encontro_deus_participantes_pg.data = meta_vigente.meta_encontro_deus_participantes_pg
+            form.meta_batizados_aclamados_pg.data = meta_vigente.meta_batizados_aclamados_pg
+            form.meta_multiplicacoes_pg_pg.data = meta_vigente.meta_multiplicacoes_pg_pg
+            form.data_fim.data = meta_vigente.data_fim
+
+    return render_template(
+        'grupos/areas/form_metas_area.html',
+        form=form,
+        area=area,
+        pode_editar=pode_editar,
+        meta_vigente=meta_vigente,
+        ano=ano,
+        versao=versao
+    )
+
+@grupos_bp.route('/areas/<int:area_id>/admin_gerenciar_metas', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_gerenciar_metas_da_area(area_id):
+    area = Area.query.get_or_404(area_id)
+    meta_vigente = area.meta_vigente
+    form = AreaMetasForm()
+
+    if form.validate_on_submit():
+        if meta_vigente:
+            meta_vigente.ativa = False
+            db.session.add(meta_vigente)
+
+        nova_meta = AreaMetaVigente(
+            meta_facilitadores_treinamento_pg=form.meta_facilitadores_treinamento_pg.data,
+            meta_anfitrioes_treinamento_pg=form.meta_anfitrioes_treinamento_pg.data,
+            meta_ctm_participantes_pg=form.meta_ctm_participantes_pg.data,
+            meta_encontro_deus_participantes_pg=form.meta_encontro_deus_participantes_pg.data,
+            meta_batizados_aclamados_pg=form.meta_batizados_aclamados_pg.data,
+            meta_multiplicacoes_pg_pg=form.meta_multiplicacoes_pg_pg.data,
+            data_fim=form.data_fim.data,
+            area_id=area.id
+        )
+        db.session.add(nova_meta)
+
+        try:
+            db.session.commit()
+            flash('Metas da área (Admin) atualizadas com sucesso!', 'success')
+            return redirect(url_for('grupos.detalhes_area', area_id=area.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao salvar as metas (Admin): {e}', 'danger')
+
+    elif request.method == 'GET':
+        if meta_vigente:
+            form.meta_facilitadores_treinamento_pg.data = meta_vigente.meta_facilitadores_treinamento_pg
+            form.meta_anfitrioes_treinamento_pg.data = meta_vigente.meta_anfitrioes_treinamento_pg
+            form.meta_ctm_participantes_pg.data = meta_vigente.meta_ctm_participantes_pg
+            form.meta_encontro_deus_participantes_pg.data = meta_vigente.meta_encontro_deus_participantes_pg
+            form.meta_batizados_aclamados_pg.data = meta_vigente.meta_batizados_aclamados_pg
+            form.meta_multiplicacoes_pg_pg.data = meta_vigente.meta_multiplicacoes_pg_pg
+            form.data_fim.data = meta_vigente.data_fim
+
+    return render_template(
+        'grupos/areas/form_metas_area.html',
+        form=form,
+        area=area,
+        pode_editar=True,
+        meta_vigente=meta_vigente,
+        ano=ano,
+        versao=versao
+    )
