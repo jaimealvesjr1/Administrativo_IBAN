@@ -11,6 +11,12 @@
 </a>
 {% endmacro %}
 
+{% macro outline_danger(text, href='#', icon='', attrs={}) %}
+<a href="{{ href }}" class="btn btn-outline-danger" {{ _render_html_attributes(attrs) }}>
+    {% if icon %}<i class="{{ icon }}"></i>{% endif %}{{ text }}
+</a>
+{% endmacro %}
+
 {% macro submit(text='Salvar', attrs={}) %}
 <div class="d-grid mt-4">
     <button type="submit" class="btn btn-custom" {{ _render_html_attributes(attrs) }}>

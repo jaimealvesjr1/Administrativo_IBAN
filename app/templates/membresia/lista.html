@@ -1,14 +1,17 @@
 {% set show_navbar = true %}
 {% extends 'base/layout.html' %}
 {% from 'base/components/forms.html' import field %}
-{% from 'base/components/buttons.html' import primary %}
+{% from 'base/components/buttons.html' import primary, outline_danger %}
 {% block title %}Membresia · IBAN{% endblock %}
 
 {% block content %}
 <div class="container">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><strong>Membresia</strong></h2>
-    {{ primary('+ Novo Membro', url_for('membresia.novo_membro')) }}
+    <div class="btn-group">
+        {{ outline_danger('Unificar Cadastros', url_for('membresia.unificar_membros')) }}
+        {{ primary('+ Novo Membro', url_for('membresia.novo_membro')) }}
+    </div>
   </div>
 
   <form method="get" class="row g-3 mb-4">

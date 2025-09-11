@@ -118,7 +118,7 @@
                     <p class="card-text"><strong>Anfitrião:</strong> {{ pg.anfitriao.nome_completo if pg.anfitriao else 'N/A' }}</p>
                     <p class="card-text"><strong>Dia da Reunião:</strong> {{ pg.dia_reuniao }}</p>
                     <p class="card-text"><strong>Horário da Reunião:</strong> {{ pg.horario_reuniao }}</p>
-                    <p class="card-text"><strong>Data de Multiplicação:</strong> {{ pg.data_multiplicacao|strftime('%d/%m/%Y') if pg.data_multiplicacao else 'N/A' }}</p>
+                    <p class="card-text"><strong>Data de Multiplicação:</strong> {{ pg.data_multiplicacao|format_datetime if pg.data_multiplicacao else 'N/A' }}</p>
                 </div>
             </div>
         </div>

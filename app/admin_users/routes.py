@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.auth.models import User
@@ -8,6 +8,7 @@ from .forms import RequestResetPasswordForm, ResetPasswordForm, UserEditForm
 from werkzeug.security import generate_password_hash
 from config import Config
 import os
+from sqlalchemy import or_
 
 admin_users_bp = Blueprint('admin_users', __name__, url_prefix='/admin_users')
 
@@ -22,8 +23,21 @@ def require_admin_permission():
 
 @admin_users_bp.route('/')
 def list_users():
-    users = User.query.order_by(User.email).all()
-    return render_template('admin_users/list_users.html', users=users, ano=Config.ANO_ATUAL, versao=Config.VERSAO_APP)
+    busca = request.args.get('busca', '')
+
+    query = User.query
+
+    if busca:
+        query = query.join(Membro, User.membro_id == Membro.id, isouter=True).filter(
+            or_(
+                User.email.ilike(f'%{busca}%'),
+                Membro.nome_completo.ilike(f'%{busca}%')
+            )
+        )
+
+    users = query.order_by(User.id).all()
+    
+    return render_template('admin_users/list_users.html', users=users, busca=busca, ano=Config.ANO_ATUAL, versao=Config.VERSAO_APP)
 
 @admin_users_bp.route('/edit_user/<int:user_id>', methods=['GET', 'POST'])
 @login_required

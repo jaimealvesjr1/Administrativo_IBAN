@@ -10,7 +10,7 @@
                     <div class="timeline-content card mb-2">
                         <div class="card-body p-2">
                             <small class="text-muted d-block">
-                                {{ evento.data_evento|strftime('%d/%m/%Y %H:%M') }}
+                                {{ evento.data_evento | format_datetime }} 
                                 {% if tipo_jornada and tipo_jornada.icon %}
                                     <i class="bi {{ tipo_jornada.icon }} ms-1"></i>
                                 {% endif %}

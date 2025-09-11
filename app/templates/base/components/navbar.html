@@ -16,38 +16,54 @@
     <div class="collapse navbar-collapse" id="navbarIBAN">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         {% if current_user.is_authenticated %}
-          {% if current_user.membro %}
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('membresia.perfil', id=current_user.membro.id) }}">👤 Meu Perfil</a>
-          </li>
-          {% endif %}
-          {% if current_user.has_permission('financeiro') %}
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('financeiro.index') }}">💰 Financeiro</a>
-          </li>
-          {% endif %}
-          {% if current_user.is_leader() %}
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('grupos.listar_grupos_unificada') }}">🏡 Grupos</a>
-          </li>
-          {% endif %}
           {% if current_user.has_permission('admin') %}
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('membresia.index') }}">👥 Membresia</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('ctm.index') }}">📚 CTM</a>
-          </li>
-          <li class="nav-item">
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('membresia.perfil', id=current_user.membro.id) }}">👤 Meu Perfil</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('financeiro.index') }}">💰 Financeiro</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('grupos.listar_grupos_unificada') }}">🏡 Grupos</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('membresia.index') }}">👥 Membresia</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('ctm.index') }}">📚 CTM</a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link" href="{{ url_for('admin_users.list_users') }}">⚙️ Acessos</a>
-          </li>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link disabled" tabindex="-1" style="opacity: 0.6;">📅 Eventos (em breve)</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link disabled" tabindex="-1" style="opacity: 0.6;">🎈 Kids (em breve)</a>
+            </li>
+          {% else %}
+            {% if current_user.membro %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('membresia.perfil', id=current_user.membro.id) }}">👤 Meu Perfil</a>
+            </li>
+            {% endif %}
+            {% if current_user.has_permission('financeiro') %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('financeiro.index') }}">💰 Financeiro</a>
+            </li>
+            {% endif %}
+            {% if current_user.is_leader() %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('grupos.listar_grupos_unificada') }}">🏡 Grupos</a>
+            </li>
+            {% endif %}
+            <li class="nav-item">
+              <a class="nav-link disabled" tabindex="-1" style="opacity: 0.6;">📅 Eventos (em breve)</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link disabled" tabindex="-1" style="opacity: 0.6;">🎈 Kids (em breve)</a>
+            </li>
           {% endif %}
-        <li class="nav-item">
-          <a class="nav-link disabled" tabindex="-1" style="opacity: 0.6;">📅 Eventos (em breve)</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link disabled" tabindex="-1" style="opacity: 0.6;">🎈 Kids (em breve)</a>
-        </li>
         {% endif %}
       </ul>
       <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger">🚪 Encerrar Sessão</a>

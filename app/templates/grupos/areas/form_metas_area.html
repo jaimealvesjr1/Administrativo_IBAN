@@ -51,8 +51,17 @@
             <hr class="my-4">
 
             <div class="mb-3">
-                {{ form.data_fim.label(class="form-label") }}
-                {{ form.data_fim(class="form-control", disabled=not pode_editar) }}
+                <h5 class="card-title mb-3">Validade da Meta</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.data_inicio.label(class="form-label") }}
+                        {{ form.data_inicio(class="form-control", type="date", disabled=not pode_editar) }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.data_fim.label(class="form-label") }}
+                        {{ form.data_fim(class="form-control", type="date", disabled=not pode_editar) }}
+                    </div>
+                </div>
             </div>
 
             <div class="d-grid gap-2 mt-4">

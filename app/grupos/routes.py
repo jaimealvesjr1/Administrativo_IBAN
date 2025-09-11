@@ -418,7 +418,7 @@ def criar_pg():
 @group_permission_required(PequenoGrupo, 'view')
 def detalhes_pg(pg_id):
     pg = PequenoGrupo.query.get_or_404(pg_id)
-    
+
     participantes_pg_ids = [m.id for m in pg.membros_completos]
     ctm_dados_alunos = []
 
@@ -709,6 +709,7 @@ def admin_gerenciar_metas_da_area(area_id):
             meta_encontro_deus_participantes_pg=form.meta_encontro_deus_participantes_pg.data,
             meta_batizados_aclamados_pg=form.meta_batizados_aclamados_pg.data,
             meta_multiplicacoes_pg_pg=form.meta_multiplicacoes_pg_pg.data,
+            data_inicio=datetime.combine(form.data_inicio.data, datetime.min.time()),
             data_fim=form.data_fim.data,
             area_id=area.id
         )
@@ -730,6 +731,7 @@ def admin_gerenciar_metas_da_area(area_id):
             form.meta_encontro_deus_participantes_pg.data = meta_vigente.meta_encontro_deus_participantes_pg
             form.meta_batizados_aclamados_pg.data = meta_vigente.meta_batizados_aclamados_pg
             form.meta_multiplicacoes_pg_pg.data = meta_vigente.meta_multiplicacoes_pg_pg
+            form.data_inicio.data = meta_vigente.data_inicio.date()
             form.data_fim.data = meta_vigente.data_fim
 
     return render_template(
@@ -741,3 +743,21 @@ def admin_gerenciar_metas_da_area(area_id):
         ano=ano,
         versao=versao
     )
+
+@grupos_bp.route('/buscar_membros_ativos')
+@login_required
+def buscar_membros_ativos():
+    search_term = request.args.get('q', '')
+    
+    query = Membro.query.filter(
+        Membro.nome_completo.ilike(f'%{search_term}%'),
+        Membro.ativo == True
+    )
+    
+    membros = query.order_by(Membro.nome_completo).limit(20).all()
+    
+    results = []
+    for membro in membros:
+        results.append({'id': membro.id, 'text': membro.nome_completo})
+        
+    return jsonify(results=results)

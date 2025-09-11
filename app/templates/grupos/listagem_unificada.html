@@ -193,7 +193,7 @@
                                         Nenhum
                                     {% endfor %}
                                 </td>
-                                <td>{{ area.data_criacao|strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>{{ area.data_criacao|format_datetime }}</td>
                                 <td>
                                     <a href="{{ url_for('grupos.editar_area', area_id=area.id) }}" class="btn btn-sm btn-info">Editar</a>
                                     {% if current_user.has_permission('admin') %}

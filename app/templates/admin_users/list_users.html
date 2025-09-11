@@ -11,6 +11,18 @@
         {{ primary('+ Novo Acesso', url_for('auth.registrar_membro')) }}
     </div>
 
+    <form method="get" class="row g-3 mb-4">
+        <div class="col-md-8">
+            <input type="text" name="busca" placeholder="Buscar por nome ou email" class="form-control" value="{{ busca if busca is defined else '' }}">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <a href="{{ url_for('admin_users.list_users') }}" class="btn btn-outline-secondary w-100">Limpar</a>
+        </div>
+    </form>
+
     {% if users %}
     <div class="table-responsive">
         <table class="table table-bordered table-striped">
@@ -36,13 +48,11 @@
                             <span class="badge bg-info me-1">Tesoureiro</span>
                         {% endif %}
                         
-                        {% if user.membro %}
+                        {% if user.membro and user.membro.get_cargo_lideranca() != 'Nenhum' %}
                             {% set cargos_lideranca = user.membro.get_cargo_lideranca().split(', ') %}
-                            {% if cargos_lideranca|length > 0 and cargos_lideranca[0] != 'Nenhum' %}
-                                {% for cargo in cargos_lideranca %}
-                                    <span class="badge bg-success me-1">{{ cargo }}</span>
-                                {% endfor %}
-                            {% endif %}
+                            {% for cargo in cargos_lideranca %}
+                                <span class="badge bg-success me-1">{{ cargo }}</span>
+                            {% endfor %}
                         {% endif %}
 
                         {% if not user.has_permission('admin') and not user.has_permission('financeiro') and (not user.membro or user.membro.get_cargo_lideranca() == 'Nenhum') %}

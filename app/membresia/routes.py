@@ -4,7 +4,9 @@ from app.extensions import db
 from .models import Membro
 from .forms import MembroForm, CadastrarNaoMembroForm, EditarMembroForm
 from app.jornada.models import JornadaEvento, registrar_evento_jornada
+from app.financeiro.models import Contribuicao
 from app.ctm.models import ConclusaoCTM
+from app.auth.models import User
 from config import Config
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, and_, or_
@@ -13,6 +15,8 @@ import os
 import uuid
 from PIL import Image
 from app.decorators import admin_required, group_permission_required
+from unidecode import unidecode
+import re
 
 membresia_bp = Blueprint('membresia', __name__, url_prefix='/membresia')
 ano=Config.ANO_ATUAL
@@ -437,3 +441,97 @@ def detalhes_membro(membro_id):
     membro = Membro.query.get_or_404(membro_id)
     jornada_eventos = membro.jornada_eventos_membro.order_by(JornadaEvento.data_evento.desc()).all()
     return render_template('membresia/perfil.html', membro=membro, jornada_eventos=jornada_eventos)
+
+@membresia_bp.route('/unificar', methods=['GET'])
+@login_required
+@admin_required
+def unificar_membros():
+    busca = request.args.get('busca', '').strip()
+    membros_sugeridos = []
+
+    if busca:
+        busca_normalizada = busca.lower()
+        busca_db = f"%{busca_normalizada}%"
+
+        membros_sugeridos = Membro.query.filter(
+            func.lower(func.unidecode(Membro.nome_completo)).like(busca_db)
+        ).order_by(Membro.nome_completo).limit(20).all()
+
+    return render_template('membresia/unificar_membros.html', 
+                           busca=busca, 
+                           membros_sugeridos=membros_sugeridos,
+                           ano=Config.ANO_ATUAL, 
+                           versao=Config.VERSAO_APP)
+
+@membresia_bp.route('/unificar_processar', methods=['POST'])
+@login_required
+@admin_required
+def unificar_processar():
+    try:
+        data = request.get_json()
+        membros_ids = data.get('membros_ids', [])
+        
+        if not isinstance(membros_ids, list) or len(membros_ids) < 2:
+            return jsonify({'success': False, 'message': 'Selecione pelo menos dois membros para unificar.'}), 400
+
+        membro_principal = Membro.query.get(membros_ids[0])
+        membros_secundarios = Membro.query.filter(Membro.id.in_(membros_ids[1:])).all()
+        
+        if not membro_principal or len(membros_secundarios) != len(membros_ids) - 1:
+            return jsonify({'success': False, 'message': 'Um ou mais membros não foram encontrados.'}), 404
+
+        for membro_secundario in membros_secundarios:
+            usuario_secundario = User.query.filter_by(membro_id=membro_secundario.id).first()
+            if usuario_secundario:
+                if not membro_principal.user:
+                    usuario_secundario.membro_id = membro_principal.id
+                    db.session.add(usuario_secundario)
+                else:
+                    db.session.delete(usuario_secundario)
+            
+            for evento in membro_secundario.jornada_eventos_membro:
+                evento.membros_afetados.append(membro_principal)
+                evento.membros_afetados.remove(membro_secundario)
+
+            Contribuicao.query.filter_by(membro_id=membro_secundario.id).update({Contribuicao.membro_id: membro_principal.id})
+            
+            ConclusaoCTM.query.filter_by(membro_id=membro_secundario.id).update({ConclusaoCTM.membro_id: membro_principal.id})
+
+            db.session.delete(membro_secundario)
+
+        db.session.commit()
+        
+        flash('Unificação de membros concluída com sucesso!', 'success')
+        
+        return jsonify({'success': True, 'redirect_url': url_for('membresia.perfil', id=membro_principal.id)})
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Erro ao unificar membros: {e}')
+        return jsonify({'success': False, 'message': 'Ocorreu um erro ao processar a unificação.'}), 500
+
+@membresia_bp.route('/sugerir_membros', methods=['GET'])
+@login_required
+def sugerir_membros():
+    busca = request.args.get('q', '').strip()
+    membros_encontrados = []
+
+    if busca:
+        busca_normalizada = unidecode(busca).lower()
+        busca_db = f"%{busca_normalizada}%"
+        
+        membros_encontrados = Membro.query.filter(
+            func.lower(func.unidecode(Membro.nome_completo)).like(busca_db),
+            Membro.ativo == True
+        ).order_by(Membro.nome_completo).limit(5).all()
+
+    resultados_json = []
+    for membro in membros_encontrados:
+        resultados_json.append({
+            'nome_completo': membro.nome_completo,
+            'status': membro.status,
+            'campus': membro.campus,
+            'perfil_url': url_for('membresia.perfil', id=membro.id)
+        })
+        
+    return jsonify({'sugestoes': resultados_json})

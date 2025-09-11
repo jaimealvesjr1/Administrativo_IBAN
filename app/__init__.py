@@ -8,6 +8,7 @@ from .grupos import models as grupos_models
 from .jornada import models as jornada_models
 from .jornada.models import registrar_evento_jornada
 from .auth.models import User
+from unidecode import unidecode
 
 from .auth.routes import auth_bp
 from .membresia.routes import membresia_bp
@@ -29,7 +30,7 @@ def create_app():
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
     app.jinja_env.filters['brasilia'] = to_brasilia
-    app.jinja_env.filters['strftime'] = format_datetime
+    app.jinja_env.filters['format_datetime'] = format_datetime
     app.jinja_env.filters['currency'] = format_currency
 
     db.init_app(app)

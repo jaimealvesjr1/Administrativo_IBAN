@@ -14,7 +14,8 @@ class AreaForm(FlaskForm):
     def __init__(self, *args, **kwargs):
         super(AreaForm, self).__init__(*args, **kwargs)
         self.obj = kwargs.get('obj', None)
-        self.supervisores.choices = [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
+        if self.obj and self.obj.supervisores:
+            self.supervisores.choices = [(s.id, s.nome_completo) for s in self.obj.supervisores]
 
 
     def validate_nome(self, nome):
@@ -100,9 +101,14 @@ class AreaMetasForm(FlaskForm):
     meta_batizados_aclamados_pg = IntegerField('Batizados/Aclamados por PG', default=0, validators=[NumberRange(min=0)])
     meta_multiplicacoes_pg_pg = IntegerField('Multiplicações de PGs por PG', default=0, validators=[NumberRange(min=0)])
     
-    data_fim = DateField('Data de Validade da Meta', validators=[DataRequired()])
+    data_inicio = DateField('Data de Início', validators=[DataRequired()])
+    data_fim = DateField('Data Limite', validators=[DataRequired()])
     submit = SubmitField('Salvar Metas')
 
     def validate_data_fim(self, field):
-        if field.data <= date.today():
-            raise ValidationError('A data de validade deve ser no futuro.')
+        if field.data <= self.data_inicio.data:
+            raise ValidationError('A data limite deve ser posterior à data de início.')
+
+    def validate_data_inicio(self, field):
+        if field.data >= self.data_fim.data:
+            raise ValidationError('A data de início deve ser anterior à data de validade.')
