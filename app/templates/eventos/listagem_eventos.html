@@ -1,0 +1,62 @@
+{% set show_navbar = true %}
+{% extends 'base/layout.html' %}
+{% from 'base/components/buttons.html' import primary %}
+
+{% block title %}Eventos · IBAN{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><strong>Gerenciamento de Eventos</strong></h2>
+        {{ primary('Criar Novo Evento', url_for('eventos.criar_evento')) }}
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Eventos Ativos</h5>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for evento in eventos_ativos %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <a href="{{ url_for('eventos.gerenciar_evento', evento_id=evento.id) }}">
+                                <strong>{{ evento.nome }}</strong>
+                            </a>
+                            <br>
+                            <small class="text-muted">{{ evento.tipo_evento }} - {{ evento.data_evento.strftime('%d/%m/%Y') }}</small>
+                        </div>
+                        <span class="badge bg-secondary">{{ evento.participantes.count() }} inscritos</span>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-center text-muted">Nenhum evento ativo.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Eventos Concluídos</h5>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for evento in eventos_concluidos %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ evento.nome }}</strong>
+                            <br>
+                            <small class="text-muted">{{ evento.tipo_evento }} - {{ evento.data_evento.strftime('%d/%m/%Y') }}</small>
+                        </div>
+                        <span class="badge bg-secondary">{{ evento.participantes.count() }} participantes</span>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-center text-muted">Nenhum evento concluído.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

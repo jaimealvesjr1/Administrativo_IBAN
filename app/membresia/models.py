@@ -34,6 +34,8 @@ class Membro(db.Model):
     pgs_facilitados = relationship('PequenoGrupo', back_populates='facilitador', foreign_keys='PequenoGrupo.facilitador_id')
     pgs_anfitriados = relationship('PequenoGrupo', back_populates='anfitriao', foreign_keys='PequenoGrupo.anfitriao_id')
 
+    user = db.relationship('User', back_populates='membro', uselist=False)
+
     @property
     def contribuiu_dizimo_mes_atual(self):
         from app.financeiro.models import Contribuicao

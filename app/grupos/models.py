@@ -89,9 +89,7 @@ class Area(db.Model):
 
     @property
     def num_ctm_participantes_atuais_agregado(self):
-        count = sum(setor.num_ctm_participantes_atuais_agregado for setor in self.setores.all())
-        count += sum(1 for supervisor in self.supervisores if supervisor.participou_ctm)
-        return count
+        return sum(setor.num_ctm_participantes_atuais_agregado for setor in self.setores.all())
 
     @property
     def num_encontro_deus_participantes_atuais_agregado(self):
@@ -99,7 +97,19 @@ class Area(db.Model):
 
     @property
     def num_batizados_aclamados_atuais_agregado(self):
-        return sum(setor.num_batizados_aclamados_atuais_agregado for setor in self.setores.all())
+        if not self.meta_vigente:
+            return 0
+        
+        data_inicio_meta = self.meta_vigente.data_inicio.date()
+        data_fim_meta = self.meta_vigente.data_fim
+        
+        membros_da_area = self.membros_da_area_completos
+        
+        count = sum(1 for membro in membros_da_area 
+                    if membro.batizado_aclamado and membro.data_recepcao 
+                    and membro.data_recepcao >= data_inicio_meta
+                    and membro.data_recepcao <= data_fim_meta)
+        return count
 
     @property
     def num_multiplicacoes_pg_atuais_agregado(self):
@@ -215,8 +225,18 @@ class Setor(db.Model):
 
     @property
     def num_batizados_aclamados_atuais_agregado(self):
-        membros_setor = set(self.membros_do_setor_completos)
-        count = sum(1 for membro in membros_setor if membro.batizado_aclamado)
+        if not self.area.meta_vigente:
+            return 0
+        
+        data_inicio_meta = self.area.meta_vigente.data_inicio.date()
+        data_fim_meta = self.area.meta_vigente.data_fim
+        
+        membros_do_setor = self.membros_do_setor_completos
+        
+        count = sum(1 for membro in membros_do_setor 
+                    if membro.batizado_aclamado and membro.data_recepcao 
+                    and membro.data_recepcao >= data_inicio_meta
+                    and membro.data_recepcao <= data_fim_meta)
         return count
 
     @property
@@ -318,11 +338,24 @@ class PequenoGrupo(db.Model):
 
     @property
     def num_encontro_deus_participantes_atuais(self):
-        return db.session.query(Membro).filter(Membro.pg_id == self.id, Membro.participou_encontro_deus == True).count()
+        count = sum(1 for membro in self.membros_completos if membro.participou_encontro_deus)
+        return count
 
     @property
     def num_batizados_aclamados_atuais(self):
-        return db.session.query(Membro).filter(Membro.pg_id == self.id, Membro.batizado_aclamado == True).count()
+        if not self.setor or not self.setor.area or not self.setor.area.meta_vigente:
+            return 0
+        
+        meta_vigente = self.setor.area.meta_vigente
+        data_inicio_meta = meta_vigente.data_inicio.date()
+        data_fim_meta = meta_vigente.data_fim
+        
+        return db.session.query(Membro).filter(
+            Membro.pg_id == self.id,
+            Membro.batizado_aclamado == True,
+            Membro.data_recepcao >= data_inicio_meta,
+            Membro.data_recepcao <= data_fim_meta
+        ).count()
 
     @property
     def membros_completos(self):

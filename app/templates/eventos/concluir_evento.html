@@ -1,0 +1,37 @@
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit %}
+
+{% block title %}Concluir Evento · {{ evento.nome }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+        <h2 class="text-center"><strong>Concluir Evento</strong><br><small class="text-muted">{{ evento.nome }}</small></h2>
+        
+        <p class="text-muted text-center mt-3 mb-4">
+            Confirme os detalhes para concluir o evento e atualizar os membros participantes.
+        </p>
+
+        {% if evento.tipo_evento == 'Recepção' %}
+        <form method="POST">
+            {{ form_conclusao.hidden_tag() }}
+            {{ field(form_conclusao.tipo_recepcao.label, form_conclusao.tipo_recepcao) }}
+            {{ field(form_conclusao.obs_membresia.label, form_conclusao.obs_membresia) }}
+            {{ submit('Concluir e Atualizar Membros') }}
+        </form>
+        {% elif evento.tipo_evento == 'Encontro com Deus' %}
+        <form method="POST">
+            <div class="alert alert-info text-center">
+                Este evento irá atualizar o status de "Participou do Encontro com Deus" de todos os membros inscritos.
+            </div>
+            {{ submit('Concluir Evento e Atualizar Participantes') }}
+        </form>
+        {% endif %}
+        
+        <div class="text-end mt-3">
+            <a href="{{ url_for('eventos.gerenciar_evento', evento_id=evento.id) }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

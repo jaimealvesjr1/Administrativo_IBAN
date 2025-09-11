@@ -12,7 +12,7 @@ class User(db.Model, UserMixin):
     permissions = db.Column(db.String(255), default='membro') 
     
     membro_id = db.Column(db.Integer, db.ForeignKey('membro.id'), unique=True, nullable=True) 
-    membro = db.relationship('Membro', backref='user_account', lazy=True)
+    membro = db.relationship('Membro', back_populates='user')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

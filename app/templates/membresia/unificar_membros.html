@@ -10,7 +10,7 @@
         <h2><strong>Unificar Membros</strong></h2>
     </div>
 
-    <p>Utilize esta ferramenta para buscar e unificar cadastros de membros que podem estar duplicados.<br>A busca ignora acentuação e é insensível a maiúsculas/minúsculas.</p>
+    <p>Utilize esta ferramenta para buscar e unificar cadastros de membros que podem ter sido duplicados.<br>A busca ignora acentuação e é insensível a maiúsculas/minúsculas.</p>
     
     <form method="get" class="row g-3 mb-4">
         <div class="col-md-10">
@@ -46,8 +46,8 @@
                                         <input type="checkbox" name="membros_ids[]" value="{{ membro.id }}" class="form-check-input">
                                     </td>
                                     <td>{{ membro.nome_completo }}</td>
-                                    <td>{{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento }}</td>
-                                    <td>{{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao }}</td>
+                                    <td>{{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento else 'N/A' }}</td>
+                                    <td>{{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao else 'N/A' }}</td>
                                     <td>{{ membro.status }}</td>
                                     <td>{{ membro.campus }}</td>
                                 </tr>
@@ -57,7 +57,7 @@
                     </div>
                     <div class="mt-3">
                         <p class="text-danger">Selecione pelo menos dois membros para unificar.</p>
-                        <button type="button" class="btn btn-danger" id="unificar-btn" disabled>Unificar Membros</button>
+                        <button type="button" class="btn btn-primary" id="unificar-btn" disabled>Avançar para Revisão</button>
                     </div>
                 </form>
             </div>
@@ -83,6 +83,7 @@
         function updateButtonState() {
             const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
             unificarBtn.disabled = checkedCount < 2;
+            unificarBtn.innerText = `Avançar para Revisão (${checkedCount} selecionados)`;
         }
 
         checkboxes.forEach(checkbox => {
@@ -98,54 +99,27 @@
                 return;
             }
 
-            Swal.fire({
-                title: 'Confirmar Unificação',
-                html: 'Tem certeza que deseja unificar os ' + membroIds.length + ' cadastros selecionados? <br>Todos os dados (Jornada, Finanças, CTM) serão transferidos para o primeiro cadastro da lista. Esta ação é irreversível.',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sim, Unificar!',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    Swal.fire({
-                        title: 'Unificando...',
-                        html: 'Por favor, aguarde.',
-                        allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-
-                    fetch("{{ url_for('membresia.unificar_processar') }}", {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ membros_ids: membroIds })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        Swal.close();
-                        if (data.success) {
-                            Swal.fire({
-                                title: 'Sucesso!',
-                                text: 'Membros unificados com sucesso!',
-                                icon: 'success'
-                            }).then(() => {
-                                window.location.href = data.redirect_url;
-                            });
-                        } else {
-                            Swal.fire('Erro', data.message, 'error');
-                        }
-                    })
-                    .catch(error => {
-                        Swal.close();
-                        Swal.fire('Erro', 'Ocorreu um erro inesperado.', 'error');
-                        console.error('Erro:', error);
-                    });
+            fetch("{{ url_for('membresia.unificar_revisar') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ membros_ids: membroIds })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.text();
+                } else {
+                    return response.json().then(error => { throw new Error(error.message); });
                 }
+            })
+            .then(html => {
+                document.open();
+                document.write(html);
+                document.close();
+            })
+            .catch(error => {
+                Swal.fire('Erro', error.message, 'error');
             });
         });
     });

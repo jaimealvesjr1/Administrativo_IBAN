@@ -1,0 +1,26 @@
+{% set show_navbar = true %}
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit %}
+
+{% block title %}Criar Evento · IBAN{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+        <h2 class="text-center"><strong>Criar Novo Evento</strong></h2>
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            {{ field(form.nome.label, form.nome) }}
+            {{ field(form.tipo_evento.label, form.tipo_evento) }}
+            {{ field(form.data_evento.label, form.data_evento) }}
+            {{ field(form.observacoes.label, form.observacoes) }}
+            
+            {{ submit('Salvar Evento') }}
+            <div class="text-end mt-3">
+                <a href="{{ url_for('eventos.listar_eventos') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

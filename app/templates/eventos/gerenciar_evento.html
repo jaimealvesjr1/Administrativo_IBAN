@@ -1,0 +1,93 @@
+{% set show_navbar = true %}
+{% extends 'base/layout.html' %}
+{% from 'base/components/buttons.html' import primary, success %}
+
+{% block title %}Gerenciar Evento · {{ evento.nome }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><strong>Gerenciar Evento: {{ evento.nome }}</strong></h2>
+        <div>
+            {% if not evento.concluido %}
+            <a href="{{ url_for('eventos.concluir_evento', evento_id=evento.id) }}" class="btn btn-success">Concluir Evento</a>
+            {% else %}
+            <button class="btn btn-secondary" disabled>Evento Concluído</button>
+            {% endif %}
+            <a href="{{ url_for('eventos.listar_eventos') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Participantes Inscritos</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for membro in membros_inscritos %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ membro.nome_completo }}
+                            <form action="{{ url_for('eventos.remover_participante', evento_id=evento.id, membro_id=membro.id) }}" method="post" onsubmit="return confirm('Tem certeza que deseja remover este participante?');" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+                            </form>
+                        </li>
+                        {% else %}
+                        <li class="list-group-item text-center text-muted">Nenhum participante inscrito ainda.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Adicionar Participantes</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form_inscricao_membros.hidden_tag() }}
+                        <div class="mb-3">
+                            <label for="membros_select2" class="form-label">Selecionar Membros</label>
+                            <select id="membros_select2" name="membros" multiple="multiple" class="form-select"></select>
+                        </div>
+                        {{ primary('Inscrever Membros') }}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#membros_select2').select2({
+        placeholder: "Selecione membros para inscrever",
+        allowClear: true,
+        width: '100%',
+        ajax: {
+            url: "{{ url_for('eventos.buscar_membros_ativos') }}",
+            dataType: 'json',
+            delay: 250,
+            data: function (params) {
+                return {
+                    q: params.term
+                };
+            },
+            processResults: function (data) {
+                return {
+                    results: data.results
+                };
+            },
+            cache: true
+        }
+    });
+});
+</script>
+{% endblock %}

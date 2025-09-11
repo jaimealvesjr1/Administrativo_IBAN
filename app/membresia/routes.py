@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app.extensions import db
 from .models import Membro
@@ -10,6 +10,7 @@ from app.auth.models import User
 from config import Config
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, and_, or_
+from sqlalchemy.orm import joinedload
 from werkzeug.datastructures import FileStorage
 import os
 import uuid
@@ -463,52 +464,95 @@ def unificar_membros():
                            ano=Config.ANO_ATUAL, 
                            versao=Config.VERSAO_APP)
 
-@membresia_bp.route('/unificar_processar', methods=['POST'])
+@membresia_bp.route('/unificar/revisar', methods=['POST'])
+@login_required
+@admin_required
+def unificar_revisar():
+    data = request.get_json()
+    membros_ids = data.get('membros_ids', [])
+
+    if not isinstance(membros_ids, list) or len(membros_ids) < 2:
+        return jsonify({'success': False, 'message': 'Selecione pelo menos dois membros para unificar.'}), 400
+
+    membros_a_unificar = Membro.query.options(joinedload(Membro.user)).filter(Membro.id.in_(membros_ids)).all()
+    
+    if len(membros_a_unificar) != len(membros_ids):
+        return jsonify({'success': False, 'message': 'Um ou mais membros não foram encontrados.'}), 404
+
+    dados_membros = []
+    for membro in membros_a_unificar:
+        dados_membros.append({
+            'id': membro.id,
+            'nome_completo': membro.nome_completo,
+            'data_nascimento': membro.data_nascimento.strftime('%Y-%m-%d') if membro.data_nascimento else None,
+            'status': membro.status,
+            'campus': membro.campus,
+            'email': membro.user.email if membro.user else None,
+            'permissoes': membro.user.permissions if membro.user else None
+        })
+
+    return render_template('membresia/unificar_revisar.html', dados_membros=dados_membros, ano=Config.ANO_ATUAL, versao=Config.VERSAO_APP)
+
+@membresia_bp.route('/unificar/processar', methods=['POST'])
 @login_required
 @admin_required
 def unificar_processar():
     try:
-        data = request.get_json()
-        membros_ids = data.get('membros_ids', [])
-        
-        if not isinstance(membros_ids, list) or len(membros_ids) < 2:
-            return jsonify({'success': False, 'message': 'Selecione pelo menos dois membros para unificar.'}), 400
+        dados_revisao = request.form
 
-        membro_principal = Membro.query.get(membros_ids[0])
-        membros_secundarios = Membro.query.filter(Membro.id.in_(membros_ids[1:])).all()
+        membro_principal_id = dados_revisao.get('membro_principal_id')
+        if not membro_principal_id:
+            return jsonify({'success': False, 'message': 'Membro principal não selecionado.'}), 400
         
-        if not membro_principal or len(membros_secundarios) != len(membros_ids) - 1:
-            return jsonify({'success': False, 'message': 'Um ou mais membros não foram encontrados.'}), 404
+        membro_principal = Membro.query.get(membro_principal_id)
+        if not membro_principal:
+            return jsonify({'success': False, 'message': 'Membro principal não encontrado.'}), 404
+
+        membros_ids_a_excluir = [int(id) for id in dados_revisao.getlist('membros_a_excluir[]') if int(id) != int(membro_principal_id)]
+        membros_secundarios = Membro.query.filter(Membro.id.in_(membros_ids_a_excluir)).all()
+
+        membro_principal.nome_completo = dados_revisao.get('nome_completo')
+        membro_principal.data_nascimento = datetime.strptime(dados_revisao.get('data_nascimento'), '%Y-%m-%d').date() if dados_revisao.get('data_nascimento') else None
+        membro_principal.status = dados_revisao.get('status')
+        membro_principal.campus = dados_revisao.get('campus')
+        
+        usuario_principal = User.query.filter_by(membro_id=membro_principal.id).first()
+        if not usuario_principal:
+            for membro_secundario in membros_secundarios:
+                usuario_secundario = User.query.filter_by(membro_id=membro_secundario.id).first()
+                if usuario_secundario:
+                    usuario_secundario.membro_id = membro_principal.id
+                    usuario_principal = usuario_secundario
+                    break
+        
+        if usuario_principal:
+            usuario_principal.email = dados_revisao.get('email')
+            usuario_principal.permissions = dados_revisao.get('permissoes')
+
+        db.session.add(membro_principal)
 
         for membro_secundario in membros_secundarios:
-            usuario_secundario = User.query.filter_by(membro_id=membro_secundario.id).first()
-            if usuario_secundario:
-                if not membro_principal.user:
-                    usuario_secundario.membro_id = membro_principal.id
-                    db.session.add(usuario_secundario)
-                else:
-                    db.session.delete(usuario_secundario)
-            
             for evento in membro_secundario.jornada_eventos_membro:
                 evento.membros_afetados.append(membro_principal)
                 evento.membros_afetados.remove(membro_secundario)
-
             Contribuicao.query.filter_by(membro_id=membro_secundario.id).update({Contribuicao.membro_id: membro_principal.id})
-            
             ConclusaoCTM.query.filter_by(membro_id=membro_secundario.id).update({ConclusaoCTM.membro_id: membro_principal.id})
+
+            usuario_secundario = User.query.filter_by(membro_id=membro_secundario.id).first()
+            if usuario_secundario and usuario_secundario.id != usuario_principal.id:
+                db.session.delete(usuario_secundario)
 
             db.session.delete(membro_secundario)
 
         db.session.commit()
-        
         flash('Unificação de membros concluída com sucesso!', 'success')
-        
-        return jsonify({'success': True, 'redirect_url': url_for('membresia.perfil', id=membro_principal.id)})
+        return redirect(url_for('membresia.perfil', id=membro_principal.id))
 
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f'Erro ao unificar membros: {e}')
-        return jsonify({'success': False, 'message': 'Ocorreu um erro ao processar a unificação.'}), 500
+        flash(f'Ocorreu um erro ao processar a unificação: {e}', 'danger')
+        return redirect(url_for('membresia.unificar_membros'))
 
 @membresia_bp.route('/sugerir_membros', methods=['GET'])
 @login_required

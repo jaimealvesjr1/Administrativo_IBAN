@@ -1,4 +1,4 @@
-{% macro render_jornada_timeline(eventos) %}
+{% macro render_jornada_timeline(eventos, current_user) %}
     {% if eventos %}
         <div class="timeline mt-2 text-primary">
             <h5 class="mb-3">Jornada:</h5>
@@ -15,9 +15,18 @@
                                     <i class="bi {{ tipo_jornada.icon }} ms-1"></i>
                                 {% endif %}
                             </small>
-                            <strong class="d-block text-primary">
-                                {% if tipo_jornada %}{{ tipo_jornada.label }}{% else %}{{ evento.tipo_acao }}{% endif %}
-                            </strong>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong class="d-block text-primary">
+                                    {% if tipo_jornada %}{{ tipo_jornada.label }}{% else %}{{ evento.tipo_acao }}{% endif %}
+                                </strong>
+                                {% if current_user and current_user.has_permission('admin') %}
+                                <form action="{{ url_for('jornada.delete_jornada_evento', event_id=evento.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja apagar este evento da jornada?');">
+                                    <button type="submit" class="btn btn-link text-danger p-0" style="font-size: 1.2rem; line-height: 1;">
+                                        <i class="bi bi-x-circle-fill"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
                             <p class="mb-1">{{ evento.descricao_detalhada }}</p>
                             {% if evento.executor %}
                                 <small class="text-muted">Por: {{ evento.executor.email.split('@')[0] }}</small>
