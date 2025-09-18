@@ -66,8 +66,9 @@ def create_app():
     app.register_blueprint(eventos_bp)
     app.register_blueprint(jornada_bp)
 
-    from .cli import create_admin
+    from .cli import create_admin, optimize_images_command
     app.cli.add_command(create_admin)
+    app.cli.add_command(optimize_images_command)
 
     @app.context_processor
     def inject_config():

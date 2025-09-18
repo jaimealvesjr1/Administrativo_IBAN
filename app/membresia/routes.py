@@ -24,27 +24,49 @@ ano=Config.ANO_ATUAL
 versao=Config.VERSAO_APP
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-PROFILE_PIC_SIZE = (150, 150)
+PROFILE_PIC_SIZE = (100, 100)
+COMPRESSION_QUALITY = 75
 
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def save_profile_picture(file_data):
+    """
+    Salva e otimiza a imagem de perfil.
+    - Redimensiona para um tamanho máximo de 100x100 pixels.
+    - Converte para RGB para compatibilidade e menor tamanho (remove transparência).
+    - Aplica compressão com qualidade 75.
+    
+    Args:
+        file_data (FileStorage): O objeto de arquivo da imagem.
+        
+    Returns:
+        str: O nome único do arquivo salvo, ou None se o arquivo for inválido.
+    """
     upload_folder = current_app.config['UPLOAD_FOLDER']
-    if file_data and allowed_file(file_data.filename):
-        unique_filename = str(uuid.uuid4()) + os.path.splitext(file_data.filename)[1]
+    
+    if not isinstance(file_data, FileStorage) or not allowed_file(file_data.filename):
+        return None
+
+    try:
+        extensao = file_data.filename.rsplit('.', 1)[1].lower()
+        unique_filename = f"{uuid.uuid4()}.{extensao}"
         filepath = os.path.join(upload_folder, unique_filename)
 
         img = Image.open(file_data)
+        
         img.thumbnail(PROFILE_PIC_SIZE, Image.Resampling.LANCZOS)
+        
         if img.mode in ('RGBA', 'P'):
             img = img.convert('RGB')
         
-        img.save(filepath)
+        img.save(filepath, quality=COMPRESSION_QUALITY, optimize=True)
 
         return unique_filename
-    return None
+    except Exception as e:
+        current_app.logger.error(f'Erro ao processar e salvar a imagem: {e}')
+        return None
 
 @membresia_bp.route('/')
 @membresia_bp.route('/index')
