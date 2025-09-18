@@ -57,24 +57,25 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
+    const buscarMembrosUrl = "{{ url_for('ctm.buscar_membros') }}";
     $(document).ready(function() {
         $('#nome_aluno_select2').select2({
-            placeholder: "Clique para buscar seu nome:", // Seu placeholder
-            allowClear: true, // Permite limpar a seleção
+            placeholder: "Clique para buscar seu nome:",
+            allowClear: true,
             width: '100%',
-            theme: 'bootstrap-5', // ESSENCIAL para a integração com Bootstrap 5 
+            theme: 'bootstrap-5', 
             ajax: {
-                url: "{{ url_for('ctm.buscar_membros') }}", // Rota Flask para buscar membros
+                url: buscarMembrosUrl,
                 dataType: 'json',
-                delay: 250, // Atraso em milissegundos antes de enviar a requisição
+                delay: 250,
                 data: function (params) {
                     return {
-                        term: params.term // Parâmetro de busca que será enviado ao Flask
+                        term: params.term
                     };
                 },
                 processResults: function (data) {
                     return {
-                        results: data.items // 'items' deve ser a chave da lista de resultados do seu JSON
+                        results: data.items 
                     };
                 },
                 cache: true
@@ -83,7 +84,7 @@
 
         $('#avaliacao').select2({
             theme: 'bootstrap-5',
-            minimumResultsForSearch: Infinity // Esconde a barra de busca para selects simples
+            minimumResultsForSearch: Infinity 
         });
     });
 </script>

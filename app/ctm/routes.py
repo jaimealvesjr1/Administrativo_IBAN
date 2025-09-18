@@ -560,7 +560,6 @@ def remover_aluno(turma_id, membro_id):
     return redirect(url_for('ctm.painel_facilitador_turma', turma_id=turma.id))
 
 @ctm_bp.route('/buscar_membros')
-@login_required
 def buscar_membros():
     search_term = request.args.get('term', '')
     query = Membro.query.filter(
