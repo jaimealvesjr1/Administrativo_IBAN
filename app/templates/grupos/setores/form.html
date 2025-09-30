@@ -29,7 +29,7 @@
                 {{ form.supervisores.label(class="form-label") }}
                 <select class="form-select" name="{{ form.supervisores.name }}" id="{{ form.supervisores.id }}" multiple>
                     {% for value, label in form.supervisores.choices %}
-                        <option value="{{ value }}" {% if value in form.supervisores.data %}selected{% endif %}>{{ label }}</option>
+                        <option value="{{ value }}" {% if value in (form.supervisores.data or []) %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>

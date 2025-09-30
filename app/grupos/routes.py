@@ -112,6 +112,10 @@ def listar_areas():
 @admin_required
 def criar_area():
     form = AreaForm()
+
+    supervisores_possiveis = Membro.query.filter(Membro.ativo == True).order_by(Membro.nome_completo).all()
+    form.supervisores.choices = [(m.id, m.nome_completo) for m in supervisores_possiveis]
+
     if form.validate_on_submit():
         nova_area = Area(
             nome=form.nome.data,
@@ -268,6 +272,10 @@ def listar_setores():
 @admin_required
 def criar_setor():
     form = SetorForm()
+
+    supervisores_possiveis = Membro.query.filter(Membro.ativo == True).order_by(Membro.nome_completo).all()
+    form.supervisores.choices = [(m.id, m.nome_completo) for m in supervisores_possiveis]
+    
     if form.validate_on_submit():
         novo_setor = Setor(
             nome=form.nome.data,
