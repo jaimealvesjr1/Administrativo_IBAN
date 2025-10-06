@@ -45,7 +45,9 @@
                     {% for evento in eventos_concluidos %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <div>
-                            <strong>{{ evento.nome }}</strong>
+                            <a href="{{ url_for('eventos.gerenciar_evento', evento_id=evento.id) }}">
+                                <strong>{{ evento.nome }}</strong>
+                            </a>
                             <br>
                             <small class="text-muted">{{ evento.tipo_evento }} - {{ evento.data_evento.strftime('%d/%m/%Y') }}</small>
                         </div>

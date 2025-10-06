@@ -33,10 +33,10 @@
               <a class="nav-link" href="{{ url_for('ctm.index') }}">📚 CTM</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('admin_users.list_users') }}">⚙️ Acessos</a>
+              <a class="nav-link" href="{{ url_for('eventos.listar_eventos') }}">📅 Eventos</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link disabled" tabindex="-1" style="opacity: 0.6;">📅 Eventos (em breve)</a>
+              <a class="nav-link" href="{{ url_for('admin_users.list_users') }}">⚙️ Acessos</a>
             </li>
             <li class="nav-item">
               <a class="nav-link disabled" tabindex="-1" style="opacity: 0.6;">🎈 Kids (em breve)</a>
@@ -57,9 +57,6 @@
               <a class="nav-link" href="{{ url_for('grupos.listar_grupos_unificada') }}">🏡 Grupos</a>
             </li>
             {% endif %}
-            <li class="nav-item">
-              <a class="nav-link disabled" tabindex="-1" style="opacity: 0.6;">📅 Eventos (em breve)</a>
-            </li>
             <li class="nav-item">
               <a class="nav-link disabled" tabindex="-1" style="opacity: 0.6;">🎈 Kids (em breve)</a>
             </li>

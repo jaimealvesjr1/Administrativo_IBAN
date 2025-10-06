@@ -84,3 +84,19 @@ class Membro(db.Model):
 
     def get_foto_perfil_url(self):
         return url_for('static', filename=f'uploads/profile_pics/{self.foto_perfil}')
+
+    @property
+    def status_exibicao(self):
+        """Retorna o status mais relevante do membro para exibição."""
+        cargo = self.get_cargo_lideranca()
+        if cargo:
+            return cargo
+
+        if self.pg_participante and self.status_treinamento_pg:
+            if self.status_treinamento_pg:
+                return self.status_treinamento_pg
+
+        if self.status in ['Membro', 'Não-Membro']:
+            return self.status
+                
+        return 'Não-Membro'

@@ -1,4 +1,3 @@
-{% set show_navbar = true %}
 {% extends 'base/layout.html' %}
 {% from 'base/components/forms.html' import field %}
 {% from 'base/components/buttons.html' import submit %}
@@ -7,16 +6,34 @@
 
 {% block content %}
 <div class="container mt-4">
+    <div class="text-center mb-4">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
+    </div>
     <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
         <h2 class="text-center"><strong>Criar Novo Evento</strong></h2>
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             {{ form.hidden_tag() }}
-            {{ field(form.nome.label, form.nome) }}
-            {{ field(form.tipo_evento.label, form.tipo_evento) }}
-            {{ field(form.data_evento.label, form.data_evento) }}
-            {{ field(form.observacoes.label, form.observacoes) }}
-            
-            {{ submit('Salvar Evento') }}
+            <div class="mb-3">
+                {{ form.nome.label(class="form-label") }}
+                {{ form.nome(class="form-control") }}
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    {{ form.tipo_evento.label(class="form-label") }}
+                    {{ form.tipo_evento(class="form-select") }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.data_evento.label(class="form-label") }}
+                    {{ form.data_evento(class="form-control") }}
+                </div>
+            </div>
+            <div class="mb-3">
+                {{ form.observacoes.label(class="form-label") }}
+                {{ form.observacoes(class="form-control") }}
+            </div>
+            <div class="mb-3">
+                {{ submit('Salvar Evento') }}
+            </div>
             <div class="text-end mt-3">
                 <a href="{{ url_for('eventos.listar_eventos') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
             </div>

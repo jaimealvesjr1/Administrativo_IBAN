@@ -7,7 +7,7 @@
     {% set progresso_percent = 0 %}
     {% set status_class = 'danger' %}
 
-    {% if meta and meta > 0 %}
+    {% if meta is number and meta > 0 %}
         {% set progresso_percent = (atual / meta) * 100 %}
         {% if progresso_percent >= 99 %}
             {% set status_class = 'success' %}
@@ -29,7 +29,7 @@
                 <small class="text-muted d-block">{{ label }}</small>
                 <p class="mb-0">
                     <strong class="text-{{ status_class }}">
-                        {% if meta and meta > 0 %}
+                        {% if meta is number and meta > 0 %}
                             {{ atual }} / {{ meta }}
                         {% else %}
                             {{ atual }}
@@ -37,8 +37,8 @@
                     </strong>
                 </p>
                 <small class="text-muted">
-                    {% if meta and meta > 0 %}
-                        {{ (atual / meta * 100)|round(0) }}% da meta
+                    {% if meta is number and meta > 0 %}
+                        {{ (progresso_percent)|round(0) }}% da meta
                     {% else %}
                         Meta não definida
                     {% endif %}

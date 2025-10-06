@@ -13,11 +13,31 @@
             Confirme os detalhes para concluir o evento e atualizar os membros participantes.
         </p>
 
+        <div class="mb-4">
+            <h5 class="text-center">Participantes:</h5>
+            <ul class="list-group list-group-flush">
+                {% for participante in participantes %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ participante.nome_completo }}
+                    <span class="badge bg-secondary">Status: {{ participante.status }}</span>
+                </li>
+                {% else %}
+                <li class="list-group-item text-center text-muted">Nenhum participante inscrito.</li>
+                {% endfor %}
+            </ul>
+        </div>
+
         {% if evento.tipo_evento == 'Recepção' %}
         <form method="POST">
             {{ form_conclusao.hidden_tag() }}
-            {{ field(form_conclusao.tipo_recepcao.label, form_conclusao.tipo_recepcao) }}
-            {{ field(form_conclusao.obs_membresia.label, form_conclusao.obs_membresia) }}
+            <div class="col-md-12">
+                {{ form_conclusao.tipo_recepcao.label(class="form-label") }}
+                {{ form_conclusao.tipo_recepcao(class="form-select") }}
+            </div>
+            <div class="col-md-12">
+                {{ form_conclusao.obs_membresia.label(class="form-label") }}
+                {{ form_conclusao.obs_membresia(class="form-control") }}
+            </div>
             {{ submit('Concluir e Atualizar Membros') }}
         </form>
         {% elif evento.tipo_evento == 'Encontro com Deus' %}

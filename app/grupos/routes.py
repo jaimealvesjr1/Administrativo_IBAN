@@ -717,7 +717,7 @@ def admin_gerenciar_metas_da_area(area_id):
             meta_encontro_deus_participantes_pg=form.meta_encontro_deus_participantes_pg.data,
             meta_batizados_aclamados_pg=form.meta_batizados_aclamados_pg.data,
             meta_multiplicacoes_pg_pg=form.meta_multiplicacoes_pg_pg.data,
-            data_inicio=datetime.combine(form.data_inicio.data, datetime.min.time()),
+            data_inicio=form.data_inicio.data,
             data_fim=form.data_fim.data,
             area_id=area.id
         )
@@ -739,7 +739,7 @@ def admin_gerenciar_metas_da_area(area_id):
             form.meta_encontro_deus_participantes_pg.data = meta_vigente.meta_encontro_deus_participantes_pg
             form.meta_batizados_aclamados_pg.data = meta_vigente.meta_batizados_aclamados_pg
             form.meta_multiplicacoes_pg_pg.data = meta_vigente.meta_multiplicacoes_pg_pg
-            form.data_inicio.data = meta_vigente.data_inicio.date()
+            form.data_inicio.data = meta_vigente.data_inicio
             form.data_fim.data = meta_vigente.data_fim
 
     return render_template(

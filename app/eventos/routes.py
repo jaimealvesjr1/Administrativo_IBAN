@@ -1,14 +1,19 @@
 from . import eventos_bp
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import render_template, redirect, url_for, flash, request, jsonify, Blueprint
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.decorators import admin_required
-from .models import Evento, InscricaoEvento
+from .models import Evento, InscricaoEvento, participantes_evento
 from .forms import EventoForm, ConclusaoRecepcaoForm, InscricaoMembrosForm
 from app.membresia.models import Membro
 from app.grupos.models import Area, Setor, PequenoGrupo
 from app.jornada.models import registrar_evento_jornada
 from datetime import date
+from config import Config
+
+membresia_bp = Blueprint('eventos', __name__, url_prefix='/eventos')
+ano=Config.ANO_ATUAL
+versao=Config.VERSAO_APP
 
 @eventos_bp.route('/')
 @eventos_bp.route('/listar')
@@ -20,7 +25,10 @@ def listar_eventos():
     
     return render_template('eventos/listagem_eventos.html', 
                            eventos_ativos=eventos_ativos, 
-                           eventos_concluidos=eventos_concluidos)
+                           eventos_concluidos=eventos_concluidos,
+                           ano=ano, versao=versao,
+                           config=Config)
+
 
 @eventos_bp.route('/criar', methods=['GET', 'POST'])
 @login_required
@@ -43,7 +51,10 @@ def criar_evento():
             db.session.rollback()
             flash(f'Erro ao criar o evento: {e}', 'danger')
             
-    return render_template('eventos/form_evento.html', form=form)
+    return render_template('eventos/form_evento.html', form=form,
+                           ano=ano, versao=versao,
+                           config=Config)
+
 
 @eventos_bp.route('/<int:evento_id>/gerenciar', methods=['GET', 'POST'])
 @login_required
@@ -52,97 +63,51 @@ def gerenciar_evento(evento_id):
     evento = Evento.query.get_or_404(evento_id)
     form_inscricao_membros = InscricaoMembrosForm()
     
-    if form_inscricao_membros.validate_on_submit():
-        membros_selecionados = form_inscricao_membros.membros.data
-        for membro_id in membros_selecionados:
-            membro = Membro.query.get(membro_id)
-            if membro and membro not in evento.participantes:
-                evento.participantes.append(membro)
+    if request.method == 'POST':
+        membros_selecionados = request.form.getlist('membros')
+
+        if not membros_selecionados:
+            flash('Selecione pelo menos um membro para inscrever.', 'warning')
+            return redirect(url_for('eventos.gerenciar_evento', evento_id=evento.id))
         
         try:
+            for membro_id in membros_selecionados:
+                membro = Membro.query.get(int(membro_id))
+                
+                if membro and membro not in evento.participantes:
+                    evento.participantes.append(membro)
+            
             db.session.commit()
-            flash(f'Membros inscritos no evento com sucesso!', 'success')
+            flash('Membros inscritos no evento com sucesso!', 'success')
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao inscrever membros: {e}', 'danger')
             
         return redirect(url_for('eventos.gerenciar_evento', evento_id=evento.id))
-    
+
     membros_inscritos = evento.participantes.all()
     membros_disponiveis = Membro.query.filter(Membro.ativo==True, ~Membro.eventos_inscritos.any(Evento.id == evento.id)).all()
     
     return render_template('eventos/gerenciar_evento.html', 
-                           evento=evento, 
-                           membros_inscritos=membros_inscritos, 
-                           membros_disponiveis=membros_disponiveis,
-                           form_inscricao_membros=form_inscricao_membros)
+                            evento=evento, 
+                            membros_inscritos=membros_inscritos, 
+                            membros_disponiveis=membros_disponiveis,
+                            form_inscricao_membros=form_inscricao_membros,
+                           ano=ano, versao=versao,
+                           config=Config)
 
-@eventos_bp.route('/<int:evento_id>/concluir', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def concluir_evento(evento_id):
+
+@eventos_bp.route('/detalhes/<int:evento_id>')
+def detalhes_evento(evento_id):
+    """Exibe os detalhes de um evento e seus participantes."""
     evento = Evento.query.get_or_404(evento_id)
-    form_conclusao = ConclusaoRecepcaoForm()
+    
+    participantes = evento.participantes.all()
+    
+    return render_template('eventos/detalhes_evento.html', evento=evento, participantes=participantes,
+                           ano=ano, versao=versao,
+                           config=Config)
 
-    if evento.tipo_evento == 'Recepção' and form_conclusao.validate_on_submit():
-        tipo_recepcao = form_conclusao.tipo_recepcao.data
-        obs_membresia = form_conclusao.obs_membresia.data
-        
-        for membro in evento.participantes.all():
-            membro.status = 'Membro'
-            membro.data_recepcao = evento.data_evento
-            membro.tipo_recepcao = tipo_recepcao
-            membro.obs_recepcao = obs_membresia
-            
-            if tipo_recepcao == 'Batismo':
-                membro.batizado_aclamado = True
-                membro.data_batismo = evento.data_evento
-            elif tipo_recepcao == 'Aclamação':
-                membro.batizado_aclamado = True
-                membro.data_aclamacao = evento.data_evento
-
-            db.session.add(membro)
-            registrar_evento_jornada(
-                tipo_acao='MEMBRO_RECEBIDO',
-                descricao_detalhada=f'Recebido como membro por {tipo_recepcao}.',
-                usuario_executor=current_user,
-                membros=[membro]
-            )
-        
-        evento.concluido = True
-        db.session.add(evento)
-        
-        try:
-            db.session.commit()
-            flash('Evento concluído e membros atualizados com sucesso!', 'success')
-            return redirect(url_for('eventos.listar_eventos'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Erro ao concluir evento: {e}', 'danger')
-            
-    elif evento.tipo_evento == 'Encontro com Deus':
-        for membro in evento.participantes.all():
-            membro.participou_encontro_deus = True
-            db.session.add(membro)
-            registrar_evento_jornada(
-                tipo_acao='EVENTO_CONCLUIDO',
-                descricao_detalhada=f'Participou do Encontro com Deus.',
-                usuario_executor=current_user,
-                membros=[membro]
-            )
-        
-        evento.concluido = True
-        db.session.add(evento)
-        
-        try:
-            db.session.commit()
-            flash('Evento concluído e participantes atualizados!', 'success')
-            return redirect(url_for('eventos.listar_eventos'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Erro ao concluir evento: {e}', 'danger')
-        
-    return render_template('eventos/concluir_evento.html', evento=evento, form_conclusao=form_conclusao)
 
 @eventos_bp.route('/<int:evento_id>/remover-participante/<int:membro_id>', methods=['POST'])
 @login_required
@@ -169,16 +134,100 @@ def remover_participante(evento_id, membro_id):
 @eventos_bp.route('/buscar_membros_ativos')
 @login_required
 def buscar_membros_ativos():
-    """Retorna uma lista de membros ativos para uso com Select2."""
+    """
+    Retorna uma lista de membros ativos para uso com Select2,
+    filtrando por status se o tipo de evento for 'Recepção'.
+    """
     search_term = request.args.get('q', '')
+    tipo_evento = request.args.get('tipo_evento', '')
+    evento_id = request.args.get('evento_id', type=int)
+
+    query = Membro.query.filter(Membro.ativo == True)
     
-    query = Membro.query.filter(
-        Membro.nome_completo.ilike(f'%{search_term}%'),
-        Membro.ativo == True
-    )
-    
+    if search_term:
+        query = query.filter(Membro.nome_completo.ilike(f'%{search_term}%'))
+
+    if tipo_evento == 'Recepção':
+        query = query.filter(Membro.status == 'Não-Membro')
+    elif tipo_evento == 'Encontro com Deus':
+        query = query.filter(Membro.participou_encontro_deus == False)
+
+    if evento_id:
+        subquery = db.session.query(participantes_evento.c.membro_id).filter(
+            participantes_evento.c.evento_id == evento_id
+        )
+        query = query.filter(~Membro.id.in_(subquery))
+
     membros = query.order_by(Membro.nome_completo).limit(20).all()
     
     results = [{'id': membro.id, 'text': membro.nome_completo} for membro in membros]
     
     return jsonify(results=results)
+
+@eventos_bp.route('/<int:evento_id>/concluir', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def concluir_evento(evento_id):
+    """
+    Conclui um evento e atualiza as informações dos membros participantes
+    com base no tipo de evento.
+    """
+    evento = Evento.query.get_or_404(evento_id)
+    form_conclusao = ConclusaoRecepcaoForm()
+    participantes = evento.participantes.all()
+
+    if evento.concluido:
+        flash('Este evento já foi concluído.', 'warning')
+        return redirect(url_for('eventos.listar_eventos'))
+
+    if evento.tipo_evento == 'Recepção' and form_conclusao.validate_on_submit():
+        tipo_recepcao = form_conclusao.tipo_recepcao.data
+        obs_membresia = form_conclusao.obs_membresia.data
+        
+        for membro in evento.participantes.all():
+            membro.status = 'Membro'
+            membro.data_recepcao = evento.data_evento
+            membro.tipo_recepcao = tipo_recepcao
+            membro.obs_recepcao = obs_membresia
+            
+            if tipo_recepcao == 'Batismo':
+                membro.batizado_aclamado = True
+                membro.data_batismo = evento.data_evento
+            elif tipo_recepcao == 'Aclamação':
+                membro.batizado_aclamado = True
+                membro.data_aclamacao = evento.data_evento
+
+            db.session.add(membro)
+            registrar_evento_jornada(
+                tipo_acao='MEMBRO_RECEBIDO',
+                descricao_detalhada=f'Recebido como membro por {tipo_recepcao} no evento "{evento.nome}".',
+                usuario_executor=current_user,
+                membros=[membro]
+            )
+    
+    elif evento.tipo_evento == 'Encontro com Deus' and request.method == 'POST':
+        for membro in evento.participantes.all():
+            membro.participou_encontro_deus = True
+            db.session.add(membro)
+            registrar_evento_jornada(
+                tipo_acao='EVENTO_CONCLUIDO',
+                descricao_detalhada=f'Participou do Encontro com Deus "{evento.nome}".',
+                usuario_executor=current_user,
+                membros=[membro]
+            )
+
+    if request.method == 'POST':
+        evento.concluido = True
+        db.session.add(evento)
+        
+        try:
+            db.session.commit()
+            flash(f'Evento "{evento.nome}" concluído e participantes atualizados!', 'success')
+            return redirect(url_for('eventos.listar_eventos'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao concluir o evento: {e}', 'danger')
+            
+    return render_template('eventos/concluir_evento.html', evento=evento, form_conclusao=form_conclusao, participantes=participantes,
+                           ano=ano, versao=versao,
+                           config=Config)

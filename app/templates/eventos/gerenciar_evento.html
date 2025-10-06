@@ -25,39 +25,46 @@
                     <h5 class="mb-0">Participantes Inscritos</h5>
                 </div>
                 <div class="card-body">
+                    {% if membros_inscritos %}
                     <ul class="list-group">
                         {% for membro in membros_inscritos %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             {{ membro.nome_completo }}
                             <form action="{{ url_for('eventos.remover_participante', evento_id=evento.id, membro_id=membro.id) }}" method="post" onsubmit="return confirm('Tem certeza que deseja remover este participante?');" style="display:inline;">
+                                {% if not evento.concluido %}
                                 <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+                                {% endif %}
                             </form>
                         </li>
-                        {% else %}
-                        <li class="list-group-item text-center text-muted">Nenhum participante inscrito ainda.</li>
                         {% endfor %}
                     </ul>
+                    {% else %}
+                    <div class="alert alert-warning text-center">Nenhum participante inscrito ainda.</div>
+                    {% endif %}
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">Adicionar Participantes</h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST">
-                        {{ form_inscricao_membros.hidden_tag() }}
-                        <div class="mb-3">
-                            <label for="membros_select2" class="form-label">Selecionar Membros</label>
-                            <select id="membros_select2" name="membros" multiple="multiple" class="form-select"></select>
-                        </div>
-                        {{ primary('Inscrever Membros') }}
-                    </form>
+
+        {% if not evento.concluido %}
+            <div class="col-md-6">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Adicionar Participantes</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            {{ form_inscricao_membros.hidden_tag() }}
+                            <div class="mb-3">
+                                <label for="membros_select2" class="form-label">{{ form_inscricao_membros.membros.label }}</label>
+                                {{ form_inscricao_membros.membros(class="form-select", id="membros_select2") }}
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-3">Inscrever Membros</button>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
@@ -77,7 +84,9 @@ $(document).ready(function() {
             delay: 250,
             data: function (params) {
                 return {
-                    q: params.term
+                    q: params.term,
+                    tipo_evento: "{{ evento.tipo_evento }}",
+                    evento_id: "{{ evento.id }}"
                 };
             },
             processResults: function (data) {

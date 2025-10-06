@@ -26,7 +26,7 @@
                         {{ render_meta_card('Facilitadores em Treinamento', pg.meta_facilitadores_treinamento, pg.num_facilitadores_treinamento_atuais, 'bi-person-badge') }} 
                         {{ render_meta_card('Anfitriões em Treinamento', pg.meta_anfitrioes_treinamento, pg.num_anfitrioes_treinamento_atuais, 'bi-house-heart') }} 
                         {{ render_meta_card('Participantes frequentes no CTM', pg.meta_ctm_participantes, pg.num_ctm_participantes_atuais, 'bi-book') }} 
-                        {{ render_meta_card('Participantes no Encontro', pg.meta_encontro_deus_participantes, pg.num_encontro_deus_participantes_atuais, 'bi-fire') }} 
+                        {{ render_meta_card('Encontro com Deus', pg.meta_encontro_deus_participantes, pg.num_encontro_deus_participantes_atuais, 'bi-fire') }} 
                         {{ render_meta_card('Batizados/Aclamados', pg.meta_batizados_aclamados, pg.num_batizados_aclamados_atuais, 'bi-calendar-heart') }} 
                     </div>
                 </div>
@@ -40,7 +40,6 @@
                         <thead>
                             <tr>
                                 <th>Nome</th>
-                                <th>Indicadores</th>
                                 <th>Cargo no PG</th>
                                 <th>Ações</th>
                             </tr>
@@ -55,20 +54,6 @@
                             <tr>
                                 <td>
                                     <a href="{{ url_for('membresia.perfil', id=participante.id) }}">{{ participante.nome_completo }}</a>
-                                </td>
-                                <td>
-                                    <form action="{{ url_for('grupos.atualizar_indicadores', pg_id=pg.id, membro_id=participante.id) }}" method="POST" class="d-flex flex-wrap gap-2">
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="checkbox" id="participou_encontro_deus_{{ participante.id }}" name="participou_encontro_deus" value="true" {% if participante.participou_encontro_deus %}checked{% endif %}>
-                                            <label class="form-check-label" for="participou_encontro_deus_{{ participante.id }}">Encontro</label>
-                                        </div>
-                                        {% if participante.status == 'Não-Membro' %}
-                                            <div class="form-check form-check-inline">
-                                                <input class="form-check-input" type="checkbox" id="batizado_aclamado_{{ participante.id }}" name="batizado_aclamado" value="true" {% if participante.batizado_aclamado %}checked{% endif %}>
-                                                <label class="form-check-label" for="batizado_aclamado_{{ participante.id }}">Batismo/Aclamação</label>
-                                            </div>
-                                        {% endif %}
-                                    </form>
                                 </td>
                                 <td>
                                     <form action="{{ url_for('grupos.atualizar_indicadores', pg_id=pg.id, membro_id=participante.id) }}" method="POST" class="d-flex flex-wrap gap-2">

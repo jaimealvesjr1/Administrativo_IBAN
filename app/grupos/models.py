@@ -15,7 +15,7 @@ setor_supervisores = db.Table('setor_supervisores',
 
 class AreaMetaVigente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    data_inicio = db.Column(db.DateTime, default=datetime.utcnow)
+    data_inicio = db.Column(db.Date, default=date.today)
     data_fim = db.Column(db.Date, nullable=False)
     ativa = db.Column(db.Boolean, default=True)
     area_id = db.Column(db.Integer, db.ForeignKey('area.id'), nullable=False)
@@ -39,7 +39,7 @@ class Area(db.Model):
 
     @property
     def meta_vigente(self):
-        return AreaMetaVigente.query.filter_by(area_id=self.id, ativa=True).order_by(AreaMetaVigente.data_inicio.desc()).first()
+        return AreaMetaVigente.query.filter_by(area_id=self.id).order_by(AreaMetaVigente.data_inicio.desc()).first()
 
     @property
     def meta_facilitadores_treinamento(self):
@@ -89,26 +89,52 @@ class Area(db.Model):
 
     @property
     def num_ctm_participantes_atuais_agregado(self):
-        return sum(setor.num_ctm_participantes_atuais_agregado for setor in self.setores.all())
+        membros_area = set(self.membros_da_area_completos)
+        return sum(1 for membro in membros_area if membro.presente_ctm_ultimos_30d)
 
     @property
     def num_encontro_deus_participantes_atuais_agregado(self):
-        return sum(setor.num_encontro_deus_participantes_atuais_agregado for setor in self.setores.all())
+        if not self.meta_vigente:
+            return 0
+        
+        meta_vigente = self.meta_vigente
+        data_inicio = meta_vigente.data_inicio
+        data_fim = meta_vigente.data_fim
+        
+        from app.eventos.models import Evento
+        eventos_encontro = Evento.query.filter(
+            Evento.tipo_evento == 'Encontro com Deus',
+            Evento.concluido == True,
+            Evento.data_evento.between(data_inicio, data_fim)
+        ).all()
+        
+        membros_area = set(self.membros_da_area_completos)
+        
+        total_participantes = 0
+        for evento in eventos_encontro:
+            participantes_evento = set(evento.participantes)
+            total_participantes += len(membros_area.intersection(participantes_evento))
+
+        return total_participantes
 
     @property
     def num_batizados_aclamados_atuais_agregado(self):
         if not self.meta_vigente:
             return 0
         
-        data_inicio_meta = self.meta_vigente.data_inicio.date()
-        data_fim_meta = self.meta_vigente.data_fim
+        meta_vigente = self.meta_vigente
+        data_inicio = meta_vigente.data_inicio
+        data_fim = meta_vigente.data_fim
         
-        membros_da_area = self.membros_da_area_completos
+        membros_area = set(self.membros_da_area_completos)
         
-        count = sum(1 for membro in membros_da_area 
-                    if membro.batizado_aclamado and membro.data_recepcao 
-                    and membro.data_recepcao >= data_inicio_meta
-                    and membro.data_recepcao <= data_fim_meta)
+        count = 0
+        for membro in membros_area:
+            if membro.status == 'Não-Membro' and membro.batizado_aclamado and membro.data_recepcao and data_inicio <= membro.data_recepcao <= data_fim:
+                count += 1
+            elif membro.status != 'Não-Membro' and membro.data_recepcao and data_inicio <= membro.data_recepcao <= data_fim:
+                count += 1
+                
         return count
 
     @property
@@ -116,9 +142,9 @@ class Area(db.Model):
         if not self.meta_vigente:
             return 0
         
-        pgs_multiplicados = 0
         data_inicio_meta = self.meta_vigente.data_inicio
         
+        pgs_multiplicados = 0
         for setor in self.setores.all():
             pgs_multiplicados += setor.pequenos_grupos.filter(PequenoGrupo.data_multiplicacao >= data_inicio_meta).count()
             
@@ -219,24 +245,47 @@ class Setor(db.Model):
 
     @property
     def num_encontro_deus_participantes_atuais_agregado(self):
+        if not self.area or not self.area.meta_vigente:
+            return 0
+            
+        meta_vigente = self.area.meta_vigente
+        data_inicio = meta_vigente.data_inicio
+        data_fim = meta_vigente.data_fim
+        
+        from app.eventos.models import Evento
+        eventos_encontro = Evento.query.filter(
+            Evento.tipo_evento == 'Encontro com Deus',
+            Evento.concluido == True,
+            Evento.data_evento.between(data_inicio, data_fim)
+        ).all()
+        
         membros_setor = set(self.membros_do_setor_completos)
-        count = sum(1 for membro in membros_setor if membro.participou_encontro_deus)
-        return count
+        
+        total_participantes = 0
+        for evento in eventos_encontro:
+            participantes_evento = set(evento.participantes)
+            total_participantes += len(membros_setor.intersection(participantes_evento))
+
+        return total_participantes
 
     @property
     def num_batizados_aclamados_atuais_agregado(self):
-        if not self.area.meta_vigente:
+        if not self.area or not self.area.meta_vigente:
             return 0
         
-        data_inicio_meta = self.area.meta_vigente.data_inicio.date()
-        data_fim_meta = self.area.meta_vigente.data_fim
+        meta_vigente = self.area.meta_vigente
+        data_inicio = meta_vigente.data_inicio
+        data_fim = meta_vigente.data_fim
         
-        membros_do_setor = self.membros_do_setor_completos
+        membros_setor = set(self.membros_do_setor_completos)
         
-        count = sum(1 for membro in membros_do_setor 
-                    if membro.batizado_aclamado and membro.data_recepcao 
-                    and membro.data_recepcao >= data_inicio_meta
-                    and membro.data_recepcao <= data_fim_meta)
+        count = 0
+        for membro in membros_setor:
+            if membro.status == 'Não-Membro' and membro.batizado_aclamado and membro.data_recepcao and data_inicio <= membro.data_recepcao <= data_fim:
+                count += 1
+            elif membro.status != 'Não-Membro' and membro.data_recepcao and data_inicio <= membro.data_recepcao <= data_fim:
+                count += 1
+                
         return count
 
     @property
@@ -338,8 +387,28 @@ class PequenoGrupo(db.Model):
 
     @property
     def num_encontro_deus_participantes_atuais(self):
-        count = sum(1 for membro in self.membros_completos if membro.participou_encontro_deus)
-        return count
+        if not self.setor or not self.setor.area or not self.setor.area.meta_vigente:
+            return 0
+        
+        meta_vigente = self.setor.area.meta_vigente
+        data_inicio = meta_vigente.data_inicio
+        data_fim = meta_vigente.data_fim
+        
+        from app.eventos.models import Evento
+        eventos_encontro = Evento.query.filter(
+            Evento.tipo_evento == 'Encontro com Deus',
+            Evento.concluido == True,
+            Evento.data_evento.between(data_inicio, data_fim)
+        ).all()
+        
+        membros_pg = set(self.membros_completos)
+        
+        total_participantes = 0
+        for evento in eventos_encontro:
+            participantes_evento = set(evento.participantes)
+            total_participantes += len(membros_pg.intersection(participantes_evento))
+
+        return total_participantes
 
     @property
     def num_batizados_aclamados_atuais(self):
@@ -347,15 +416,19 @@ class PequenoGrupo(db.Model):
             return 0
         
         meta_vigente = self.setor.area.meta_vigente
-        data_inicio_meta = meta_vigente.data_inicio.date()
-        data_fim_meta = meta_vigente.data_fim
+        data_inicio = meta_vigente.data_inicio
+        data_fim = meta_vigente.data_fim
         
-        return db.session.query(Membro).filter(
-            Membro.pg_id == self.id,
-            Membro.batizado_aclamado == True,
-            Membro.data_recepcao >= data_inicio_meta,
-            Membro.data_recepcao <= data_fim_meta
-        ).count()
+        membros_pg = set(self.membros_completos)
+        
+        count = 0
+        for membro in membros_pg:
+            if membro.status == 'Não-Membro' and membro.batizado_aclamado and membro.data_recepcao and data_inicio <= membro.data_recepcao <= data_fim:
+                count += 1
+            elif membro.status != 'Não-Membro' and membro.data_recepcao and data_inicio <= membro.data_recepcao <= data_fim:
+                count += 1
+                
+        return count
 
     @property
     def membros_completos(self):

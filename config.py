@@ -14,8 +14,10 @@ JORNADA_DESLIGAMENTO = {'class': 'bg-danger', 'icon': 'bi-person-x', 'label': 'D
 JORNADA_CONTRIBUICAO = {'class': 'bg-primary', 'icon': 'bi-currency-dollar', 'label': 'Contribuição', 'categoria': 'Financeiro'}
 JORNADA_AREA_CRIADA = {'class': 'bg-primary', 'icon': 'bi-plus-circle', 'label': 'Área Criada', 'categoria': 'Grupos'}
 JORNADA_CONCLUSAO_CTM = {'class': 'bg-success', 'icon': 'bi-award', 'label': 'Conclusão de Ciclo', 'categoria': 'CTM'}
+JORNADA_CONCLUSAO_EVENTO = {'class': 'bg-success', 'icon': 'bi-award', 'label': 'Conclusão de Evento', 'categoria': 'Eventos'}
 JORNADA_REPROVACAO_CTM = {'class': 'bg-danger', 'icon': 'bi-x-circle', 'label': 'Reprovação de Ciclo', 'categoria': 'CTM'}
 JORNADA_TURMA_ARQUIVADA = {'class': 'bg-secondary', 'icon': 'bi-archive-fill', 'label': 'Turma Arquivada', 'categoria': 'CTM'}
+JORNADA_NOVO_MEMBRO = {'class': 'bg-success', 'icon': 'bi-person-plus', 'label': 'Participante recebido como Membro', 'categoria': 'Membresia'}
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'chave-secreta-segura'
@@ -26,7 +28,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     TIMEZONE = 'America/Sao_Paulo'
-    VERSAO_APP = '2.6.3 - Cadastros Duplicados'
+    VERSAO_APP = '2.7 - Eventos'
     ANO_ATUAL = datetime.now().year
 
     IDS_OFERTA_ANONIMA_POR_CAMPUS = {
@@ -77,4 +79,6 @@ class Config:
         'REPROVACAO_CTM': JORNADA_REPROVACAO_CTM,
         'TURMA_ARQUIVADA': JORNADA_TURMA_ARQUIVADA,
         'PARTICIPANTE_ADICIONADO_CTM': JORNADA_PARTICIPANTE_ADICIONADO_PG,
+        'MEMBRO_RECEBIDO': JORNADA_NOVO_MEMBRO,
+        'EVENTO_CONCLUIDO': JORNADA_CONCLUSAO_EVENTO,
     }

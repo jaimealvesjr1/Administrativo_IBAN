@@ -32,17 +32,8 @@
                     <p class="text-start"><strong>Data de Nascimento:</strong> {{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento else 'Não informado' }}</p>
                     <p class="text-start"><strong>Data de Recepção:</strong> {{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao else 'Não informado' }}</p>
                     <p class="text-start">
-                        <strong>Status:</strong> 
-                        {% set cargo_lideranca = membro.get_cargo_lideranca() %}
-                        {% if cargo_lideranca %}
-                            {{ cargo_lideranca }}
-                        {% else %}
-                            {% if membro.pg_participante %}
-                                {{ membro.status_treinamento_pg }}
-                            {% else %}
-                                {{ membro.status }}
-                            {% endif %}
-                        {% endif %}
+                        <strong>Liderança:</strong> 
+                        {{ membro.status_exibicao }}
                     </p>
                     <p class="text-start">
                         {% if membro.pg_participante %}
@@ -68,7 +59,6 @@
                     <ul class="list-unstyled">
                         <li><strong>Frequente no CTM:</strong> {{ 'Sim' if membro.participou_ctm else 'Não' }}</li>
                         <li><strong>Já Participou do Encontro com Deus:</strong> {{ 'Sim' if membro.participou_encontro_deus else 'Não' }}</li>
-                        <li><strong>Batizado/Aclamado:</strong> {{ 'Sim' if membro.batizado_aclamado else 'Não' }}</li>
                         <li><strong>Dizimista(Últimos 30 dias):</strong> {{ 'Sim' if membro.contribuiu_dizimo_ultimos_30d else 'Não' }}</li>
                     </ul>
                 </div>
