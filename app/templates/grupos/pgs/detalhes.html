@@ -87,7 +87,7 @@
                         </div>
                         <small class="form-text text-muted mt-2 d-block">
                             Não encontrou o participante?
-                            <a href="{{ url_for('membresia.cadastro_nao_membro') }}">Clique aqui para cadastrar</a>.
+                            <a href="{{ url_for('membresia.cadastro_nao_membro', next=request.path) }}">Clique aqui para cadastrar</a>.
                         </small>
                     </form>
                 </div>

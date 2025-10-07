@@ -395,7 +395,7 @@ def desligar_membro(id):
 @membresia_bp.route('/cadastro_nao_membro', methods=['GET', 'POST'])
 def cadastro_nao_membro():
     form = CadastrarNaoMembroForm(membro=None)
-    next_url = request.args.get('next')
+    next_url = request.args.get('next') or request.form.get('next')
 
     if form.validate_on_submit():
         novo_membro = Membro(
@@ -434,7 +434,11 @@ def cadastro_nao_membro():
         flash('Por favor, verifique os campos em vermelho e corrija os erros.', 'danger')
 
     return render_template('membresia/cadastro.html',
-                           form=form, editar=False, ano=ano, versao=versao)
+                           form=form,
+                           editar=False,
+                           ano=ano,
+                           versao=versao,
+                           next_url=next_url)
 
 @membresia_bp.route('/nao_membros')
 @login_required
