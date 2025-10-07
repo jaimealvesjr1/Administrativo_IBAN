@@ -62,32 +62,22 @@
                     <h5 class="mb-0">Setores na Área</h5>
                 </div>
                 <div class="card-body">
-                {% if area.setores.count() > 0 %}
-                    <table class="table table-striped table-hover">
-                        <thead>
-                            <tr>
-                                <th scope="col">Nome</th>
-                                <th scope="col">Supervisor</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                    {% if area.setores.count() > 0 %}
+                        <ul class="list-group list-group-flush">
                             {% for setor in area.setores %}
-                            <tr>
-                                <td><a href="{{ url_for('grupos.detalhes_setor', setor_id=setor.id) }}">Setor {{ setor.nome }}</a></td>
-                                <td>
-                                    {% for supervisor in setor.supervisores %}
-                                        <span class="badge bg-secondary me-1">{{ supervisor.nome_completo }}</span>
-                                    {% else %}
-                                        N/A
-                                    {% endfor %}
-                                </td>
-                            </tr>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <a href="{{ url_for('grupos.detalhes_setor', setor_id=setor.id) }}">Setor {{ setor.nome }}</a>
+                                    <small class="text-muted">
+                                        {% for supervisor in setor.supervisores %}
+                                            <span class="badge bg-secondary me-1">{{ supervisor.nome_completo }}</span>
+                                        {% endfor %}
+                                    </small>
+                                </li>
                             {% endfor %}
-                        </tbody>
-                    </table>
-                {% else %}
-                    <p>Nenhum Setor vinculado a esta Área ainda.</p>
-                {% endif %}
+                        </ul>
+                    {% else %}
+                        <p>Nenhum Setor vinculado a esta Área ainda.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -102,25 +92,10 @@
             </div>
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">Distribuição de Membros</h5>
+                    <h5 class="mb-0">Distribuição de Membros por Setor</h5>
                 </div>
                 <div class="card-body">
-                    <ul class="nav nav-pills nav-fill mb-3" id="pills-tab" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="pills-campus-tab" data-bs-toggle="pill" data-bs-target="#pills-campus" type="button" role="tab" aria-controls="pills-campus" aria-selected="true">Por Campus</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="pills-setor-tab" data-bs-toggle="pill" data-bs-target="#pills-setor" type="button" role="tab" aria-controls="pills-setor" aria-selected="false">Por Setor</button>
-                        </li>
-                    </ul>
-                    <div class="tab-content" id="pills-tabContent">
-                        <div class="tab-pane fade show active" id="pills-campus" role="tabpanel" aria-labelledby="pills-campus-tab">
-                            <canvas id="campusFrequenciaChart"></canvas>
-                        </div>
-                        <div class="tab-pane fade" id="pills-setor" role="tabpanel" aria-labelledby="pills-setor-tab">
-                            <canvas id="setorMembrosChart"></canvas>
-                        </div>
-                    </div>
+                    <canvas id="setorMembrosChart"></canvas>
                 </div>
             </div>
             <div class="card shadow-sm mb-4">
@@ -182,45 +157,6 @@
             }
         });
 
-        var ctxCampusFrequencia = document.getElementById('campusFrequenciaChart').getContext('2d');
-        var campusLabels = JSON.parse('{{ area.distribuicao_campus_frequencia.keys()|list|tojson|safe }}');
-        var campusData = JSON.parse('{{ area.distribuicao_campus_frequencia.values()|list|tojson|safe }}');
-        var campusConfigColors = {{ config.CAMPUS|tojson|safe }};
-        var backgroundColors = campusLabels.map(label => campusConfigColors[label] || '#cccccc');
-        new Chart(ctxCampusFrequencia, {
-            type: 'bar',
-            data: {
-                labels: campusLabels,
-                datasets: [{
-                    label: 'Membros',
-                    data: campusData,
-                    backgroundColor: backgroundColors,
-                    borderColor: backgroundColors,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false,
-                    },
-                    title: {
-                        display: false,
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: false,
-                        },
-                        ticks: {stepSize: 1}
-                    }
-                }
-            }
-        });
         var ctmData = {{ ctm_por_setor|tojson|safe }};
         var ctmLabels = ctmData.map(item => item.setor_nome);
         var ctmCounts = ctmData.map(item => item.count);
@@ -248,6 +184,7 @@
                 }
             }
         });
+
         var setorLabels = {{ membros_por_setor|tojson|safe }}.map(item => item.setor_nome);
         var setorData = {{ membros_por_setor|tojson|safe }}.map(item => item.count);
         

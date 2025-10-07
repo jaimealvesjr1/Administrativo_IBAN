@@ -77,15 +77,13 @@ class Area(db.Model):
 
     @property
     def num_facilitadores_treinamento_atuais_agregado(self):
-        count = sum(setor.num_facilitadores_treinamento_atuais_agregado for setor in self.setores.all())
-        count += sum(1 for supervisor in self.supervisores if supervisor.status_treinamento_pg == 'Facilitador em Treinamento')
-        return count
+        membros_area = set(self.membros_da_area_completos)
+        return sum(1 for membro in membros_area if membro.status_treinamento_pg == 'Facilitador em Treinamento')
 
     @property
     def num_anfitrioes_treinamento_atuais_agregado(self):
-        count = sum(setor.num_anfitrioes_treinamento_atuais_agregado for setor in self.setores.all())
-        count += sum(1 for supervisor in self.supervisores if supervisor.status_treinamento_pg == 'Anfitrião em Treinamento')
-        return count
+        membros_area = set(self.membros_da_area_completos)
+        return sum(1 for membro in membros_area if membro.status_treinamento_pg == 'Anfitrião em Treinamento')
 
     @property
     def num_ctm_participantes_atuais_agregado(self):
@@ -228,21 +226,18 @@ class Setor(db.Model):
     @property
     def num_facilitadores_treinamento_atuais_agregado(self):
         membros_setor = set(self.membros_do_setor_completos)
-        count = sum(1 for membro in membros_setor if membro.status_treinamento_pg == 'Facilitador em Treinamento')
-        return count
+        return sum(1 for membro in membros_setor if membro.status_treinamento_pg == 'Facilitador em Treinamento')
 
     @property
     def num_anfitrioes_treinamento_atuais_agregado(self):
         membros_setor = set(self.membros_do_setor_completos)
-        count = sum(1 for membro in membros_setor if membro.status_treinamento_pg == 'Anfitrião em Treinamento')
-        return count
+        return sum(1 for membro in membros_setor if membro.status_treinamento_pg == 'Anfitrião em Treinamento')
 
     @property
     def num_ctm_participantes_atuais_agregado(self):
         membros_setor = set(self.membros_do_setor_completos)
-        count = sum(1 for membro in membros_setor if membro.presente_ctm_ultimos_30d)
-        return count
-
+        return sum(1 for membro in membros_setor if membro.presente_ctm_ultimos_30d)
+    
     @property
     def num_encontro_deus_participantes_atuais_agregado(self):
         if not self.area or not self.area.meta_vigente:

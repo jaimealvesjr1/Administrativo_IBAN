@@ -154,31 +154,29 @@ def detalhes_area(area_id):
     membros_por_setor = []
 
     for setor in area.setores:
-        membros_do_setor = setor.membros_do_setor_completos
-        num_dizimistas = sum(1 for membro in membros_do_setor if membro.contribuiu_dizimo_ultimos_30d)
-        num_nao_dizimistas = len(membros_do_setor) - num_dizimistas
-
+        dizimistas_data = setor.distribuicao_dizimistas_30d
         dizimistas_por_setor_chart['labels'].append(setor.nome)
-        dizimistas_por_setor_chart['dizimistas'].append(num_dizimistas)
-        dizimistas_por_setor_chart['nao_dizimistas'].append(num_nao_dizimistas)
+        dizimistas_por_setor_chart['dizimistas'].append(dizimistas_data.get('dizimistas', 0))
+        dizimistas_por_setor_chart['nao_dizimistas'].append(dizimistas_data.get('nao_dizimistas', 0))
 
-        num_ctm_frequentes = sum(1 for membro in membros_do_setor if membro.presente_ctm_ultimos_30d)
+        ctm_data = setor.distribuicao_frequencia_ctm
         ctm_por_setor.append({
             'setor_nome': setor.nome,
-            'count': num_ctm_frequentes
-        })
-        membros_por_setor.append({
-            'setor_nome': setor.nome,
-            'count': len(membros_do_setor)
+            'count': ctm_data.get('frequentes_ctm', 0)
         })
 
+        membros_por_setor.append({
+            'setor_nome': setor.nome,
+            'count': len(setor.membros_do_setor_completos)
+        })
+    
     return render_template('grupos/areas/detalhes.html',
                            area=area,
                            jornada_eventos=jornada_eventos,
-                            dizimistas_por_setor=dizimistas_por_setor_chart,
-                            ctm_por_setor=ctm_por_setor,
-                            membros_por_setor=membros_por_setor,
-                            config=Config, ano=ano, versao=versao)
+                           dizimistas_por_setor=dizimistas_por_setor_chart,
+                           ctm_por_setor=ctm_por_setor,
+                           membros_por_setor=membros_por_setor,
+                           config=Config, ano=ano, versao=versao)
 
 @grupos_bp.route('/areas/editar/<int:area_id>', methods=['GET', 'POST'])
 @login_required
@@ -545,7 +543,7 @@ def adicionar_participante(pg_id):
         membro.pg_id = pg.id
         try:
             db.session.commit()
-            flash(f'{membro.nome_completo} adicionado(a) ao {pg.nome} como participante!', 'success')
+            flash(f'{membro.nome_completo} adicionado(a) ao PG {pg.nome} como participante!', 'success')
             registrar_evento_jornada(tipo_acao='PARTICIPANTE_ADICIONADO_PG', descricao_detalhada=f'Se tornou participante do PG {pg_nome}.', usuario_executor=current_user, membros=[membro])
         except Exception as e:
             db.session.rollback()
