@@ -5,7 +5,7 @@ from .models import Membro
 from .forms import MembroForm, CadastrarNaoMembroForm, EditarMembroForm
 from app.jornada.models import JornadaEvento, registrar_evento_jornada
 from app.financeiro.models import Contribuicao
-from app.ctm.models import ConclusaoCTM
+from app.ctm.models import ConclusaoCTM, Presenca
 from app.auth.models import User
 from config import Config
 from datetime import datetime, timedelta, date
@@ -558,11 +558,27 @@ def unificar_processar():
         db.session.add(membro_principal)
 
         for membro_secundario in membros_secundarios:
+            conclusoes_secundarias = ConclusaoCTM.query.filter_by(membro_id=membro_secundario.id).all()
+            turmas_concluidas_principal = {c.turma_id for c in ConclusaoCTM.query.filter_by(membro_id=membro_principal.id).all()}
+            for conclusao in conclusoes_secundarias:
+                if conclusao.turma_id in turmas_concluidas_principal:
+                    db.session.delete(conclusao)
+                else:
+                    conclusao.membro_id = membro_principal.id
+            
+            presencas_secundarias = Presenca.query.filter_by(membro_id=membro_secundario.id).all()
+            aulas_com_presenca_principal = {p.aula_realizada_id for p in Presenca.query.filter_by(membro_id=membro_principal.id).all()}
+            for presenca in presencas_secundarias:
+                if presenca.aula_realizada_id in aulas_com_presenca_principal:
+                    db.session.delete(presenca)
+                else:
+                    presenca.membro_id = membro_principal.id
+
+            Contribuicao.query.filter_by(membro_id=membro_secundario.id).update({Contribuicao.membro_id: membro_principal.id}, synchronize_session=False)
+
             for evento in membro_secundario.jornada_eventos_membro:
                 evento.membros_afetados.append(membro_principal)
                 evento.membros_afetados.remove(membro_secundario)
-            Contribuicao.query.filter_by(membro_id=membro_secundario.id).update({Contribuicao.membro_id: membro_principal.id})
-            ConclusaoCTM.query.filter_by(membro_id=membro_secundario.id).update({ConclusaoCTM.membro_id: membro_principal.id})
 
             usuario_secundario = User.query.filter_by(membro_id=membro_secundario.id).first()
             if usuario_secundario and usuario_secundario.id != usuario_principal.id:

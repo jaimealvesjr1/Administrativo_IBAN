@@ -18,6 +18,7 @@ JORNADA_CONCLUSAO_EVENTO = {'class': 'bg-success', 'icon': 'bi-award', 'label': 
 JORNADA_REPROVACAO_CTM = {'class': 'bg-danger', 'icon': 'bi-x-circle', 'label': 'Reprovação de Ciclo', 'categoria': 'CTM'}
 JORNADA_TURMA_ARQUIVADA = {'class': 'bg-secondary', 'icon': 'bi-archive-fill', 'label': 'Turma Arquivada', 'categoria': 'CTM'}
 JORNADA_NOVO_MEMBRO = {'class': 'bg-success', 'icon': 'bi-person-plus', 'label': 'Participante recebido como Membro', 'categoria': 'Membresia'}
+JORNADA_PRESENCA_CTM = {'class': 'bg-info', 'icon': 'bi-bar-chart-line', 'label': 'Participante Presente no CTM', 'categoria': 'Membresia'}
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'chave-secreta-segura'
@@ -28,7 +29,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     TIMEZONE = 'America/Sao_Paulo'
-    VERSAO_APP = '2.7.1 - Eventos'
+    VERSAO_APP = '2.7.2 - Eventos'
     ANO_ATUAL = datetime.now().year
 
     IDS_OFERTA_ANONIMA_POR_CAMPUS = {
@@ -81,4 +82,5 @@ class Config:
         'PARTICIPANTE_ADICIONADO_CTM': JORNADA_PARTICIPANTE_ADICIONADO_PG,
         'MEMBRO_RECEBIDO': JORNADA_NOVO_MEMBRO,
         'EVENTO_CONCLUIDO': JORNADA_CONCLUSAO_EVENTO,
+        'PRESENCA_CTM': JORNADA_PRESENCA_CTM,
     }
