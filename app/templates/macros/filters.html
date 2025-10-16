@@ -9,7 +9,15 @@
 
     {% if meta is number and meta > 0 %}
         {% set progresso_percent = (atual / meta) * 100 %}
-        {% if progresso_percent >= 99 %}
+        
+        {% set largura_visivel = progresso_percent %}
+        {% if progresso_percent > 100 %}
+            {% set largura_visivel = 100 %}
+        {% endif %}
+        
+        {% if progresso_percent > 100 %}
+            {% set status_class = 'primary' %}
+        {% elif progresso_percent >= 99 %}
             {% set status_class = 'success' %}
         {% elif progresso_percent >= 41 %}
             {% set status_class = 'warning' %}
@@ -18,11 +26,12 @@
         {% endif %}
     {% else %}
         {% set progresso_percent = 0 %}
+        {% set largura_visivel = 0 %}
         {% set status_class = 'secondary' %}
     {% endif %}
 
     <div class="card h-100 border-start border-4 border-{{ status_class }} shadow-sm">
-        <div class="position-absolute top-0 start-0 h-100 bg-{{ status_class }} opacity-25" style="width: {{ progresso_percent }}%;"></div>
+        <div class="position-absolute top-0 start-0 h-100 bg-{{ status_class }} opacity-25" style="width: {{ largura_visivel | int }}%;"></div>
         <div class="card-body p-2 d-flex align-items-center position-relative">
             <i class="bi {{ icon_class }} icon-small me-2 fs-4 text-{{ status_class }}"></i>
             <div>

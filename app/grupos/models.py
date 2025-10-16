@@ -68,6 +68,10 @@ class Area(db.Model):
         return count
 
     @property
+    def num_pequenos_grupos_ativos(self):
+        return self.pequenos_grupos.filter_by(ativo=True).count()
+
+    @property
     def membros_da_area_completos(self):
         membros = set()
         membros.update(self.supervisores)
@@ -134,18 +138,22 @@ class Area(db.Model):
                 count += 1
                 
         return count
-
+    
     @property
     def num_multiplicacoes_pg_atuais_agregado(self):
         if not self.meta_vigente:
             return 0
         
         data_inicio_meta = self.meta_vigente.data_inicio
-        
+        data_fim_meta = self.meta_vigente.data_fim
+
         pgs_multiplicados = 0
         for setor in self.setores.all():
-            pgs_multiplicados += setor.pequenos_grupos.filter(PequenoGrupo.data_multiplicacao >= data_inicio_meta).count()
-            
+            pgs_multiplicados += setor.pequenos_grupos.filter(
+                PequenoGrupo.data_multiplicacao.isnot(None),
+                PequenoGrupo.data_multiplicacao >= data_inicio_meta,
+                PequenoGrupo.data_multiplicacao <= data_fim_meta
+            ).count()
         return pgs_multiplicados
     
     @property
@@ -225,63 +233,23 @@ class Setor(db.Model):
 
     @property
     def num_facilitadores_treinamento_atuais_agregado(self):
-        membros_setor = set(self.membros_do_setor_completos)
-        return sum(1 for membro in membros_setor if membro.status_treinamento_pg == 'Facilitador em Treinamento')
+        return sum(pg.num_facilitadores_treinamento_atuais for pg in self.pequenos_grupos.all())
 
     @property
     def num_anfitrioes_treinamento_atuais_agregado(self):
-        membros_setor = set(self.membros_do_setor_completos)
-        return sum(1 for membro in membros_setor if membro.status_treinamento_pg == 'Anfitrião em Treinamento')
+        return sum(pg.num_anfitrioes_treinamento_atuais for pg in self.pequenos_grupos.all())
 
     @property
     def num_ctm_participantes_atuais_agregado(self):
-        membros_setor = set(self.membros_do_setor_completos)
-        return sum(1 for membro in membros_setor if membro.presente_ctm_ultimos_30d)
-    
+        return sum(pg.num_ctm_participantes_atuais for pg in self.pequenos_grupos.all())
+
     @property
     def num_encontro_deus_participantes_atuais_agregado(self):
-        if not self.area or not self.area.meta_vigente:
-            return 0
-            
-        meta_vigente = self.area.meta_vigente
-        data_inicio = meta_vigente.data_inicio
-        data_fim = meta_vigente.data_fim
-        
-        from app.eventos.models import Evento
-        eventos_encontro = Evento.query.filter(
-            Evento.tipo_evento == 'Encontro com Deus',
-            Evento.concluido == True,
-            Evento.data_evento.between(data_inicio, data_fim)
-        ).all()
-        
-        membros_setor = set(self.membros_do_setor_completos)
-        
-        total_participantes = 0
-        for evento in eventos_encontro:
-            participantes_evento = set(evento.participantes)
-            total_participantes += len(membros_setor.intersection(participantes_evento))
-
-        return total_participantes
+        return sum(pg.num_encontro_deus_participantes_atuais for pg in self.pequenos_grupos.all())
 
     @property
     def num_batizados_aclamados_atuais_agregado(self):
-        if not self.area or not self.area.meta_vigente:
-            return 0
-        
-        meta_vigente = self.area.meta_vigente
-        data_inicio = meta_vigente.data_inicio
-        data_fim = meta_vigente.data_fim
-        
-        membros_setor = set(self.membros_do_setor_completos)
-        
-        count = 0
-        for membro in membros_setor:
-            if membro.status == 'Não-Membro' and membro.batizado_aclamado and membro.data_recepcao and data_inicio <= membro.data_recepcao <= data_fim:
-                count += 1
-            elif membro.status != 'Não-Membro' and membro.data_recepcao and data_inicio <= membro.data_recepcao <= data_fim:
-                count += 1
-                
-        return count
+        return sum(pg.num_batizados_aclamados_atuais for pg in self.pequenos_grupos.all())
 
     @property
     def num_multiplicacoes_pg_atuais_agregado(self):
@@ -333,12 +301,15 @@ class PequenoGrupo(db.Model):
     setor_id = db.Column(db.Integer, db.ForeignKey('setor.id'), nullable=False)
     dia_reuniao = db.Column(db.String(20), nullable=False)
     horario_reuniao = db.Column(db.String(10), nullable=False)
-    data_multiplicacao = db.Column(db.DateTime, default=datetime.utcnow)
+    data_multiplicacao = db.Column(db.DateTime, nullable=True)
+    autorizacao_multiplicacao = db.Column(db.Boolean, default=False)
+    ativo = db.Column(db.Boolean, default=True)
 
     facilitador = db.relationship('Membro', foreign_keys=[facilitador_id], back_populates='pgs_facilitados')
     anfitriao = db.relationship('Membro', foreign_keys=[anfitriao_id], back_populates='pgs_anfitriados')
     participantes = db.relationship('Membro', foreign_keys='Membro.pg_id', back_populates='pg_participante', lazy='dynamic')
     
+    # --- Propriedades de Definição de Metas ---
     @property
     def meta_facilitadores_treinamento(self):
         return self.setor.area.meta_vigente.meta_facilitadores_treinamento_pg if self.setor and self.setor.area and self.setor.area.meta_vigente else 0
@@ -357,32 +328,37 @@ class PequenoGrupo(db.Model):
     @property
     def meta_multiplicacoes_pg(self):
         return self.setor.area.meta_vigente.meta_multiplicacoes_pg_pg if self.setor and self.setor.area and self.setor.area.meta_vigente else 0
-
+    
+    # --- Propriedades de Contagem de Metas ---
     @property
     def num_facilitadores_treinamento_atuais(self):
+        if not self.ativo:
+            return 0
         from app.membresia.models import Membro
         membros_completos = self.membros_completos
         count = sum(1 for membro in membros_completos if membro.status_treinamento_pg == 'Facilitador em Treinamento')
-        
         return count
-
+    
     @property
     def num_anfitrioes_treinamento_atuais(self):
+        if not self.ativo:
+            return 0
         from app.membresia.models import Membro
         membros_completos = self.membros_completos
         count = sum(1 for membro in membros_completos if membro.status_treinamento_pg == 'Anfitrião em Treinamento')
-        
         return count
 
     @property
     def num_ctm_participantes_atuais(self):
+        if not self.ativo:
+            return 0
         membros_completos = self.membros_completos
         count = sum(1 for membro in membros_completos if membro.presente_ctm_ultimos_30d)
         return count
 
     @property
     def num_encontro_deus_participantes_atuais(self):
-        if not self.setor or not self.setor.area or not self.setor.area.meta_vigente:
+        if not self.ativo or not self.setor or not self.setor.area or not self.setor.area.meta_vigente:
             return 0
         
         meta_vigente = self.setor.area.meta_vigente
@@ -407,7 +383,7 @@ class PequenoGrupo(db.Model):
 
     @property
     def num_batizados_aclamados_atuais(self):
-        if not self.setor or not self.setor.area or not self.setor.area.meta_vigente:
+        if not self.ativo or not self.setor or not self.setor.area or not self.setor.area.meta_vigente:
             return 0
         
         meta_vigente = self.setor.area.meta_vigente
@@ -418,13 +394,17 @@ class PequenoGrupo(db.Model):
         
         count = 0
         for membro in membros_pg:
-            if membro.status == 'Não-Membro' and membro.batizado_aclamado and membro.data_recepcao and data_inicio <= membro.data_recepcao <= data_fim:
-                count += 1
-            elif membro.status != 'Não-Membro' and membro.data_recepcao and data_inicio <= membro.data_recepcao <= data_fim:
-                count += 1
-                
+            is_batizado_aclamado = (
+                membro.batizado_aclamado == True and
+                membro.data_recepcao is not None and
+                data_inicio <= membro.data_recepcao <= data_fim
+            )
+            
+            if is_batizado_aclamado:
+                 count += 1
+            
         return count
-
+    
     @property
     def membros_completos(self):
         membros = set(p for p in self.participantes.all())
@@ -449,6 +429,14 @@ class PequenoGrupo(db.Model):
         if self.anfitriao and self.anfitriao.id != self.facilitador.id:
             membros.add(self.anfitriao)
         return list(membros)
+    
+    @property
+    def pronto_para_multiplicar(self):
+        tem_facilitador_treinamento = self.num_facilitadores_treinamento_atuais > 0
+        tem_anfitriao_treinamento = self.num_anfitrioes_treinamento_atuais > 0
+        esta_autorizado = self.autorizacao_multiplicacao
+        
+        return tem_facilitador_treinamento and tem_anfitriao_treinamento and esta_autorizado
 
     def __repr__(self):
         return f'<PG: {self.nome} | Facilitador: {self.facilitador.nome_completo}>'

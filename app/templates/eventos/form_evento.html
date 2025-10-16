@@ -2,7 +2,13 @@
 {% from 'base/components/forms.html' import field %}
 {% from 'base/components/buttons.html' import submit %}
 
-{% block title %}Criar Evento · IBAN{% endblock %}
+{% block title %}
+    {% if evento %}
+        Editar {{ evento.nome }}
+    {% else %}
+        Criar Evento
+    {% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -10,7 +16,15 @@
         <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
     </div>
     <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
-        <h2 class="text-center"><strong>Criar Novo Evento</strong></h2>
+        <h2 class="text-center">
+            <strong>
+                {% if evento %}
+                    Editar {{ evento.nome }}
+                {% else %}
+                    Criar Novo Evento
+                {% endif %}
+            </strong>
+        </h2>
         <form method="POST" enctype="multipart/form-data">
             {{ form.hidden_tag() }}
             <div class="mb-3">
@@ -32,10 +46,18 @@
                 {{ form.observacoes(class="form-control") }}
             </div>
             <div class="mb-3">
-                {{ submit('Salvar Evento') }}
+                {% if evento %}
+                    {{ submit('Salvar Alterações') }}
+                {% else %}
+                    {{ submit('Salvar Evento') }}
+                {% endif %}
             </div>
             <div class="text-end mt-3">
-                <a href="{{ url_for('eventos.listar_eventos') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+                {% if evento %}
+                    <a href="{{ url_for('eventos.gerenciar_evento', evento_id=evento.id) }}" class="btn btn-outline-secondary">⬅ Cancelar</a>
+                {% else %}
+                    <a href="{{ url_for('eventos.listar_eventos') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+                {% endif %}
             </div>
         </form>
     </div>

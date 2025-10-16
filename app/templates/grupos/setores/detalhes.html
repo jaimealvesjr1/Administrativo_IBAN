@@ -17,8 +17,11 @@
     <div class="row">
         <div class="col-md-12 text-center ">
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-warning text-white">
+                <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Metas do Setor</h5>
+                    <a href="{{ url_for('grupos.multiplicar_pgs_setor', setor_id=setor.id) }}" class="btn btn-sm btn-light">
+                        <i class="bi bi-diagram-3-fill me-1"></i> Multiplicar PGs
+                    </a>
                 </div>
                 <div class="card-body">
                     <div class="row row-cols-1 row-cols-md-6 g-2">
@@ -49,29 +52,37 @@
                 </div>
             </div>
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">PGs no Setor</h5>
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Pequenos Grupos no Setor</h5>
                 </div>
                 <div class="card-body">
-                    {% if setor.pequenos_grupos.count() > 0 %}
-                        <table class="table table-striped table-hover">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Nome</th>
-                                    <th scope="col">Dia/Hora</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for pg in setor.pequenos_grupos %}
-                                <tr>
-                                    <td><a href="{{ url_for('grupos.detalhes_pg', pg_id=pg.id) }}">PG {{ pg.nome }}</a></td>
-                                    <td>{{ pg.dia_reuniao }} às {{ pg.horario_reuniao }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    
+                    <h6 class="text-success mb-2"><strong>Ativos ({{ pgs_ativos|length }})</strong></h6>
+                    {% if pgs_ativos %}
+                        <ul class="list-group list-group-flush mb-4">
+                            {% for pg in pgs_ativos %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <a href="{{ url_for('grupos.detalhes_pg', pg_id=pg.id) }}">PG {{ pg.nome }}</a>
+                                <small class="text-muted">{{ pg.dia_reuniao }}</small>
+                            </li>
+                            {% endfor %}
+                        </ul>
                     {% else %}
-                        <p>Nenhum Pequeno Grupo vinculado a este Setor ainda.</p>
+                        <div class="alert alert-light text-center" role="alert">Nenhum PG ativo neste Setor.</div>
+                    {% endif %}
+
+                    <h6 class="text-warning mb-2"><strong>Multiplicados ({{ pgs_multiplicados|length }})</strong></h6>
+                    {% if pgs_multiplicados %}
+                        <ul class="list-group list-group-flush">
+                            {% for pg in pgs_multiplicados %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <a href="{{ url_for('grupos.detalhes_pg', pg_id=pg.id) }}">PG {{ pg.nome }}</a>
+                                <small class="text-warning"><strong>{{ pg.data_multiplicacao.strftime('%d/%m/%Y') }}</strong></small>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="alert alert-light text-center" role="alert">Nenhum PG multiplicado registrado.</div>
                     {% endif %}
                 </div>
             </div>

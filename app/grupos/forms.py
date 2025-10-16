@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, SelectField, IntegerField, SelectMultipleField, DateField
+from wtforms import StringField, SubmitField, SelectField, IntegerField, SelectMultipleField, DateField, Form, FieldList, FormField
 from wtforms.validators import DataRequired, Length, ValidationError, NumberRange
 from app.grupos.models import Area, Setor, PequenoGrupo
 from app.membresia.models import Membro
@@ -16,7 +16,6 @@ class AreaForm(FlaskForm):
         self.obj = kwargs.get('obj', None)
         if self.obj and self.obj.supervisores:
             self.supervisores.choices = [(s.id, s.nome_completo) for s in self.obj.supervisores]
-
 
     def validate_nome(self, nome):
         area = Area.query.filter_by(nome=nome.data).first()
@@ -52,9 +51,10 @@ class SetorForm(FlaskForm):
 
 class PequenoGrupoForm(FlaskForm):
     nome = StringField('Nome do PG', validators=[DataRequired(), Length(min=2, max=100)])
+    sufixo_nome = StringField('Sobrenome ou Sufixo')
     facilitador = SelectField('Facilitador', coerce=int, validators=[DataRequired()])
     anfitriao = SelectField('Anfitrião', coerce=int, validators=[DataRequired()])
-    setor = SelectField('Setor', coerce=int, validators=[DataRequired()])
+    setor = SelectField('Setor', coerce=int)
     dia_reuniao = SelectField('Dia da Reunião', validators=[DataRequired()],
                               choices=[('Segunda-feira', 'Segunda-feira'),
                                        ('Terça-feira', 'Terça-feira'),
@@ -62,9 +62,12 @@ class PequenoGrupoForm(FlaskForm):
                                        ('Quinta-feira', 'Quinta-feira'),
                                        ('Sexta-feira', 'Sexta-feira'),
                                        ('Sábado', 'Sábado')])
-    horario_reuniao = StringField('Horário da Reunião (Ex: 19:30)', validators=[DataRequired()])
+    horario_reuniao = StringField('Horário (Ex: 19:30)', validators=[DataRequired()])
 
     submit = SubmitField('Salvar Pequeno Grupo')
+
+    class Meta:
+        csrf = False
 
     def __init__(self, *args, **kwargs):
         super(PequenoGrupoForm, self).__init__(*args, **kwargs)
@@ -77,9 +80,17 @@ class PequenoGrupoForm(FlaskForm):
         self.setor.choices.insert(0, (0, 'Selecione um setor'))
 
     def validate_nome(self, nome):
+        from app.auth.models import User
+        from flask_login import current_user
+
         pg = PequenoGrupo.query.filter_by(nome=nome.data).first()
         if pg and (not self.obj or pg.id != self.obj.id):
             raise ValidationError('Já existe um Pequeno Grupo com este nome. Por favor, escolha outro.')
+        
+        if self.obj and self.obj.nome != nome.data:
+            user_is_admin = current_user.is_authenticated and current_user.has_permission('admin')
+            if not user_is_admin:
+                raise ValidationError('O nome do Pequeno Grupo não pode ser alterado após a criação.')
 
     def validate_facilitador(self, facilitador):
         if facilitador.data == 0:
@@ -88,7 +99,7 @@ class PequenoGrupoForm(FlaskForm):
     def validate_anfitriao(self, anfitriao):
         if anfitriao.data == 0:
             raise ValidationError('Por favor, selecione um Anfitrião válido.')
-
+        
     def validate_setor(self, setor):
         if setor.data == 0:
             raise ValidationError('Por favor, selecione um Setor válido.')
@@ -112,3 +123,30 @@ class AreaMetasForm(FlaskForm):
     def validate_data_inicio(self, field):
         if field.data >= self.data_fim.data:
             raise ValidationError('A data de início deve ser anterior à data de validade.')
+
+class MultiplicacaoForm(FlaskForm):
+    pg1 = FormField(PequenoGrupoForm)
+    pg2 = FormField(PequenoGrupoForm)
+    data_multiplicacao = DateField('Data da Multiplicação', validators=[DataRequired()])
+    submit = SubmitField('Multiplicar PG')
+
+    def __init__(self, *args, **kwargs):
+        super(MultiplicacaoForm, self).__init__(*args, **kwargs)
+        membros_choices = [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
+        membros_choices.insert(0, (0, 'Selecione um membro'))
+        
+        self.pg1.facilitador.choices = membros_choices
+        self.pg1.anfitriao.choices = membros_choices
+        self.pg2.facilitador.choices = membros_choices
+        self.pg2.anfitriao.choices = membros_choices
+
+        self.pg1.setor.choices = []
+        self.pg2.setor.choices = []
+
+    def validate(self, **kwargs):
+        valid_principal = super(MultiplicacaoForm, self).validate(**kwargs)
+        
+        valid_pg1 = self.pg1.validate(self)
+        valid_pg2 = self.pg2.validate(self)
+
+        return valid_principal and valid_pg1 and valid_pg2

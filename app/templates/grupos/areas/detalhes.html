@@ -1,6 +1,5 @@
 {% set show_navbar = true %}
 {% extends "base/layout.html" %}
-{% from 'base/components/jornada_timeline.html' import render_jornada_timeline %}
 {% from 'base/components/buttons.html' import primary %}
 {% from 'macros/filters.html' import render_meta_card %}
 
@@ -64,16 +63,12 @@
                 <div class="card-body">
                     {% if area.setores.count() > 0 %}
                         <ul class="list-group list-group-flush">
-                            {% for setor in area.setores %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <a href="{{ url_for('grupos.detalhes_setor', setor_id=setor.id) }}">Setor {{ setor.nome }}</a>
-                                    <small class="text-muted">
-                                        {% for supervisor in setor.supervisores %}
-                                            <span class="badge bg-secondary me-1">{{ supervisor.nome_completo }}</span>
-                                        {% endfor %}
-                                    </small>
-                                </li>
-                            {% endfor %}
+                        {% for setor_data in pgs_ativos_por_setor %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <a href="{{ url_for('grupos.detalhes_setor', setor_id=setor_data.id) }}">Setor {{ setor_data.nome }}</a>
+                                <small class="text-muted">{{ setor_data.pgs_ativos }} PGs</small>
+                            </li>
+                        {% endfor %}
                         </ul>
                     {% else %}
                         <p>Nenhum Setor vinculado a esta Área ainda.</p>

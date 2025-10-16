@@ -15,24 +15,46 @@
         </h2>
         <form method="POST" enctype="multipart/form-data">
             {{ form.hidden_tag() }}
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    {{ form.nome.label (class="form-label") }}
-                    {{ form.nome (class="form-control") }}
-                </div>
-                <div class="col-md-6">
-                    {{ form.setor.label (class="form-label") }}
-                    {{ form.setor (class="form-select") }}
-                </div>
-            </div>
+            {% if not pg %}
             <div class="mb-3">
                 {{ form.facilitador.label (class="form-label") }}
-                {{ form.facilitador (class="form-select") }}
+                {{ form.facilitador (class="form-select", id="facilitador_select") }}
             </div>
+            {% endif %}
             <div class="mb-3">
                 {{ form.anfitriao.label (class="form-label") }}
                 {{ form.anfitriao (class="form-select") }}
             </div>
+            {% if not pg %}
+            <div class="mb-3">
+                {{ form.setor.label (class="form-label") }}
+                {{ form.setor (class="form-select") }}
+            </div>
+            <div class="mb-3">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        {{ form.nome.label(class="form-label") }}
+                        {% set is_readonly = 'readonly' if not current_user.has_permission('admin') else '' %}
+                        {{ form.nome(class="form-control", **{'readonly': is_readonly}) }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.sufixo_nome.label(class="form-label") }}
+                        {{ form.sufixo_nome(class="form-control") }}
+                    </div>                    
+                    <div id="sugestao-nome-container" class="mt-2">
+                        <small class="form-text text-muted">
+                            O nome é sempre o primeiro nome do facilitador. Preencha com o sobrenome ou um sufixo se o nome já estiver em uso (Ex: Crianças, Familiar).
+                        </small>
+                    </div>                    
+                    {% if form.nome.errors %}
+                        {% for error in form.nome.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    {% endif %}
+                    {% if form.sufixo_nome.errors %}
+                        {% for error in form.sufixo_nome.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
             <div class="row mb-4">
                 <div class="col-md-6">
                     {{ form.dia_reuniao.label (class="form-label") }}
@@ -43,11 +65,35 @@
                     {{ form.horario_reuniao (class="form-control") }}
                 </div>
             </div>
-            {{ submit('Salvar Alterações' if editar else 'Criar Pequeno Grupo') }}
+            
+            {{ submit('Salvar Alterações' if pg else 'Criar Pequeno Grupo') }}
+            
             <div class="text-end mt-3">
                 <a href="{{ url_for('grupos.listar_pgs') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const facilitadorSelect = document.getElementById('facilitador_select');
+        const nomeInput = document.getElementsByName('nome')[0];
+        
+        function suggestName() {
+            const selectedFacilitador = facilitadorSelect.value;
+            if (selectedFacilitador && selectedFacilitador != 0) {
+                window.location.href = "{{ url_for('grupos.criar_pg') }}?facilitador=" + selectedFacilitador;
+            }
+        }
+        
+        facilitadorSelect.addEventListener('change', suggestName);
+
+        {% if nome_sugerido_base %}
+            if (!nomeInput.value) {
+                nomeInput.value = "{{ nome_sugerido_base }}";
+            }
+        {% endif %}
+    });
+</script>
 {% endblock %}

@@ -96,6 +96,33 @@ def gerenciar_evento(evento_id):
                            ano=ano, versao=versao,
                            config=Config)
 
+@eventos_bp.route('/<int:evento_id>/editar', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def editar_evento(evento_id):
+    evento = Evento.query.get_or_404(evento_id)
+
+    if evento.concluido:
+        flash('Não é possível editar um evento já concluído.', 'danger')
+        return redirect(url_for('eventos.gerenciar_evento', evento_id=evento.id))
+
+    form = EventoForm(obj=evento)
+    
+    if form.validate_on_submit():
+        evento.nome = form.nome.data
+        evento.tipo_evento = form.tipo_evento.data
+        evento.data_evento = form.data_evento.data
+        evento.observacoes = form.observacoes.data
+
+        try:
+            db.session.commit()
+            flash('Evento atualizado com sucesso!', 'success')
+            return redirect(url_for('eventos.gerenciar_evento', evento_id=evento.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao atualizar o evento: {e}', 'danger')
+            
+    return render_template('eventos/form_evento.html', form=form, evento=evento)
 
 @eventos_bp.route('/detalhes/<int:evento_id>')
 def detalhes_evento(evento_id):

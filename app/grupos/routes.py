@@ -2,13 +2,13 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.grupos.models import Area, Setor, PequenoGrupo, AreaMetaVigente
-from app.grupos.forms import AreaForm, SetorForm, PequenoGrupoForm, AreaMetasForm
+from app.grupos.forms import AreaForm, SetorForm, PequenoGrupoForm, AreaMetasForm, MultiplicacaoForm
 from app.membresia.models import Membro
 from app.auth.models import User
 from app.jornada.models import registrar_evento_jornada, JornadaEvento
 from config import Config
 from app.decorators import admin_required, group_permission_required, leader_required
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 from app.ctm.models import TurmaCTM, AulaRealizada, Presenca, ConclusaoCTM
 from datetime import date, datetime
 
@@ -26,43 +26,58 @@ def listar_grupos_unificada():
     setor_filtro = request.args.get('setor_filtro', '')
     area_filtro = request.args.get('area_filtro', '')
     tipo_selecionado = request.args.get('tipo', 'pgs')
+    status_pg = request.args.get('status_pg', 'ativos')
 
     if current_user.has_permission('admin'):
-        areas_query = Area.query.order_by(Area.nome)
-        setores_query = Setor.query.order_by(Setor.nome)
-        pgs_query = PequenoGrupo.query.order_by(PequenoGrupo.nome)
+        areas_query = Area.query
+        setores_query = Setor.query
+        pgs_query = PequenoGrupo.query
+
     elif current_user.membro:
         membro_logado = current_user.membro
 
-        areas_do_lider = list(membro_logado.areas_supervisionadas)
-        setores_do_lider = list(membro_logado.setores_supervisionados)
-        pgs_do_lider = list(PequenoGrupo.query.filter(
+        areas_do_lider = Area.query.filter(Area.supervisores.any(id=membro_logado.id)).all()
+        area_ids_lider = [a.id for a in areas_do_lider]
+        
+        setores_do_lider = Setor.query.filter(
+            db.or_(
+                Setor.supervisores.any(id=membro_logado.id),
+                Setor.area_id.in_(area_ids_lider)
+            )
+        ).all()
+        setor_ids_lider = [s.id for s in setores_do_lider]
+
+        areas_query = Area.query.filter(Area.id.in_(area_ids_lider))
+        setores_query = Setor.query.filter(Setor.id.in_(setor_ids_lider))
+        pgs_query = PequenoGrupo.query.filter(
             db.or_(
                 PequenoGrupo.facilitador_id == membro_logado.id,
-                PequenoGrupo.anfitriao_id == membro_logado.id
+                PequenoGrupo.anfitriao_id == membro_logado.id,
+                PequenoGrupo.setor_id.in_(setor_ids_lider)
             )
-        ).all())
-
-        for area in areas_do_lider:
-            for setor_na_area in area.setores:
-                if setor_na_area not in setores_do_lider:
-                    setores_do_lider.append(setor_na_area)
-                for pg_no_setor in setor_na_area.pequenos_grupos:
-                    if pg_no_setor not in pgs_do_lider:
-                        pgs_do_lider.append(pg_no_setor)
-
-        area_ids = [a.id for a in areas_do_lider]
-        setor_ids = [s.id for s in setores_do_lider]
-        pg_ids = [pg.id for pg in pgs_do_lider]
-
-        areas_query = db.session.query(Area).filter(Area.id.in_(area_ids)).order_by(Area.nome)
-        setores_query = db.session.query(Setor).filter(Setor.id.in_(setor_ids)).order_by(Setor.nome)
-        pgs_query = db.session.query(PequenoGrupo).filter(PequenoGrupo.id.in_(pg_ids)).order_by(PequenoGrupo.nome)
-
+        )
     else:
         flash('Você não tem permissão para visualizar grupos.', 'danger')
         return redirect(url_for('main.index'))
 
+    if tipo_selecionado == 'pgs':
+        if status_pg == 'ativos':
+            pgs_query = pgs_query.filter_by(ativo=True)
+        elif status_pg == 'multiplicados':
+            pgs_query = pgs_query.filter(
+                db.and_(
+                    PequenoGrupo.ativo == False,
+                    PequenoGrupo.data_multiplicacao.isnot(None)
+                )
+            )
+        elif status_pg == 'inativos':
+            pgs_query = pgs_query.filter(
+                db.and_(
+                    PequenoGrupo.ativo == False,
+                    PequenoGrupo.data_multiplicacao.is_(None)
+                )
+            )
+    
     if busca:
         if tipo_selecionado == 'areas':
             areas_query = areas_query.filter(Area.nome.ilike(f'%{busca}%'))
@@ -81,9 +96,9 @@ def listar_grupos_unificada():
         if tipo_selecionado == 'pgs':
             pgs_query = pgs_query.filter(PequenoGrupo.setor_id == setor_filtro)
 
-    areas = areas_query.all()
-    setores = setores_query.all()
-    pgs = pgs_query.all()
+    areas = areas_query.order_by(Area.nome).all()
+    setores = setores_query.order_by(Setor.nome).all()
+    pgs = pgs_query.order_by(PequenoGrupo.nome).all()
 
     todas_areas = Area.query.order_by(Area.nome).all()
     todos_setores = Setor.query.order_by(Setor.nome).all()
@@ -93,6 +108,7 @@ def listar_grupos_unificada():
                            setores=setores,
                            pgs=pgs,
                            tipo_selecionado=tipo_selecionado,
+                           status_pg=status_pg,
                            busca=busca,
                            setor_filtro=setor_filtro,
                            area_filtro=area_filtro,
@@ -152,6 +168,7 @@ def detalhes_area(area_id):
     dizimistas_por_setor_chart = { 'labels': [], 'dizimistas': [], 'nao_dizimistas': [] }
     ctm_por_setor = []
     membros_por_setor = []
+    pgs_ativos_por_setor = []
 
     for setor in area.setores:
         dizimistas_data = setor.distribuicao_dizimistas_30d
@@ -169,13 +186,22 @@ def detalhes_area(area_id):
             'setor_nome': setor.nome,
             'count': len(setor.membros_do_setor_completos)
         })
+
+        pgs_ativos_por_setor.append({
+            'id': setor.id,
+            'nome': setor.nome,
+            'pgs_ativos': setor.pequenos_grupos.filter_by(ativo=True).count()
+        })
     
+    pgs_ativos_por_setor.sort(key=lambda x: x['nome'])
+
     return render_template('grupos/areas/detalhes.html',
                            area=area,
                            jornada_eventos=jornada_eventos,
                            dizimistas_por_setor=dizimistas_por_setor_chart,
                            ctm_por_setor=ctm_por_setor,
                            membros_por_setor=membros_por_setor,
+                           pgs_ativos_por_setor=pgs_ativos_por_setor,
                            config=Config, ano=ano, versao=versao)
 
 @grupos_bp.route('/areas/editar/<int:area_id>', methods=['GET', 'POST'])
@@ -308,7 +334,158 @@ def criar_setor():
 def detalhes_setor(setor_id):
     setor = Setor.query.get_or_404(setor_id)
     jornada_eventos = setor.jornada_eventos_setor.order_by(JornadaEvento.data_evento.desc()).all()
-    return render_template('grupos/setores/detalhes.html', setor=setor, jornada_eventos=jornada_eventos, config=Config, ano=ano, versao=versao)
+
+    pgs_ativos = setor.pequenos_grupos.filter(
+        db.and_(
+            PequenoGrupo.ativo == True,
+            PequenoGrupo.data_multiplicacao.is_(None)
+        )
+    ).order_by(PequenoGrupo.nome).all()
+    
+    pgs_multiplicados = setor.pequenos_grupos.filter(
+        db.and_(
+            PequenoGrupo.ativo == False,
+            PequenoGrupo.data_multiplicacao.isnot(None)
+        )
+    ).order_by(PequenoGrupo.nome).all()
+
+    return render_template('grupos/setores/detalhes.html',  
+                           setor=setor,
+                           pgs_ativos=pgs_ativos,
+                           pgs_multiplicados=pgs_multiplicados,
+                           jornada_eventos=jornada_eventos,
+                           config=Config, ano=ano, versao=versao)
+
+@grupos_bp.route('/setores/<int:setor_id>/multiplicar_pgs', methods=['GET'])
+@login_required
+@group_permission_required(Setor, 'edit', 'supervisores')
+def tela_multiplicacao_pgs(setor_id):
+    setor = Setor.query.get_or_404(setor_id)
+    pgs_do_setor = setor.pequenos_grupos.all()
+
+    form_multiplicacao = MultiplicacaoForm()
+    setor_choices = [(setor.id, setor.nome)]
+    form_multiplicacao.pg1.setor.choices = setor_choices
+    form_multiplicacao.pg2.setor.choices = setor_choices
+
+    hoje = date.today().strftime('%Y-%m-%d')
+
+    return render_template('grupos/setores/multiplicar_pg.html',
+                           setor=setor,
+                           pgs=pgs_do_setor,
+                           form_multiplicacao=form_multiplicacao,
+                           hoje=hoje,
+                           ano=ano,
+                           versao=versao)
+
+@grupos_bp.route('/pgs/<int:pg_id>/autorizar_multiplicacao', methods=['POST'])
+@login_required
+@group_permission_required(PequenoGrupo, 'supervisores')
+def autorizar_multiplicacao(pg_id):
+    pg = PequenoGrupo.query.get_or_404(pg_id)
+    autorizacao_status = request.form.get('autorizacao') == '1'
+    
+    pg.autorizacao_multiplicacao = autorizacao_status
+    
+    try:
+        db.session.commit()
+        if autorizacao_status:
+            flash(f'A multiplicação do PG {pg.nome} foi autorizada!', 'success')
+        else:
+            flash(f'A autorização para multiplicação do PG {pg.nome} foi removida.', 'warning')
+        return redirect(url_for('grupos.tela_multiplicacao_pgs', setor_id=pg.setor_id))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao atualizar a autorização: {e}', 'danger')
+        return redirect(url_for('grupos.tela_multiplicacao_pgs', setor_id=pg.setor_id))
+
+@grupos_bp.route('/pgs/<int:pg_id>/processar_multiplicacao', methods=['POST'])
+@login_required
+@group_permission_required(PequenoGrupo, 'supervisores')
+def processar_multiplicacao(pg_id):
+    pg_antigo = PequenoGrupo.query.get_or_404(pg_id)
+    setor = pg_antigo.setor
+
+    form = MultiplicacaoForm()    
+
+    setor_choices = [(pg_antigo.setor.id, pg_antigo.setor.nome)]
+    form.pg1.setor.choices = setor_choices
+    form.pg2.setor.choices = setor_choices
+
+    if form.validate_on_submit():
+        if not pg_antigo.pronto_para_multiplicar:
+            flash('O PG não preenche todos os requisitos para a multiplicação.', 'danger')
+            return redirect(url_for('grupos.tela_multiplicacao_pgs', setor_id=pg_antigo.setor_id))
+
+        pg_antigo.data_multiplicacao = form.data_multiplicacao.data
+        pg_antigo.ativo = False        
+
+        novo_pg1 = PequenoGrupo(
+            nome=form.pg1.nome.data,
+            facilitador_id=form.pg1.facilitador.data,
+            anfitriao_id=form.pg1.anfitriao.data,
+            setor_id=form.pg1.setor.data,
+            dia_reuniao=form.pg1.dia_reuniao.data,
+            horario_reuniao=form.pg1.horario_reuniao.data,
+            autorizacao_multiplicacao=False
+        )
+        novo_pg2 = PequenoGrupo(
+            nome=form.pg2.nome.data,
+            facilitador_id=form.pg2.facilitador.data,
+            anfitriao_id=form.pg2.anfitriao.data,
+            setor_id=form.pg2.setor.data,
+            dia_reuniao=form.pg2.dia_reuniao.data,
+            horario_reuniao=form.pg2.horario_reuniao.data,
+            autorizacao_multiplicacao=False
+        )
+
+        db.session.add_all([novo_pg1, novo_pg2])
+        db.session.add(pg_antigo)
+        
+        try:
+            db.session.commit()
+            
+            registrar_evento_jornada(
+                tipo_acao='PG_MULTIPLICADO',
+                descricao_detalhada=f'PG {pg_antigo.nome} foi multiplicado, originando os PGs "{novo_pg1.nome}" e "{novo_pg2.nome}".',
+                usuario_executor=current_user,
+                pgs=[pg_antigo]
+            )
+            
+            registrar_evento_jornada(
+                tipo_acao='PG_MULTIPLICADO',
+                descricao_detalhada=f'Nasceu da multiplicação do PG "{pg_antigo.nome}".',
+                usuario_executor=current_user,
+                pgs=[novo_pg1, novo_pg2]
+            )
+                        
+            registrar_evento_jornada(
+                tipo_acao='PG_MULTIPLICADO',
+                descricao_detalhada=f'O PG "{pg_antigo.nome}" foi multiplicado, gerando os novos PGs: "{novo_pg1.nome}" e "{novo_pg2.nome}".',
+                usuario_executor=current_user,
+                setores=[pg_antigo.setor]
+            )
+            
+            flash(f'PG {pg_antigo.nome} multiplicado com sucesso! Os novos PGs foram criados e os membros devem ser adicionados manualmente.', 'success')
+            return redirect(url_for('grupos.detalhes_setor', setor_id=pg_antigo.setor_id))
+        except Exception as e:
+                    db.session.rollback()
+                    flash(f'Erro ao processar a multiplicação: {e}', 'danger')
+                    return redirect(url_for('grupos.tela_multiplicacao_pgs', setor_id=setor.id))
+
+    for field, errors in form.errors.items():
+        for error in errors:
+            flash(f"Erro no campo {field}: {error}", 'danger')
+
+    pgs_do_setor = setor.pequenos_grupos.all()
+    hoje = date.today().strftime('%Y-%m-%d')
+    return render_template('grupos/setores/multiplicar_pg.html',
+                        setor=setor,
+                        pgs=pgs_do_setor,
+                        form_multiplicacao=form,
+                        hoje=hoje,
+                        ano=ano,
+                        versao=versao)    
 
 @grupos_bp.route('/setores/editar/<int:setor_id>', methods=['GET', 'POST'])
 @login_required
@@ -367,6 +544,19 @@ def editar_setor(setor_id):
         
     return render_template('grupos/setores/form.html', form=form, setor=setor, ano=ano, versao=versao)
 
+@grupos_bp.route('/setores/<int:setor_id>/multiplicar_pgs', methods=['GET', 'POST'])
+@login_required
+@group_permission_required(Setor, 'edit', 'supervisores')
+def multiplicar_pgs_setor(setor_id):
+    setor = Setor.query.get_or_404(setor_id)
+    
+    if request.method == 'GET':
+        pgs_do_setor = setor.pequenos_grupos.all()
+        return render_template('grupos/setores/multiplicar_pg.html', setor=setor, pgs=pgs_do_setor, ano=ano, versao=versao)
+    
+    if request.method == 'POST':
+        pass
+
 @grupos_bp.route('/setores/deletar/<int:setor_id>', methods=['POST'])
 @login_required
 @admin_required
@@ -400,14 +590,76 @@ def deletar_setor(setor_id):
 def listar_pgs():
     return redirect(url_for('grupos.listar_grupos_unificada', tipo='pgs'))
 
+def get_primeiro_nome(membro_id):
+    """Obtém o primeiro nome do facilitador para sugerir o nome do PG."""
+    membro = Membro.query.get(membro_id)
+    if membro:
+        return membro.nome_completo.split()[0]
+    return ""
+
+def verificar_e_sugerir_nome_pg(nome_base, sufixo):
+    """Verifica a unicidade e constrói o nome final."""
+    nome_final = nome_base
+    if sufixo:
+        nome_final = f"{nome_base} - {sufixo}"
+
+    pg_existente = PequenoGrupo.query.filter_by(nome=nome_final).first()
+    
+    if pg_existente:
+        return None, True, nome_final
+    
+    return nome_final, False, None
+
 @grupos_bp.route('/pgs/criar', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def criar_pg():
     form = PequenoGrupoForm()
+    nome_sugerido_base = None
+    
+    facilitador_id_url = request.args.get('facilitador', type=int)
+
+    if request.method == 'GET' and facilitador_id_url and facilitador_id_url != 0:
+        form.facilitador.data = facilitador_id_url 
+        nome_sugerido_base = get_primeiro_nome(facilitador_id_url)
+        if nome_sugerido_base:
+            form.nome.data = nome_sugerido_base
+            
     if form.validate_on_submit():
-        novo_pg = PequenoGrupo(nome=form.nome.data, facilitador_id=form.facilitador.data, anfitriao_id=form.anfitriao.data, setor_id=form.setor.data, dia_reuniao=form.dia_reuniao.data, horario_reuniao=form.horario_reuniao.data)
+        nome_base = get_primeiro_nome(form.facilitador.data)
+        sufixo = form.sufixo_nome.data.strip()
+        
+        if form.nome.data:
+            nome_base = form.nome.data
+
+        if sufixo:
+            nome_candidato = f"{nome_base} - {sufixo}"
+        else:
+            nome_candidato = nome_base
+        
+        pg_existente = PequenoGrupo.query.filter_by(nome=nome_candidato).first()
+        
+        if pg_existente:
+            form.nome.errors.append(f'O nome do PG "{nome_candidato}" já existe. Por favor, ajuste o nome ou adicione um sufixo único.')
+            
+            nome_sugerido_base = nome_base
+
+            return render_template('grupos/pgs/form.html', form=form, nome_sugerido_base=nome_sugerido_base, ano=ano, versao=versao)
+        
+        nome_final = nome_candidato
+        
+        form.nome.data = nome_final
+
+        novo_pg = PequenoGrupo(
+            nome=form.nome.data,
+            facilitador_id=form.facilitador.data,
+            anfitriao_id=form.anfitriao.data,
+            setor_id=form.setor.data,
+            dia_reuniao=form.dia_reuniao.data,
+            horario_reuniao=form.horario_reuniao.data
+        )
         db.session.add(novo_pg)
+
         try:
             db.session.commit()
             flash('Pequeno Grupo criado com sucesso!', 'success')
@@ -417,7 +669,7 @@ def criar_pg():
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao criar Pequeno Grupo: {e}', 'danger')
-    return render_template('grupos/pgs/form.html', form=form, ano=ano, versao=versao)
+    return render_template('grupos/pgs/form.html', form=form, nome_sugerido_base=nome_sugerido_base, ano=ano, versao=versao)
 
 @grupos_bp.route('/pgs/<int:pg_id>')
 @login_required
@@ -425,6 +677,9 @@ def criar_pg():
 def detalhes_pg(pg_id):
     pg = PequenoGrupo.query.get_or_404(pg_id)
 
+    if pg.data_multiplicacao:
+        return render_template('grupos/pgs/detalhes_multiplicado.html', pg=pg, ano=ano, versao=versao)
+    
     participantes_pg_ids = [m.id for m in pg.membros_completos]
     ctm_dados_alunos = []
 
@@ -467,6 +722,11 @@ def detalhes_pg(pg_id):
 @group_permission_required(PequenoGrupo, 'edit')
 def editar_pg(pg_id):
     pg = PequenoGrupo.query.get_or_404(pg_id)
+
+    if not pg.ativo and not current_user.has_permission('admin'):
+        flash('Não é possível editar um Pequeno Grupo inativo ou que já foi multiplicado.', 'danger')
+        return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
+
     form = PequenoGrupoForm(obj=pg)
     form.pg = pg
     facilitador_antigo = pg.facilitador

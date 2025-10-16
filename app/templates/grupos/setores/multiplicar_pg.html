@@ -1,0 +1,116 @@
+{% set show_navbar = true %}
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit %}
+
+{% block title %}Multiplicação de PGs · {{ setor.nome }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><strong>Multiplicação de PGs > Setor {{ setor.nome }}</strong></h2>
+        <a href="{{ url_for('grupos.detalhes_setor', setor_id=setor.id) }}" class="btn btn-outline-secondary">Voltar</a>
+    </div>
+
+    <div class="row">
+        {% for pg in pgs %}
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">PG {{ pg.nome }}</h5>
+                    {% if pg.pronto_para_multiplicar %}
+                        <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePG{{ pg.id }}" aria-expanded="false" aria-controls="collapsePG{{ pg.id }}">
+                            <i class="bi bi-diagram-3-fill me-1"></i> Multiplicar PG
+                        </button>
+                    {% else %}
+                        <button class="btn btn-sm btn-light" disabled>
+                            <i class="bi bi-diagram-3-fill me-1"></i> Multiplicar PG
+                        </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-2">Facilitador: {{ pg.facilitador.nome_completo }}</p>
+                    <p class="card-text text-muted mb-2">Anfitrião: {{ pg.anfitriao.nome_completo }}</p>
+                    
+                    <h6 class="mb-2">Checklist de Multiplicação:</h6>
+                    <ul class="list-group list-group-flush mb-3">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Facilitador em Treinamento:
+                            {% if pg.num_facilitadores_treinamento_atuais > 0 %}
+                            <span class="badge bg-success">Sim ({{ pg.num_facilitadores_treinamento_atuais }})</span>
+                            {% else %}
+                            <span class="badge bg-danger">Não (0)</span>
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Anfitrião em Treinamento:
+                            {% if pg.num_anfitrioes_treinamento_atuais > 0 %}
+                            <span class="badge bg-success">Sim ({{ pg.num_anfitrioes_treinamento_atuais }})</span>
+                            {% else %}
+                            <span class="badge bg-danger">Não (0)</span>
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Autorização do Supervisor da Área:
+                            <form action="{{ url_for('grupos.autorizar_multiplicacao', pg_id=pg.id) }}" method="POST">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="autorizacao-{{ pg.id }}" name="autorizacao" value="1" {% if pg.autorizacao_multiplicacao %}checked{% endif %} onchange="this.form.submit()">
+                                </div>
+                            </form>
+                        </li>
+                    </ul>
+        
+                    <div class="collapse mt-4" id="collapsePG{{ pg.id }}">
+                        <div class="card card-body bg-light">
+                            <form action="{{ url_for('grupos.processar_multiplicacao', pg_id=pg.id) }}" method="POST" class="mb-3">
+                                {{ form_multiplicacao.hidden_tag() }}
+                                <h6 class="mb-3">Preencha os dados dos novos PGs:</h6>
+                                <div class="mb-3">
+                                    {{ form_multiplicacao.data_multiplicacao.label(class="form-label") }}
+                                    {{ form_multiplicacao.data_multiplicacao(class="form-control") }}
+                                </div>
+                                {% set pgs_para_multiplicar = [form_multiplicacao.pg1, form_multiplicacao.pg2] %}
+                                {% for pg_form in pgs_para_multiplicar %}
+                                <div class="border p-3 mb-3 rounded-3">
+                                    <h6 class="mb-3">Novo PG {{ loop.index }}</h6>
+                                    <div class="row mb-4">
+                                        <div class="col-md-6">
+                                            {{ pg_form.nome.label(class="form-label") }}
+                                            {{ pg_form.nome(class="form-control") }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            {{ pg_form.setor.label(class="form-label") }}
+                                            {{ pg_form.setor(class="form-control") }}
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        {{ pg_form.facilitador.label(class="form-label") }}
+                                        {{ pg_form.facilitador(class="form-select") }}
+                                    </div>
+                                    <div class="mb-3">
+                                        {{ pg_form.anfitriao.label(class="form-label") }}
+                                        {{ pg_form.anfitriao(class="form-select") }}
+                                    </div>
+                                    <div class="row mb-4">
+                                        <div class="col-md-6">
+                                            {{ pg_form.dia_reuniao.label(class="form-label") }}
+                                            {{ pg_form.dia_reuniao(class="form-select") }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            {{ pg_form.horario_reuniao.label(class="form-label") }}
+                                            {{ pg_form.horario_reuniao(class="form-control") }}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                {{ submit('Confirmar Multiplicação') }}
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
