@@ -1,0 +1,61 @@
+{% set show_navbar = true %}
+{% extends 'base/layout.html' %}
+{% from 'base/components/jornada_timeline.html' import render_jornada_timeline %}
+
+{% block title %}Jornada do PG {{ pg.nome }} · IBAN{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    {% set is_multiplicado = pg.data_multiplicacao is not none %}
+    
+    {% set header_text_class = 'text-success' if is_multiplicado else 'text-danger' %}
+    {% set header_bg_class = 'bg-success' if is_multiplicado else 'bg-danger' %}
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="{{ header_text_class }}">
+            <strong>PG {{ pg.nome }} 
+                {% if is_multiplicado %}
+                    (Multiplicado)
+                {% else %}
+                    (Fechado)
+                {% endif %}
+            </strong>
+        </h2>
+        <a href="{{ url_for('grupos.listar_grupos_unificada') }}" class="btn btn-outline-secondary">Voltar à Lista</a>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header {{ header_bg_class }} text-white">
+                    <h5 class="mb-0">
+                        Dados do PG
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Facilitador:</strong> {{ pg.facilitador.nome_completo }}</p>
+                    <p><strong>Anfitrião:</strong> {{ pg.anfitriao.nome_completo }}</p>
+                    <p><strong>Setor:</strong> {{ pg.setor.nome }}</p>
+                    {% if is_multiplicado and pg.data_multiplicacao %}
+                        <p><strong>Data da Multiplicação:</strong> {{ pg.data_multiplicacao.strftime('%d/%m/%Y') }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Membros do PG</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for membro in pg.membros_completos %}
+                        <li class="list-group-item">{{ membro.nome_completo }} ({{ 'Facilitador' if membro == pg.facilitador else ('Anfitrião' if membro == pg.anfitriao else 'Participante') }})</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            {{ render_jornada_timeline(pg.jornada_eventos_pg.all(), current_user) }}
+        </div>
+    </div>
+</div>
+{% endblock %}

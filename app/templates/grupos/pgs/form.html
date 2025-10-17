@@ -15,17 +15,26 @@
         </h2>
         <form method="POST" enctype="multipart/form-data">
             {{ form.hidden_tag() }}
+            {% set is_readonly = 'readonly' if not current_user.has_permission('admin') else '' %}
             {% if not pg %}
+            {% endif %}
             <div class="mb-3">
                 {{ form.facilitador.label (class="form-label") }}
                 {{ form.facilitador (class="form-select", id="facilitador_select") }}
             </div>
-            {% endif %}
+            <div class="mb-3">
+                {{ form.nome.label(class="form-label") }}
+                {% if pg %}
+                    {{ form.nome(class="form-control", **{'readonly': is_readonly} if is_readonly else {}) }}
+                {% else %}
+                    {{ form.nome(class="form-control") }}
+                {% endif %}
+            </div>
             <div class="mb-3">
                 {{ form.anfitriao.label (class="form-label") }}
                 {{ form.anfitriao (class="form-select") }}
             </div>
-            {% if not pg %}
+
             <div class="mb-3">
                 {{ form.setor.label (class="form-label") }}
                 {{ form.setor (class="form-select") }}
@@ -33,45 +42,32 @@
             <div class="mb-3">
                 <div class="row mb-4">
                     <div class="col-md-6">
-                        {{ form.nome.label(class="form-label") }}
-                        {% set is_readonly = 'readonly' if not current_user.has_permission('admin') else '' %}
-                        {{ form.nome(class="form-control", **{'readonly': is_readonly}) }}
+                        {{ form.dia_reuniao.label (class="form-label") }}
+                        {{ form.dia_reuniao (class="form-select") }}
                     </div>
                     <div class="col-md-6">
-                        {{ form.sufixo_nome.label(class="form-label") }}
-                        {{ form.sufixo_nome(class="form-control") }}
-                    </div>                    
-                    <div id="sugestao-nome-container" class="mt-2">
-                        <small class="form-text text-muted">
-                            O nome é sempre o primeiro nome do facilitador. Preencha com o sobrenome ou um sufixo se o nome já estiver em uso (Ex: Crianças, Familiar).
-                        </small>
-                    </div>                    
-                    {% if form.nome.errors %}
-                        {% for error in form.nome.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-                    {% endif %}
-                    {% if form.sufixo_nome.errors %}
-                        {% for error in form.sufixo_nome.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-                    {% endif %}
+                        {{ form.horario_reuniao.label (class="form-label") }}
+                        {{ form.horario_reuniao (class="form-control") }}
+                    </div>
                 </div>
             </div>
-            {% endif %}
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    {{ form.dia_reuniao.label (class="form-label") }}
-                    {{ form.dia_reuniao (class="form-select") }}
-                </div>
-                <div class="col-md-6">
-                    {{ form.horario_reuniao.label (class="form-label") }}
-                    {{ form.horario_reuniao (class="form-control") }}
-                </div>
-            </div>
-            
             {{ submit('Salvar Alterações' if pg else 'Criar Pequeno Grupo') }}
-            
-            <div class="text-end mt-3">
-                <a href="{{ url_for('grupos.listar_pgs') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
-            </div>
         </form>
+
+        {% set can_close = current_user.has_permission('admin') or is_area_supervisor or is_sector_supervisor %}
+        {% if pg and pg.ativo and can_close %}
+        <div class="mt-3">
+            <form method="POST" action="{{ url_for('grupos.fechar_pg', pg_id=pg.id) }}" 
+                    onsubmit="return confirm('ATENÇÃO: Fechar o PG irá congelar todas as informações. Tem certeza?');">
+                {{ form.hidden_tag() }}
+                <button type="submit" class="btn btn-danger w-100"><strong>Fechar PG</strong></button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div class="text-end mt-3">
+            <a href="{{ url_for('grupos.listar_pgs') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+        </div>
     </div>
 </div>
 
@@ -87,12 +83,14 @@
             }
         }
         
-        facilitadorSelect.addEventListener('change', suggestName);
-
-        {% if nome_sugerido_base %}
-            if (!nomeInput.value) {
-                nomeInput.value = "{{ nome_sugerido_base }}";
-            }
+        {% if not pg %}
+            facilitadorSelect.addEventListener('change', suggestName);
+            
+            {% if nome_sugerido_base %}
+                if (!nomeInput.value) {
+                    nomeInput.value = "{{ nome_sugerido_base }}";
+                }
+            {% endif %}
         {% endif %}
     });
 </script>

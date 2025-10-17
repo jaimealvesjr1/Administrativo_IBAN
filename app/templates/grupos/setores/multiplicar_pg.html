@@ -19,9 +19,10 @@
                 <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">PG {{ pg.nome }}</h5>
                     {% if pg.pronto_para_multiplicar %}
-                        <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePG{{ pg.id }}" aria-expanded="false" aria-controls="collapsePG{{ pg.id }}">
+                        <a href="{{ url_for('grupos.tela_multiplicacao_pgs', setor_id=setor.id, pg_id=pg.id) }}"
+                           class="btn btn-sm btn-light">
                             <i class="bi bi-diagram-3-fill me-1"></i> Multiplicar PG
-                        </button>
+                        </a>
                     {% else %}
                         <button class="btn btn-sm btn-light" disabled>
                             <i class="bi bi-diagram-3-fill me-1"></i> Multiplicar PG
@@ -60,29 +61,22 @@
                         </li>
                     </ul>
         
-                    <div class="collapse mt-4" id="collapsePG{{ pg.id }}">
+                    {% set pg_id_selecionado = request.args.get('pg_id') | int %}
+
+                    {% if pg.id == pg_id_selecionado %}
+                    <div class="mt-4">
                         <div class="card card-body bg-light">
                             <form action="{{ url_for('grupos.processar_multiplicacao', pg_id=pg.id) }}" method="POST" class="mb-3">
                                 {{ form_multiplicacao.hidden_tag() }}
                                 <h6 class="mb-3">Preencha os dados dos novos PGs:</h6>
                                 <div class="mb-3">
                                     {{ form_multiplicacao.data_multiplicacao.label(class="form-label") }}
-                                    {{ form_multiplicacao.data_multiplicacao(class="form-control") }}
+                                    {{ form_multiplicacao.data_multiplicacao(class="form-control", value=hoje) }}
                                 </div>
                                 {% set pgs_para_multiplicar = [form_multiplicacao.pg1, form_multiplicacao.pg2] %}
                                 {% for pg_form in pgs_para_multiplicar %}
                                 <div class="border p-3 mb-3 rounded-3">
                                     <h6 class="mb-3">Novo PG {{ loop.index }}</h6>
-                                    <div class="row mb-4">
-                                        <div class="col-md-6">
-                                            {{ pg_form.nome.label(class="form-label") }}
-                                            {{ pg_form.nome(class="form-control") }}
-                                        </div>
-                                        <div class="col-md-6">
-                                            {{ pg_form.setor.label(class="form-label") }}
-                                            {{ pg_form.setor(class="form-control") }}
-                                        </div>
-                                    </div>
                                     <div class="mb-3">
                                         {{ pg_form.facilitador.label(class="form-label") }}
                                         {{ pg_form.facilitador(class="form-select") }}
@@ -90,6 +84,16 @@
                                     <div class="mb-3">
                                         {{ pg_form.anfitriao.label(class="form-label") }}
                                         {{ pg_form.anfitriao(class="form-select") }}
+                                    </div>
+                                    <div class="row mb-4">
+                                        <div class="col-md-6">
+                                            {{ pg_form.nome.label(class="form-label") }}
+                                            {{ pg_form.nome(class="form-control") }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            {{ pg_form.setor.label(class="form-label") }}
+                                            {{ pg_form.setor(class="form-control", readonly='readonly') }}
+                                        </div>
                                     </div>
                                     <div class="row mb-4">
                                         <div class="col-md-6">
@@ -107,6 +111,7 @@
                             </form>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

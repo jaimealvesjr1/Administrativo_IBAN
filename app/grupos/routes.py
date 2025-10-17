@@ -16,6 +16,28 @@ grupos_bp = Blueprint('grupos', __name__, template_folder='templates')
 ano=Config.ANO_ATUAL
 versao=Config.VERSAO_APP
 
+def is_supervisor_do_setor(user_membro_id, pg):
+    """Verifica se o usuário é supervisor do setor do PG."""
+    if not pg.setor:
+        return False
+    membro = Membro.query.get(user_membro_id)
+    if not membro:
+        return False
+    return pg.setor in membro.setores_supervisionados
+
+def is_supervisor_da_area(user_membro_id, pg):
+    """Verifica se o usuário é supervisor da área do PG."""
+    if not pg.setor or not pg.setor.area:
+        return False
+    membro = Membro.query.get(user_membro_id)
+    if not membro:
+        return False
+    return pg.setor.area in membro.areas_supervisionadas
+
+def is_pg_facilitator(user_membro_id, pg):
+    """Verifica se o usuário é facilitador do PG."""
+    return pg.facilitador_id == user_membro_id
+
 @grupos_bp.route('/')
 @grupos_bp.route('/index')
 @grupos_bp.route('/listar')
@@ -364,6 +386,29 @@ def tela_multiplicacao_pgs(setor_id):
     pgs_do_setor = setor.pequenos_grupos.all()
 
     form_multiplicacao = MultiplicacaoForm()
+
+    pg_antigo_id = request.args.get('pg_id', type=int)
+    pg_antigo = PequenoGrupo.query.get(pg_antigo_id) if pg_antigo_id else None
+
+    if pg_antigo:
+        membros_treinamento = [m for m in pg_antigo.membros_para_indicadores 
+                               if m.status_treinamento_pg in ['Facilitador em Treinamento', 'Anfitrião em Treinamento']]
+        lideres_atuais = []
+        if pg_antigo.facilitador:
+            lideres_atuais.append(pg_antigo.facilitador)
+        if pg_antigo.anfitriao and pg_antigo.anfitriao.id != pg_antigo.facilitador.id:
+            lideres_atuais.append(pg_antigo.anfitriao)
+
+        membros_candidatos = list(set(membros_treinamento + lideres_atuais))
+        membros_choices = [(m.id, f"{m.nome_completo} ({m.status_treinamento_pg or 'Líder Atual'})") for m in membros_candidatos]
+        membros_choices.sort(key=lambda x: x[1])
+        membros_choices.insert(0, (0, 'Selecione um membro'))
+
+        form_multiplicacao.pg1.facilitador.choices = membros_choices
+        form_multiplicacao.pg1.anfitriao.choices = membros_choices
+        form_multiplicacao.pg2.facilitador.choices = membros_choices
+        form_multiplicacao.pg2.anfitriao.choices = membros_choices
+    
     setor_choices = [(setor.id, setor.nome)]
     form_multiplicacao.pg1.setor.choices = setor_choices
     form_multiplicacao.pg2.setor.choices = setor_choices
@@ -406,18 +451,36 @@ def processar_multiplicacao(pg_id):
     pg_antigo = PequenoGrupo.query.get_or_404(pg_id)
     setor = pg_antigo.setor
 
-    form = MultiplicacaoForm()    
+    form = MultiplicacaoForm(pg_antigo_id=pg_antigo.id)
+
+    membros_treinamento = [m for m in pg_antigo.membros_para_indicadores 
+                           if m.status_treinamento_pg in ['Facilitador em Treinamento', 'Anfitrião em Treinamento']]
+    lideres_atuais = []
+    if pg_antigo.facilitador:
+        lideres_atuais.append(pg_antigo.facilitador)
+    if pg_antigo.anfitriao and pg_antigo.anfitriao.id != pg_antigo.facilitador.id:
+        lideres_atuais.append(pg_antigo.anfitriao)
+    membros_candidatos = list(set(membros_treinamento + lideres_atuais))
+
+    membros_choices = [(m.id, f"{m.nome_completo} ({m.status_treinamento_pg or 'Líder Atual'})") for m in membros_candidatos]
+    membros_choices.sort(key=lambda x: x[1])
+    membros_choices.insert(0, (0, 'Selecione um membro'))
+
+    form.pg1.facilitador.choices = membros_choices
+    form.pg1.anfitriao.choices = membros_choices
+    form.pg2.facilitador.choices = membros_choices
+    form.pg2.anfitriao.choices = membros_choices
 
     setor_choices = [(pg_antigo.setor.id, pg_antigo.setor.nome)]
     form.pg1.setor.choices = setor_choices
     form.pg2.setor.choices = setor_choices
 
     if form.validate_on_submit():
-        if not pg_antigo.pronto_para_multiplicar:
-            flash('O PG não preenche todos os requisitos para a multiplicação.', 'danger')
-            return redirect(url_for('grupos.tela_multiplicacao_pgs', setor_id=pg_antigo.setor_id))
-
-        pg_antigo.data_multiplicacao = form.data_multiplicacao.data
+        nome_antigo_original = pg_antigo.nome
+        data_multiplicacao = form.data_multiplicacao.data
+        data_formatada = data_multiplicacao.strftime('%d/%m/%Y')
+        pg_antigo.nome = f"{nome_antigo_original} - {data_formatada}"
+        pg_antigo.data_multiplicacao = data_multiplicacao
         pg_antigo.ativo = False        
 
         novo_pg1 = PequenoGrupo(
@@ -447,7 +510,7 @@ def processar_multiplicacao(pg_id):
             
             registrar_evento_jornada(
                 tipo_acao='PG_MULTIPLICADO',
-                descricao_detalhada=f'PG {pg_antigo.nome} foi multiplicado, originando os PGs "{novo_pg1.nome}" e "{novo_pg2.nome}".',
+                descricao_detalhada=f'PG {nome_antigo_original} foi multiplicado, originando os PGs "{novo_pg1.nome}" e "{novo_pg2.nome}".',
                 usuario_executor=current_user,
                 pgs=[pg_antigo]
             )
@@ -590,11 +653,11 @@ def deletar_setor(setor_id):
 def listar_pgs():
     return redirect(url_for('grupos.listar_grupos_unificada', tipo='pgs'))
 
-def get_primeiro_nome(membro_id):
-    """Obtém o primeiro nome do facilitador para sugerir o nome do PG."""
+def get_nome(membro_id):
+    """Obtém o nome do facilitador para sugerir o nome do PG."""
     membro = Membro.query.get(membro_id)
     if membro:
-        return membro.nome_completo.split()[0]
+        return membro.nome_completo
     return ""
 
 def verificar_e_sugerir_nome_pg(nome_base, sufixo):
@@ -616,42 +679,20 @@ def verificar_e_sugerir_nome_pg(nome_base, sufixo):
 def criar_pg():
     form = PequenoGrupoForm()
     nome_sugerido_base = None
-    
+
     facilitador_id_url = request.args.get('facilitador', type=int)
 
     if request.method == 'GET' and facilitador_id_url and facilitador_id_url != 0:
         form.facilitador.data = facilitador_id_url 
-        nome_sugerido_base = get_primeiro_nome(facilitador_id_url)
+        nome_sugerido_base = get_nome(facilitador_id_url)
         if nome_sugerido_base:
             form.nome.data = nome_sugerido_base
-            
+    
     if form.validate_on_submit():
-        nome_base = get_primeiro_nome(form.facilitador.data)
-        sufixo = form.sufixo_nome.data.strip()
-        
-        if form.nome.data:
-            nome_base = form.nome.data
-
-        if sufixo:
-            nome_candidato = f"{nome_base} - {sufixo}"
-        else:
-            nome_candidato = nome_base
-        
-        pg_existente = PequenoGrupo.query.filter_by(nome=nome_candidato).first()
-        
-        if pg_existente:
-            form.nome.errors.append(f'O nome do PG "{nome_candidato}" já existe. Por favor, ajuste o nome ou adicione um sufixo único.')
-            
-            nome_sugerido_base = nome_base
-
-            return render_template('grupos/pgs/form.html', form=form, nome_sugerido_base=nome_sugerido_base, ano=ano, versao=versao)
-        
-        nome_final = nome_candidato
-        
-        form.nome.data = nome_final
+        nome_final = form.nome.data 
 
         novo_pg = PequenoGrupo(
-            nome=form.nome.data,
+            nome=nome_final,
             facilitador_id=form.facilitador.data,
             anfitriao_id=form.anfitriao.data,
             setor_id=form.setor.data,
@@ -669,6 +710,10 @@ def criar_pg():
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao criar Pequeno Grupo: {e}', 'danger')
+
+    elif request.method == 'POST':
+        nome_sugerido_base = get_nome(form.facilitador.data)
+        
     return render_template('grupos/pgs/form.html', form=form, nome_sugerido_base=nome_sugerido_base, ano=ano, versao=versao)
 
 @grupos_bp.route('/pgs/<int:pg_id>')
@@ -677,8 +722,8 @@ def criar_pg():
 def detalhes_pg(pg_id):
     pg = PequenoGrupo.query.get_or_404(pg_id)
 
-    if pg.data_multiplicacao:
-        return render_template('grupos/pgs/detalhes_multiplicado.html', pg=pg, ano=ano, versao=versao)
+    if not pg.ativo:
+        return render_template('grupos/pgs/detalhes_inativo.html', pg=pg, ano=ano, versao=versao)
     
     participantes_pg_ids = [m.id for m in pg.membros_completos]
     ctm_dados_alunos = []
@@ -722,74 +767,142 @@ def detalhes_pg(pg_id):
 @group_permission_required(PequenoGrupo, 'edit')
 def editar_pg(pg_id):
     pg = PequenoGrupo.query.get_or_404(pg_id)
+    membro_atual_id = current_user.membro.id if current_user.membro else None
 
-    if not pg.ativo and not current_user.has_permission('admin'):
-        flash('Não é possível editar um Pequeno Grupo inativo ou que já foi multiplicado.', 'danger')
+    is_admin = current_user.has_permission('admin')
+    is_area_supervisor = is_supervisor_da_area(membro_atual_id, pg)
+    is_sector_supervisor = is_supervisor_do_setor(membro_atual_id, pg)
+    is_facilitator = is_pg_facilitator(membro_atual_id, pg)
+
+    can_access_inactive = is_admin or is_area_supervisor or is_sector_supervisor
+    if not pg.ativo and not can_access_inactive:
+        flash('Não é possível editar um Pequeno Grupo inativo.', 'danger')
         return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
+    
+    form = PequenoGrupoForm(
+        obj=pg,
+        pg=pg,
+        is_admin=is_admin,
+        is_area_supervisor=is_area_supervisor,
+        is_sector_supervisor=is_sector_supervisor,
+        is_facilitator=is_facilitator,
+        formdata=request.form if request.method == 'POST' else None
+    )
 
-    form = PequenoGrupoForm(obj=pg)
-    form.pg = pg
     facilitador_antigo = pg.facilitador
     anfitriao_antigo = pg.anfitriao
-    setor_antigo = pg.setor
-    if form.validate_on_submit():
+    
+    if form.validate_on_submit():        
+        novo_facilitador_id_str = request.form.get('facilitador')
+        if novo_facilitador_id_str is not None:
+            pg.facilitador_id = int(novo_facilitador_id_str)
+        
+        novo_anfitriao_id_str = request.form.get('anfitriao')
+        if novo_anfitriao_id_str is not None:
+            pg.anfitriao_id = int(novo_anfitriao_id_str)
+
+        novo_setor_id_str = request.form.get('setor')
+        if novo_setor_id_str is not None:
+            pg.setor_id = int(novo_setor_id_str)
+            
         pg.nome = form.nome.data
-        pg.facilitador_id = form.facilitador.data
-        pg.anfitriao_id = form.anfitriao.data
-        pg.setor_id = form.setor.data
         pg.dia_reuniao = form.dia_reuniao.data
         pg.horario_reuniao = form.horario_reuniao.data
+
         try:
             db.session.commit()
             flash('Pequeno Grupo atualizado com sucesso!', 'success')
+            
             if facilitador_antigo and facilitador_antigo.id != pg.facilitador_id:
                 registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser facilitador(a) do PG {pg.nome}.', usuario_executor=current_user, membros=[facilitador_antigo])
                 registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou facilitador(a) do PG {pg.nome}.', usuario_executor=current_user, membros=[pg.facilitador])
             if anfitriao_antigo and anfitriao_antigo.id != pg.anfitriao_id:
                 registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser anfitrião do PG {pg.nome}.', usuario_executor=current_user, membros=[anfitriao_antigo])
                 registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Se tornou anfitrião do PG {pg.nome}.', usuario_executor=current_user, membros=[pg.anfitriao])
+                
             return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao atualizar Pequeno Grupo: {e}', 'danger')
+    
+    elif request.method == 'POST':
+        current_app.logger.error(f"Falha de validação no editar_pg. Erros: {form.errors}")
+        
+        if form.errors:
+            flash('Falha na validação do formulário. Por favor, verifique os campos em vermelho.', 'danger')
+        else:
+            flash('As alterações não puderam ser salvas. Tente novamente.', 'danger')
+
     elif request.method == 'GET':
         form.facilitador.data = pg.facilitador_id
         form.anfitriao.data = pg.anfitriao_id
         form.setor.data = pg.setor_id
-        form.dia_reuniao.data = pg.dia_reuniao
-        form.horario_reuniao.data = pg.horario_reuniao
-    return render_template('grupos/pgs/form.html', form=form, pg=pg, ano=ano, versao=versao)
+
+    return render_template('grupos/pgs/form.html', 
+                           form=form, 
+                           pg=pg, 
+                           is_area_supervisor=is_area_supervisor,
+                           is_sector_supervisor=is_sector_supervisor,
+                           ano=ano, 
+                           versao=versao)
+
+@grupos_bp.route('/pgs/fechar/<int:pg_id>', methods=['POST'])
+@login_required
+def fechar_pg(pg_id):
+    pg = PequenoGrupo.query.get_or_404(pg_id)
+    membro_atual_id = current_user.membro.id if current_user.membro else None
+    
+    form = PequenoGrupoForm(pg=pg) 
+
+    is_admin = current_user.has_permission('admin')
+    is_area_supervisor = is_supervisor_da_area(membro_atual_id, pg)
+    is_sector_supervisor = is_supervisor_do_setor(membro_atual_id, pg)
+
+    can_close = is_admin or is_area_supervisor or is_sector_supervisor
+    
+    if not can_close:
+        flash('Você não tem permissão para fechar este Pequeno Grupo.', 'danger')
+        return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
+
+    if pg.ativo:
+        pg.ativo = False
+        
+        try:
+            db.session.commit()
+            flash(f'Pequeno Grupo "{pg.nome}" foi fechado com sucesso.', 'success')
+            
+            registrar_evento_jornada(tipo_acao='PG_FECHADO', 
+                                     descricao_detalhada=f'O PG "{pg.nome}" foi fechado.', 
+                                     usuario_executor=current_user)
+
+            return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao fechar Pequeno Grupo: {e}', 'danger')
+            
+    return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
 
 @grupos_bp.route('/pgs/deletar/<int:pg_id>', methods=['POST'])
 @login_required
 @admin_required
 def deletar_pg(pg_id):
     pg = PequenoGrupo.query.get_or_404(pg_id)
-    nome_pg = pg.nome
-    facilitador_obj = pg.facilitador
-    anfitriao_obj = pg.anfitriao
-    membros_no_pg_antes_deletar = list(pg.participantes)
-    for membro in pg.participantes:
+    
+    for membro in pg.membros_completos:
         membro.pg_id = None
-        membro.status_treinamento_pg = 'Nenhum'
-        membro.participou_ctm = False
-        membro.participou_encontro_deus = False
-        membro.batizado_aclamado = False
         db.session.add(membro)
+
+    db.session.delete(pg)
+    
     try:
-        db.session.delete(pg)
         db.session.commit()
-        flash('Pequeno Grupo deletado com sucesso!', 'success')
-        if facilitador_obj:
-            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser facilitador(a) do PG {nome_pg}.', usuario_executor=current_user, membros=[facilitador_obj])
-        if anfitriao_obj:
-            registrar_evento_jornada(tipo_acao='LIDERANCA_ALTERADA', descricao_detalhada=f'Deixou de ser anfitrião do PG {nome_pg}.', usuario_executor=current_user, membros=[anfitriao_obj])
-        for membro in membros_no_pg_antes_deletar:
-            registrar_evento_jornada(tipo_acao='PARTICIPANTE_REMOVIDO_PG', descricao_detalhada=f'Deixou de ser participante do PG {nome_pg}.', usuario_executor=current_user, membros=[membro])
+        flash(f'Pequeno Grupo "{pg.nome}" foi deletado.', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Erro ao deletar Pequeno Grupo: {e}', 'danger')
-    return redirect(url_for('grupos.listar_pgs'))
+        
+    return redirect(url_for('grupos.listar_grupos_unificada'))
 
 @grupos_bp.route('/pgs/<int:pg_id>/adicionar', methods=['POST'])
 @login_required

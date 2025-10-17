@@ -87,7 +87,9 @@
                                 <td>{{ pg.dia_reuniao }} às {{ pg.horario_reuniao }}</td>
                                 <td>
                                     <a href="{{ url_for('grupos.editar_pg', pg_id=pg.id) }}" class="btn btn-sm btn-info">Editar</a>
+                                    {% if current_user.has_permission('admin') %}
                                     <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeletePGModal{{ pg.id }}">Deletar</button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}

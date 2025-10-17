@@ -1,4 +1,3 @@
-{# Macro auxiliar para renderizar atributos HTML de um dicionário #}
 {% macro _render_html_attributes(attributes) %}
     {% for key, value in attributes.items() %}
         {{ key }}="{{ value }}"

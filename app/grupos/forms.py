@@ -4,6 +4,7 @@ from wtforms.validators import DataRequired, Length, ValidationError, NumberRang
 from app.grupos.models import Area, Setor, PequenoGrupo
 from app.membresia.models import Membro
 from app.extensions import db
+from flask_login import current_user
 from datetime import date
 
 class AreaForm(FlaskForm):
@@ -50,8 +51,10 @@ class SetorForm(FlaskForm):
 
 
 class PequenoGrupoForm(FlaskForm):
+    class Meta:
+        csrf = False
+
     nome = StringField('Nome do PG', validators=[DataRequired(), Length(min=2, max=100)])
-    sufixo_nome = StringField('Sobrenome ou Sufixo')
     facilitador = SelectField('Facilitador', coerce=int, validators=[DataRequired()])
     anfitriao = SelectField('Anfitrião', coerce=int, validators=[DataRequired()])
     setor = SelectField('Setor', coerce=int)
@@ -66,32 +69,77 @@ class PequenoGrupoForm(FlaskForm):
 
     submit = SubmitField('Salvar Pequeno Grupo')
 
-    class Meta:
-        csrf = False
-
     def __init__(self, *args, **kwargs):
+        self.pg = kwargs.pop('pg', None)
+        self.current_user = kwargs.pop('current_user', current_user)
+        self.is_admin = kwargs.pop('is_admin', False)
+        self.is_area_supervisor = kwargs.pop('is_area_supervisor', False)
+        self.is_sector_supervisor = kwargs.pop('is_sector_supervisor', False)
+        self.is_facilitator = kwargs.pop('is_facilitator', False)
+        self.pg_antigo_id = kwargs.pop('pg_antigo_id', None) 
+
         super(PequenoGrupoForm, self).__init__(*args, **kwargs)
-        self.obj = kwargs.get('obj', None)
-        self.facilitador.choices = [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
-        self.facilitador.choices.insert(0, (0, 'Selecione um facilitador'))
-        self.anfitriao.choices = [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
-        self.anfitriao.choices.insert(0, (0, 'Selecione um anfitrião'))
-        self.setor.choices = [(s.id, s.nome) for s in Setor.query.order_by(Setor.nome).all()]
-        self.setor.choices.insert(0, (0, 'Selecione um setor'))
+
+        membros_ativos = Membro.query.filter_by(ativo=True).order_by(Membro.nome_completo).all()
+        membros_choices = [(m.id, m.nome_completo) for m in membros_ativos]
+        membros_choices.insert(0, (0, 'Selecione um membro'))
+        
+        self.facilitador.choices = membros_choices
+        self.anfitriao.choices = membros_choices
+
+        setores_ativos = Setor.query.order_by(Setor.nome).all()
+        setor_choices = [(s.id, s.nome) for s in setores_ativos]
+        setor_choices.insert(0, (0, 'Selecione um setor'))
+
+        self.setor.choices = setor_choices
+
+        if kwargs.get('obj', None):
+            obj = kwargs['obj']
+            if hasattr(obj, 'facilitador_id') and obj.facilitador_id:
+                self.facilitador.data = obj.facilitador_id
+            if hasattr(obj, 'anfitriao_id') and obj.anfitriao_id:
+                self.anfitriao.data = obj.anfitriao_id
+            if hasattr(obj, 'setor_id') and obj.setor_id:
+                self.setor.data = obj.setor_id
+
+        if self.pg: 
+            can_edit_lideranca = self.is_admin or self.is_area_supervisor or self.is_sector_supervisor
+            if not can_edit_lideranca:
+                self.facilitador.render_kw = {'disabled': True}
+                self.anfitriao.render_kw = {'disabled': True}
+
+            can_edit_setor = self.is_admin or self.is_area_supervisor
+            if not can_edit_setor:
+                self.setor.render_kw = {'disabled': True}
+
+            can_edit_dia_horario = self.is_admin or self.is_area_supervisor or self.is_sector_supervisor or self.is_facilitator
+            if not can_edit_dia_horario:
+                self.dia_reuniao.render_kw = {'disabled': True}
+                self.horario_reuniao.render_kw = {'disabled': True}
+            
+            if not self.pg.ativo and not self.is_admin:
+                for field_name in ['nome', 'facilitador', 'anfitriao', 'setor', 'dia_reuniao', 'horario_reuniao']:
+                    field = getattr(self, field_name)
+                    field.render_kw = {'disabled': True}
 
     def validate_nome(self, nome):
-        from app.auth.models import User
-        from flask_login import current_user
-
+        if not nome.data:
+            return
         pg = PequenoGrupo.query.filter_by(nome=nome.data).first()
-        if pg and (not self.obj or pg.id != self.obj.id):
-            raise ValidationError('Já existe um Pequeno Grupo com este nome. Por favor, escolha outro.')
-        
-        if self.obj and self.obj.nome != nome.data:
-            user_is_admin = current_user.is_authenticated and current_user.has_permission('admin')
-            if not user_is_admin:
-                raise ValidationError('O nome do Pequeno Grupo não pode ser alterado após a criação.')
 
+        if pg:
+            if self.pg and pg.id == self.pg.id:
+                pass
+            elif self.pg_antigo_id and pg.id == self.pg_antigo_id:
+                pass
+            elif pg.ativo:
+                raise ValidationError('Já existe um Pequeno Grupo ATIVO com este nome. Por favor, escolha outro.')
+            
+        if self.pg:
+            if self.pg.nome != nome.data:
+                if not current_user.has_permission('admin'):
+                    raise ValidationError('O nome do Pequeno Grupo não pode ser alterado após a criação.')
+                            
     def validate_facilitador(self, facilitador):
         if facilitador.data == 0:
             raise ValidationError('Por favor, selecione um Facilitador válido.')
@@ -131,6 +179,11 @@ class MultiplicacaoForm(FlaskForm):
     submit = SubmitField('Multiplicar PG')
 
     def __init__(self, *args, **kwargs):
+        pg_antigo_id = kwargs.pop('pg_antigo_id', None)
+
+        kwargs['pg1'] = kwargs.get('pg1', {'pg_antigo_id': pg_antigo_id}) 
+        kwargs['pg2'] = kwargs.get('pg2', {'pg_antigo_id': pg_antigo_id})
+
         super(MultiplicacaoForm, self).__init__(*args, **kwargs)
         membros_choices = [(m.id, m.nome_completo) for m in Membro.query.order_by(Membro.nome_completo).all()]
         membros_choices.insert(0, (0, 'Selecione um membro'))
@@ -144,9 +197,9 @@ class MultiplicacaoForm(FlaskForm):
         self.pg2.setor.choices = []
 
     def validate(self, **kwargs):
-        valid_principal = super(MultiplicacaoForm, self).validate(**kwargs)
+        valid_principal = super(MultiplicacaoForm, self).validate(**kwargs) 
         
-        valid_pg1 = self.pg1.validate(self)
+        valid_pg1 = self.pg1.validate(self) 
         valid_pg2 = self.pg2.validate(self)
 
         return valid_principal and valid_pg1 and valid_pg2
