@@ -18,8 +18,10 @@
     <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
         <h2 class="text-center">
             <strong>
-                {% if evento %}
-                    Editar {{ evento.nome }}
+                {% if evento and evento.concluido %}
+                    Editar Evento Concluído
+                {% elif evento %}
+                    Editar Evento: {{ evento.nome }}
                 {% else %}
                     Criar Novo Evento
                 {% endif %}

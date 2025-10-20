@@ -101,18 +101,23 @@ def gerenciar_evento(evento_id):
 @admin_required
 def editar_evento(evento_id):
     evento = Evento.query.get_or_404(evento_id)
+    form = EventoForm(obj=evento)
 
-    if evento.concluido:
-        flash('Não é possível editar um evento já concluído.', 'danger')
-        return redirect(url_for('eventos.gerenciar_evento', evento_id=evento.id))
+    is_concluido = evento.concluido
 
     form = EventoForm(obj=evento)
     
     if form.validate_on_submit():
-        evento.nome = form.nome.data
-        evento.tipo_evento = form.tipo_evento.data
-        evento.data_evento = form.data_evento.data
-        evento.observacoes = form.observacoes.data
+
+        if is_concluido:
+            evento.nome = form.nome.data
+            evento.data_evento = form.data_evento.data
+            evento.observacoes = form.observacoes.data
+        else:
+            evento.nome = form.nome.data
+            evento.tipo_evento = form.tipo_evento.data
+            evento.data_evento = form.data_evento.data
+            evento.observacoes = form.observacoes.data
 
         try:
             db.session.commit()
@@ -121,6 +126,9 @@ def editar_evento(evento_id):
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao atualizar o evento: {e}', 'danger')
+    
+    if is_concluido:
+        form.tipo_evento.render_kw = {'disabled': 'disabled'}
             
     return render_template('eventos/form_evento.html', form=form, evento=evento)
 
@@ -180,6 +188,7 @@ def buscar_membros_ativos():
         query = query.filter(Membro.participou_encontro_deus == False)
 
     if evento_id:
+        from .models import participantes_evento
         subquery = db.session.query(participantes_evento.c.membro_id).filter(
             participantes_evento.c.evento_id == evento_id
         )

@@ -972,43 +972,6 @@ def remover_participante(pg_id, membro_id):
         flash('Membro não pertence a este Pequeno Grupo.', 'danger')
     return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
 
-@grupos_bp.route('/pgs/<int:pg_id>/atualizar-indicadores/<int:membro_id>', methods=['POST'])
-@login_required
-@group_permission_required(PequenoGrupo, 'manage_participants')
-def atualizar_indicadores(pg_id, membro_id):
-    pg = PequenoGrupo.query.get_or_404(pg_id)
-    membro = Membro.query.get_or_404(membro_id)
-    
-    if membro.id not in [m.id for m in pg.membros_para_indicadores]:
-        flash('Este membro não pode ter seus indicadores atualizados neste Pequeno Grupo.', 'danger')
-        return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
-    
-    status_treinamento = request.form.get(f'status_treinamento_pg_{membro.id}')
-
-    membro.participou_ctm = 'participou_ctm' in request.form
-    membro.participou_encontro_deus = 'participou_encontro_deus' in request.form
-
-    if membro.status == 'Não-Membro':
-        membro.batizado_aclamado = 'batizado_aclamado' in request.form
-    else:
-        membro.batizado_aclamado = False
-
-    membro.status_treinamento_pg = status_treinamento
-
-    try:
-        db.session.add(membro)
-        db.session.commit()
-        flash(f'Indicadores de {membro.nome_completo} atualizados com sucesso!', 'success')
-        descricao_membro = f'Indicadores atualizados no PG {pg.nome}.'
-        descricao_setor = f'Indicadores do PG {pg.nome} atualizados. (Membro: {membro.nome_completo})'
-        registrar_evento_jornada(tipo_acao='INDICADORES_PG_ATUALIZADOS', descricao_detalhada=descricao_membro, usuario_executor=current_user, membros=[membro])
-        if pg.setor:
-            registrar_evento_jornada(tipo_acao='INDICADORES_PG_ATUALIZADOS', descricao_detalhada=descricao_setor, usuario_executor=current_user, setores=[pg.setor])
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Erro ao atualizar indicadores: {e}', 'danger')
-    return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
-
 @grupos_bp.route('/areas/<int:area_id>/gerenciar_metas', methods=['GET', 'POST'])
 @login_required
 @group_permission_required(Area, 'edit', 'supervisores')

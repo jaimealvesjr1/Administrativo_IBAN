@@ -52,11 +52,12 @@
                             <a href="{{ url_for('grupos.detalhes_pg', pg_id=membro.pg_participante.id) }}">{{ membro.pg_participante.nome }}</a>
                             <br>
                             <small class="text-muted">Setor {{ membro.pg_participante.setor.nome }}</small>
-                            {% if membro.status_treinamento_pg != 'Nenhum' %}
                                 <span class="badge bg-warning text-dark ms-2" style="font-size: 0.75rem;">
+                                {% if membro.status_treinamento_pg != 'nao_treinado' %}
                                     {{ membro.status_treinamento_pg }}
-                                </span>
-                            {% endif %}
+                                {% else %}
+                                    Nenhum
+                                {% endif %}
                         </li>
                         {% endif %}
 
