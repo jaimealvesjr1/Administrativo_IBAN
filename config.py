@@ -53,12 +53,13 @@ class Config:
     }
 
     STATUS = {
-        'Anfitrião':    '#0d6efd',
-        'Líder':  '#198754',
-        'Supervisor':   '#ffc107',
-        #'Pastor':       '#dc3545',  
-        'Não-Membro':   '#6c757d', 
-        #'Inativo':      '#6c757d',
+        'Facilitador em Treinamento': '#20c997',
+        'Anfitrião em Treinamento':   '#0dcaf0',
+        'Anfitrião de PG':    '#0d6efd',
+        'Facilitador de PG':  '#198754',
+        'Supervisor de Setor':   '#ffc107',
+        'Supervisor de Área':       '#dc3545',  
+        'Sem Cargo':   "#6c757d", 
     }
 
     TIPOS = ['Dízimo', 'Oferta']
@@ -75,6 +76,7 @@ class Config:
         'MEMBRO_ATUALIZADO_SELF': JORNADA_MEMBRO_ATUALIZADO_SELF,
         'DESLIGAMENTO': JORNADA_DESLIGAMENTO,
         'CADASTRO_NAO_MEMBRO': JORNADA_CADASTRO_MEMBRO,
+        'CADASTRO_NAO_MEMBRO_E_INSCRICAO': JORNADA_CADASTRO_MEMBRO,
         'CONTRIBUICAO': JORNADA_CONTRIBUICAO,
         'AREA_CRIADA': JORNADA_AREA_CRIADA,
         'CONCLUSAO_CTM': JORNADA_CONCLUSAO_CTM,

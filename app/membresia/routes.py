@@ -74,6 +74,7 @@ def save_profile_picture(file_data):
 @admin_required
 def index():
     total_membros_ativos = Membro.query.filter_by(ativo=True).count()
+    
     membros_por_status = db.session.query(Membro.status, func.count(Membro.id)).filter_by(ativo=True).group_by(Membro.status).all()
     resumo_membros_por_status = {status: count for status, count in membros_por_status}
 
@@ -100,14 +101,46 @@ def index():
     chart_labels_campus = [campus for campus, _ in membros_por_campus_data]
     chart_data_campus = [count for _, count in membros_por_campus_data]
 
-    status_alvo = ["Líder", "Supervisor", "Não-Membro"]
-    membros_por_status_db = db.session.query(Membro.status, func.count(Membro.id)).filter_by(ativo=True).group_by(Membro.status).all()
-    resumo_membros_por_status = {status: 0 for status in status_alvo}
-    for status, count in membros_por_status_db:
-        if status in resumo_membros_por_status:
-            resumo_membros_por_status[status] = count
-    chart_labels_status = list(resumo_membros_por_status.keys())
-    chart_data_status = list(resumo_membros_por_status.values())
+    membros_com_cargos = Membro.query.filter_by(ativo=True).options(
+    joinedload(Membro.pgs_facilitados),
+    joinedload(Membro.pgs_anfitriados),
+    joinedload(Membro.areas_supervisionadas),
+    joinedload(Membro.setores_supervisionados)
+    ).all()
+
+    contagem_cargos = {
+        'Supervisor de Área': 0,
+        'Supervisor de Setor': 0,
+        'Facilitador de PG': 0,
+        'Anfitrião de PG': 0,
+        'Facilitador em Treinamento': 0,
+        'Anfitrião em Treinamento': 0,
+        'Sem Cargo': 0
+    }
+
+    for membro in membros_com_cargos:
+        if len(membro.areas_supervisionadas) > 0:
+            contagem_cargos['Supervisor de Área'] += 1
+        elif len(membro.setores_supervisionados) > 0:
+            contagem_cargos['Supervisor de Setor'] += 1
+        elif len(membro.pgs_facilitados) > 0:
+            contagem_cargos['Facilitador de PG'] += 1
+        elif len(membro.pgs_anfitriados) > 0:
+            contagem_cargos['Anfitrião de PG'] += 1
+        else:
+            status_treinamento = membro.status_treinamento_pg or 'Participante'
+            
+            if status_treinamento == 'Facilitador em Treinamento':
+                contagem_cargos['Facilitador em Treinamento'] += 1
+            
+            elif status_treinamento == 'Anfitrião em Treinamento':
+                contagem_cargos['Anfitrião em Treinamento'] += 1
+                
+            else:
+                contagem_cargos['Sem Cargo'] += 1
+    
+    chart_labels_cargos_pg = list(contagem_cargos.keys())
+    chart_data_cargos_pg = list(contagem_cargos.values())
 
     campus_colors = Config.CAMPUS
     status_colors = Config.STATUS
@@ -117,12 +150,12 @@ def index():
         ano=ano,
         versao=versao,
         total_membros_ativos=total_membros_ativos,
-        resumo_membros_por_status=resumo_membros_por_status,
+        resumo_membros_por_status=contagem_cargos, 
         aniversariantes_do_mes=aniversariantes_do_mes,
         chart_labels_campus=chart_labels_campus,
         chart_data_campus=chart_data_campus,
-        chart_labels_status=chart_labels_status,
-        chart_data_status=chart_data_status,
+        chart_labels_cargos=chart_labels_cargos_pg,
+        chart_data_cargos=chart_data_cargos_pg,
         campus_colors=campus_colors,
         status_colors=status_colors
     )

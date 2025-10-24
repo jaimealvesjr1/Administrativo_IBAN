@@ -13,14 +13,14 @@
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card shadow-lg p-4 rounded-4 mb-4">
-                <h3 class="mb-3 text-center">Membros por Campus</h3>
+                <h3 class="mb-3 text-center">Pessoas por Campus</h3>
                 <div style="height: 300px;"><canvas id="graficoMembrosCampus"></canvas></div>
             </div>
         </div>
         <div class="col-md-6">
             <div class="card shadow-lg p-4 rounded-4 mb-4">
-                <h3 class="mb-3 text-center">Membros por Status</h3>
-                <div style="height: 300px;"><canvas id="graficoMembrosStatus"></canvas></div>
+                <h3 class="mb-3 text-center">Pessoas por Cargo</h3>
+                <div style="height: 300px;"><canvas id="graficoCargosPG"></canvas></div>
             </div>
         </div>
     </div>
@@ -28,7 +28,7 @@
     <div class="row mb-4">
         <div class="col-md-4">
             <div class="card text-white bg-primary mb-3 shadow-sm">
-                <div class="card-header">Total de Membros Ativos</div>
+                <div class="card-header">Total de Pessoas Ativas</div>
                 <div class="card-body">
                     <h5 class="card-title">{{ total_membros_ativos }}</h5>
                 </div>
@@ -36,7 +36,7 @@
         </div>
         <div class="col-md-4">
             <div class="card text-white bg-success mb-3 shadow-sm">
-                <div class="card-header">Membros por Status</div>
+                <div class="card-header">Pessoas por Status</div>
                     <ul class="list-group list-group-flush">
                         {% for status, count in resumo_membros_por_status.items() %}
                             <li class="list-group-item d-flex justify-content-between align-items-center text-dark">
@@ -49,7 +49,7 @@
         </div>
         <div class="col-4">
             <div class="card text-white bg-danger mb-3 shadow-sm">
-                <div class="card-header">Aniversariantes deste Mês</div>
+                <div class="card-header">Aniversariantes (Próximos 30 dias)</div>
                 {% if aniversariantes_do_mes %}
                     <ul class="list-group list-group-flush">
                         {% for membro in aniversariantes_do_mes %}
@@ -57,7 +57,7 @@
                         {% endfor %}
                     </ul>
                 {% else %}
-                    <p class="text-center">Nenhum aniversariante ativo este mês.</p>
+                    <p class="text-center">Nenhum aniversariante ativo nos próximos 30 dias.</p>
                 {% endif %}
             </div>
         </div>
@@ -74,13 +74,12 @@
         const corTexto = estilo.getPropertyValue('--cor-texto').trim() || '#021D40';
 
         const campusColorsMap = JSON.parse('{{ campus_colors | tojson | safe }}');
-        const statusColorsMap = JSON.parse('{{ status_colors | tojson | safe }}');
+        const statusColorsMap = JSON.parse('{{ status_colors | tojson | safe }}'); 
 
         const chartLabelsCampus = JSON.parse('{{ chart_labels_campus | tojson | safe }}');
         const chartDataCampus = JSON.parse('{{ chart_data_campus | tojson | safe }}');
-
         const campusBackgroundColors = chartLabelsCampus.map(label => campusColorsMap[label] || '#CCCCCC');
-
+    
         const ctxMembrosCampus = document.getElementById('graficoMembrosCampus').getContext('2d');
         new Chart(ctxMembrosCampus, {
             type: 'pie',
@@ -125,19 +124,20 @@
             }
         });
 
-        const chartLabelsStatus = JSON.parse('{{ chart_labels_status | tojson | safe }}');
-        const chartDataStatus = JSON.parse('{{ chart_data_status | tojson | safe }}');
+        const chartLabelsCargos = JSON.parse('{{ chart_labels_cargos | tojson | safe }}');
+        const chartDataCargos = JSON.parse('{{ chart_data_cargos | tojson | safe }}');
 
-        const statusBackgroundColors = chartLabelsStatus.map(label => statusColorsMap[label] || '#CCCCCC');
+        const cargosBackgroundColors = chartLabelsCargos.map(label => statusColorsMap[label] || '#CCCCCC');
 
-        const ctxMembrosStatus = document.getElementById('graficoMembrosStatus').getContext('2d');
-        new Chart(ctxMembrosStatus, {
+        const ctxCargosPG = document.getElementById('graficoCargosPG').getContext('2d');
+        new Chart(ctxCargosPG, {
             type: 'pie',
             data: {
-                labels: chartLabelsStatus,
+                labels: chartLabelsCargos,
                 datasets: [{
-                    data: chartDataStatus,
-                    backgroundColor: statusBackgroundColors,
+                    label: 'Cargos de PG',
+                    data: chartDataCargos,
+                    backgroundColor: cargosBackgroundColors,
                     hoverOffset: 4
                 }]
             },

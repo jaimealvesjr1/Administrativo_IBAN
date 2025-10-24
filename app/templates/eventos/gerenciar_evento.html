@@ -63,9 +63,14 @@
                         <form method="POST">
                             {{ form_inscricao_membros.hidden_tag() }}
                             <div class="mb-3">
-                                <label for="membros_select2" class="form-label">{{ form_inscricao_membros.membros.label }}</label>
+                                <label for="membros_select2" class="form-label">Pessoas cadastradas:</label>
                                 {{ form_inscricao_membros.membros(class="form-select", id="membros_select2") }}
                             </div>
+                            {% if evento.tipo_evento == 'Encontro com Deus' %}
+                            <small class="text-center text-muted mt-2 d-block">
+                                Pessoa não encontrada? <a href="{{ url_for('eventos.cadastrar_e_inscrever', evento_id=evento.id) }}">Clique aqui para cadastrar novo não-membro e inscrever</a>.
+                            </small>
+                            {% endif %}
                             <button type="submit" class="btn btn-primary mt-3">Inscrever Membros</button>
                         </form>
                     </div>

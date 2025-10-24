@@ -38,14 +38,13 @@
             {% set pgs_facilitados_ativos = membro.pgs_facilitados|selectattr('ativo')|list %}
             {% set pgs_anfitriados_ativos = membro.pgs_anfitriados|selectattr('ativo')|list %}
             {% set pgs_liderados_ativos = pgs_facilitados_ativos + pgs_anfitriados_ativos %}
-            
+            {% if membro.pg_participante and membro.pg_participante.ativo %}
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-danger text-white">
                     <h5 class="mb-0">Atividade em PGs</h5>
                 </div>
                 <div class="card-body">
                     <ul class="list-unstyled mb-0">
-                        {% if membro.pg_participante and membro.pg_participante.ativo %}
                         <li>
                             <i class="bi bi-person-fill me-1"></i>
                             <strong>Participante do PG:</strong> 
@@ -59,7 +58,6 @@
                                     Nenhum
                                 {% endif %}
                         </li>
-                        {% endif %}
 
                         {% for pg in pgs_liderados_ativos %}
                         <li>
@@ -90,7 +88,8 @@
                 </div>
                 {% endif %}
             </div>
-            
+            {% endif %}
+
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">Indicadores de PG</h5>

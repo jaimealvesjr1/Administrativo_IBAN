@@ -1,0 +1,9 @@
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit %}
+
+{% block title %}Cadastrar e Inscrever · {{ evento.nome }}{% endblock %}
+
+{% block content %}
+{% include 'membresia/cadastro.html' %}
+{% endblock %}

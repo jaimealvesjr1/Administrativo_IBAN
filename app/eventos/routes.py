@@ -8,6 +8,8 @@ from .forms import EventoForm, ConclusaoRecepcaoForm, InscricaoMembrosForm
 from app.membresia.models import Membro
 from app.grupos.models import Area, Setor, PequenoGrupo
 from app.jornada.models import registrar_evento_jornada
+from app.membresia.forms import CadastrarNaoMembroForm 
+from app.membresia.routes import save_profile_picture
 from datetime import date
 from config import Config
 
@@ -95,6 +97,68 @@ def gerenciar_evento(evento_id):
                             form_inscricao_membros=form_inscricao_membros,
                            ano=ano, versao=versao,
                            config=Config)
+
+@eventos_bp.route('/<int:evento_id>/cadastrar_e_inscrever', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def cadastrar_e_inscrever(evento_id):
+    evento = Evento.query.get_or_404(evento_id)
+
+    if evento.tipo_evento != 'Encontro com Deus':
+        flash('Esta função é válida apenas para eventos do tipo "Encontro com Deus".', 'danger')
+        return redirect(url_for('eventos.gerenciar_evento', evento_id=evento.id))
+        
+    form = CadastrarNaoMembroForm(membro=None)    
+    if form.validate_on_submit():
+        novo_membro = Membro(
+            nome_completo=form.nome_completo.data,
+            campus=form.campus.data,
+            status='Não-Membro', # Eventos de Encontro costumam ser para Não-Membros
+            ativo=True
+        )
+
+        # Lógica de salvar a foto (reutilizada do seu código de membresia)
+        if form.foto_perfil.data and form.foto_perfil.data.filename:
+            # Certifique-se de que save_profile_picture está acessível ou importado
+            filename = save_profile_picture(form.foto_perfil.data)
+            if filename:
+                novo_membro.foto_perfil = filename
+            else:
+                flash('Tipo de arquivo de imagem não permitido ou inválido!', 'danger')
+                return render_template('eventos/form_cadastro_e_inscricao.html', form=form, evento=evento)
+
+        # Adiciona o novo membro à sessão
+        db.session.add(novo_membro)
+        
+        try:
+            # Commit inicial para obter o ID do novo membro
+            db.session.commit()
+
+            # --- PASSO CRÍTICO: INSCREVER O MEMBRO NO EVENTO ---
+            evento.participantes.append(novo_membro)
+            db.session.commit()
+            
+            flash(f'{novo_membro.nome_completo} cadastrado(a) e inscrito(a) no evento com sucesso!', 'success')
+
+            registrar_evento_jornada(
+                tipo_acao='CADASTRO_NAO_MEMBRO_E_INSCRICAO',
+                descricao_detalhada=f'Cadastrado(a) e inscrito(a) no evento {evento.nome}.',
+                usuario_executor=current_user,
+                membros=[novo_membro]
+            )
+            
+            return redirect(url_for('eventos.gerenciar_evento', evento_id=evento.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao cadastrar e inscrever: {e}', 'danger')
+            
+    return render_template('eventos/form_cadastro_e_inscricao.html', 
+                           form=form, 
+                           evento=evento,
+                           editar=False, 
+                           membro=None,
+                           next_url=None)
 
 @eventos_bp.route('/<int:evento_id>/editar', methods=['GET', 'POST'])
 @login_required
