@@ -427,31 +427,43 @@ def deletar_aula_realizada(aula_realizada_id):
 @group_permission_required(ClasseCTM, 'view', 'supervisor')
 def painel_supervisor_classe(classe_id):
     classe = ClasseCTM.query.get_or_404(classe_id)
+
+    turmas_ativas = [t for t in classe.turmas if t.ativa]
+    turmas_arquivadas = [t for t in classe.turmas if not t.ativa]
+
+    def processar_dados_turmas(lista_turmas):
+        dados = {}
+        for turma in lista_turmas:
+            # Garante que as aulas realizadas sejam ordenadas por data
+            aulas_realizadas = AulaRealizada.query.filter_by(turma_id=turma.id).order_by(AulaRealizada.data).all()
+            alunos = turma.alunos
+            
+            dados[turma.id] = {
+                'nome': turma.nome,
+                'facilitador': turma.facilitador.nome_completo if turma.facilitador else 'N/A',
+                'alunos': [],
+                'aulas': aulas_realizadas,
+                'ativa': turma.ativa, # Adiciona o status de ativa para eventual uso no template
+            }
+            
+            for aluno in alunos:
+                # Otimização: calcula apenas as presenças para as aulas desta turma
+                presencas_aluno = {p.aula_realizada_id for p in aluno.presencas if p.aula_realizada.turma_id == turma.id}
+                dados[turma.id]['alunos'].append({
+                    'id': aluno.id,
+                    'nome': aluno.nome_completo,
+                    'presencas': presencas_aluno,
+                })
+        return dados
     
-    dados_turmas = {}
-    for turma in classe.turmas:
-        aulas_realizadas = AulaRealizada.query.filter_by(turma_id=turma.id).order_by(AulaRealizada.data).all()
-        alunos = turma.alunos
-        
-        dados_turmas[turma.id] = {
-            'nome': turma.nome,
-            'facilitador': turma.facilitador.nome_completo if turma.facilitador else 'N/A',
-            'alunos': [],
-            'aulas': aulas_realizadas,
-        }
-        
-        for aluno in alunos:
-            presencas_aluno = {p.aula_realizada_id for p in aluno.presencas if p.aula_realizada.turma_id == turma.id}
-            dados_turmas[turma.id]['alunos'].append({
-                'id': aluno.id,
-                'nome': aluno.nome_completo,
-                'presencas': presencas_aluno,
-            })
+    dados_turmas_ativas = processar_dados_turmas(turmas_ativas)
+    dados_turmas_arquivadas = processar_dados_turmas(turmas_arquivadas)
 
     return render_template(
         'ctm/painel_supervisor.html',
         classe=classe,
-        dados_turmas=dados_turmas,
+        dados_turmas_ativas=dados_turmas_ativas,
+        dados_turmas_arquivadas=dados_turmas_arquivadas,
         versao=versao,
         ano=ano
     )
