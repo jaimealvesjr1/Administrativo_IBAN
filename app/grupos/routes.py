@@ -1073,53 +1073,63 @@ def gerenciar_metas_da_area(area_id):
 @admin_required
 def admin_gerenciar_metas_da_area(area_id):
     area = Area.query.get_or_404(area_id)
-    meta_vigente = area.meta_vigente
     form = AreaMetasForm()
 
     if form.validate_on_submit():
-        if meta_vigente:
-            meta_vigente.ativa = False
-            db.session.add(meta_vigente)
+        try:
+            AreaMetaVigente.query.filter_by(area_id=area.id).delete()
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao limpar metas antigas: {e}', 'danger')
+            return redirect(url_for('grupos.detalhes_area', area_id=area.id))
 
         nova_meta = AreaMetaVigente(
-            meta_facilitadores_treinamento_pg=form.meta_facilitadores_treinamento_pg.data,
-            meta_anfitrioes_treinamento_pg=form.meta_anfitrioes_treinamento_pg.data,
-            meta_ctm_participantes_pg=form.meta_ctm_participantes_pg.data,
-            meta_encontro_deus_participantes_pg=form.meta_encontro_deus_participantes_pg.data,
-            meta_batizados_aclamados_pg=form.meta_batizados_aclamados_pg.data,
-            meta_multiplicacoes_pg_pg=form.meta_multiplicacoes_pg_pg.data,
-            data_inicio=form.data_inicio.data,
-            data_fim=form.data_fim.data,
-            area_id=area.id
-        )
+                meta_facilitadores_treinamento_pg=form.meta_facilitadores_treinamento_pg.data,
+                meta_anfitrioes_treinamento_pg=form.meta_anfitrioes_treinamento_pg.data,
+                meta_ctm_participantes_pg=form.meta_ctm_participantes_pg.data,
+                meta_encontro_deus_participantes_pg=form.meta_encontro_deus_participantes_pg.data,
+                meta_batizados_aclamados_pg=form.meta_batizados_aclamados_pg.data,
+                meta_multiplicacoes_pg_pg=form.meta_multiplicacoes_pg_pg.data,
+                data_inicio=form.data_inicio.data,
+                data_fim=form.data_fim.data,
+                area_id=area.id
+            )
+
         db.session.add(nova_meta)
 
         try:
             db.session.commit()
-            flash('Metas da área (Admin) atualizadas com sucesso!', 'success')
+            flash('Metas da área (Admin) redefinidas com sucesso! Um novo ciclo foi iniciado.', 'success')
             return redirect(url_for('grupos.detalhes_area', area_id=area.id))
         except Exception as e:
             db.session.rollback()
-            flash(f'Erro ao salvar as metas (Admin): {e}', 'danger')
+            flash(f'Erro ao salvar a nova meta (Admin): {e}', 'danger')
 
     elif request.method == 'GET':
-        if meta_vigente:
-            form.meta_facilitadores_treinamento_pg.data = meta_vigente.meta_facilitadores_treinamento_pg
-            form.meta_anfitrioes_treinamento_pg.data = meta_vigente.meta_anfitrioes_treinamento_pg
-            form.meta_ctm_participantes_pg.data = meta_vigente.meta_ctm_participantes_pg
-            form.meta_encontro_deus_participantes_pg.data = meta_vigente.meta_encontro_deus_participantes_pg
-            form.meta_batizados_aclamados_pg.data = meta_vigente.meta_batizados_aclamados_pg
-            form.meta_multiplicacoes_pg_pg.data = meta_vigente.meta_multiplicacoes_pg_pg
-            form.data_inicio.data = meta_vigente.data_inicio
-            form.data_fim.data = meta_vigente.data_fim
+        # Buscamos a meta mais recente para carregar o formulário
+        meta_vigente_recente = AreaMetaVigente.query.filter_by(area_id=area.id).order_by(AreaMetaVigente.data_inicio.desc()).first()
+        
+        if meta_vigente_recente:
+            form.meta_facilitadores_treinamento_pg.data = meta_vigente_recente.meta_facilitadores_treinamento_pg
+            form.meta_anfitrioes_treinamento_pg.data = meta_vigente_recente.meta_anfitrioes_treinamento_pg
+            form.meta_ctm_participantes_pg.data = meta_vigente_recente.meta_ctm_participantes_pg
+            form.meta_encontro_deus_participantes_pg.data = meta_vigente_recente.meta_encontro_deus_participantes_pg
+            form.meta_batizados_aclamados_pg.data = meta_vigente_recente.meta_batizados_aclamados_pg
+            form.meta_multiplicacoes_pg_pg.data = meta_vigente_recente.meta_multiplicacoes_pg_pg
+            form.data_inicio.data = meta_vigente_recente.data_inicio
+            form.data_fim.data = meta_vigente_recente.data_fim
+
+    if request.method == 'POST' and not form.validate():
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"Erro no campo {field}: {error}", 'danger')
 
     return render_template(
         'grupos/areas/form_metas_area.html',
         form=form,
         area=area,
         pode_editar=True,
-        meta_vigente=meta_vigente,
-        ano=ano,
+        meta_vigente=AreaMetaVigente.query.filter_by(area_id=area.id).order_by(AreaMetaVigente.data_inicio.desc()).first(),
         versao=versao
     )
 

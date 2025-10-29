@@ -95,8 +95,8 @@ def gerenciar_evento(evento_id):
                             membros_inscritos=membros_inscritos, 
                             membros_disponiveis=membros_disponiveis,
                             form_inscricao_membros=form_inscricao_membros,
-                           ano=ano, versao=versao,
-                           config=Config)
+                            ano=ano, versao=versao,
+                            config=Config)
 
 @eventos_bp.route('/<int:evento_id>/cadastrar_e_inscrever', methods=['GET', 'POST'])
 @login_required
