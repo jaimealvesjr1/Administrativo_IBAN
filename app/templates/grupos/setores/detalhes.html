@@ -92,8 +92,36 @@
                 </div>
                 <div class="card-body">
                     <div class="text-center">
-                        <canvas id="dizimistasChart" style="max-height: 250px;"></canvas>
                         <p class="mt-2"><strong>Total de Membros no Setor:</strong> {{ setor.num_participantes_totais_agregado }}</p>
+                        <canvas id="dizimistasChart" style="max-height: 250px;"></canvas>
+                        <button class="btn btn-sm btn-link mt-3 text-success" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDizimistas" aria-expanded="false" aria-controls="collapseDizimistas">
+                            <i class="bi bi-person-lines-fill me-1"></i> Lista de Dizimistas ({{ lista_dizimistas|length }})
+                        </button>
+                        <div class="collapse" id="collapseDizimistas">
+                            <div class="list-group list-group-flush mt-3 border rounded">
+                                {% for membro in lista_dizimistas %}
+                                <li class="list-group-item">
+                                    <i class="bi bi-person-check-fill text-success me-2"></i>
+                                    <a href="{{ url_for('membresia.perfil', id=membro.id) }}">{{ membro.nome_completo }}</a>
+                                </li>
+                                {% endfor %}
+                            </div>
+                            {% if not lista_dizimistas %}<p class="mt-2 small text-muted text-center">Nenhum membro listado.</p>{% endif %}
+                        </div>
+                        <button class="btn btn-sm btn-link mt-3 text-danger" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNDizimistas" aria-expanded="false" aria-controls="collapseNDizimistas">
+                            <i class="bi bi-person-lines-fill me-1"></i> Lista de Não-Dizimistas ({{ lista_nao_dizimistas|length }})
+                        </button>
+                        <div class="collapse" id="collapseNDizimistas">
+                            <div class="list-group list-group-flush mt-3 border rounded">
+                                {% for membro in lista_nao_dizimistas %}
+                                <li class="list-group-item">
+                                    <i class="bi text-danger me-2"></i>
+                                    <a href="{{ url_for('membresia.perfil', id=membro.id) }}">{{ membro.nome_completo }}</a>
+                                </li>
+                                {% endfor %}
+                            </div>
+                            {% if not lista_dizimistas %}<p class="mt-2 small text-muted text-center">Nenhum membro listado.</p>{% endif %}
+                        </div>
                     </div>
                 </div>
             </div>     
@@ -105,6 +133,32 @@
                     <div class="text-center">
                         <canvas id="frequenciaCTMChart" style="max-height: 250px;"></canvas>
                         <p class="mt-2"><strong>Total de Participantes:</strong> {{ setor.num_participantes_totais_agregado }}</p>
+                        <button class="btn btn-sm btn-link mt-3 text-success" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCTM" aria-expanded="false" aria-controls="collapseCTM">
+                            <i class="bi bi-person-lines-fill me-1"></i> Lista de Alunos no CTM ({{ lista_ctm_frequentes|length }})
+                        </button>
+                        <div class="collapse" id="collapseCTM">
+                            <div class="list-group list-group-flush mt-3 border rounded">
+                                {% for membro in lista_ctm_frequentes %}
+                                <li class="list-group-item">
+                                    <i class="bi bi-person-check-fill text-warning me-2"></i>
+                                    <a href="{{ url_for('membresia.perfil', id=membro.id) }}">{{ membro.nome_completo }}</a>
+                                </li>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-link mt-3 text-danger" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNCTM" aria-expanded="false" aria-controls="collapseNCTM">
+                            <i class="bi bi-person-lines-fill me-1"></i> Lista de Faltosos no CTM ({{ lista_nao_ctm_frequentes|length }})
+                        </button>
+                        <div class="collapse" id="collapseNCTM">
+                            <div class="list-group list-group-flush mt-3 border rounded">
+                                {% for membro in lista_nao_ctm_frequentes %}
+                                <li class="list-group-item">
+                                    <i class="bi bi-person-check-fill text-warning me-2"></i>
+                                    <a href="{{ url_for('membresia.perfil', id=membro.id) }}">{{ membro.nome_completo }}</a>
+                                </li>
+                                {% endfor %}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

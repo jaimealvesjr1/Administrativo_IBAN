@@ -20,6 +20,8 @@ JORNADA_TURMA_ARQUIVADA = {'class': 'bg-secondary', 'icon': 'bi-archive-fill', '
 JORNADA_NOVO_MEMBRO = {'class': 'bg-success', 'icon': 'bi-person-plus', 'label': 'Participante recebido como Membro', 'categoria': 'Membresia'}
 JORNADA_PRESENCA_CTM = {'class': 'bg-info', 'icon': 'bi-bar-chart-line', 'label': 'Participante Presente no CTM', 'categoria': 'Membresia'}
 JORNADA_MULTIPLICACAO = {'class': 'bg-success', 'icon': 'bi-award', 'label': 'Multiplicação de PG', 'categoria': 'Grupos'}
+JORNADA_PG_FECHADO = {'class': 'bg-danger', 'icon': 'bi-x-octagon-fill', 'label': 'PG Fechado', 'categoria': 'Grupos'}
+JORNADA_PRESENCA_CTM_REMOVIDA = {'class': 'bg-danger', 'icon': 'bi-person-dash', 'label': 'Presença CTM Removida', 'categoria': 'CTM'}
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'chave-secreta-segura'
@@ -62,7 +64,7 @@ class Config:
         'Sem Cargo':   "#6c757d", 
     }
 
-    TIPOS = ['Dízimo', 'Oferta']
+    TIPOS = ['Dízimo', 'Oferta'] # REMOVER
 
     FORMAS = ['via Pix', 'em Espécie']
 
@@ -78,6 +80,8 @@ class Config:
         'CADASTRO_NAO_MEMBRO': JORNADA_CADASTRO_MEMBRO,
         'CADASTRO_NAO_MEMBRO_E_INSCRICAO': JORNADA_CADASTRO_MEMBRO,
         'CONTRIBUICAO': JORNADA_CONTRIBUICAO,
+        'PG_FECHADO': JORNADA_PG_FECHADO,
+        'PRESENCA_CTM_REMOVIDA': JORNADA_PRESENCA_CTM_REMOVIDA,
         'AREA_CRIADA': JORNADA_AREA_CRIADA,
         'CONCLUSAO_CTM': JORNADA_CONCLUSAO_CTM,
         'REPROVACAO_CTM': JORNADA_REPROVACAO_CTM,

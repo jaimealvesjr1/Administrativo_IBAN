@@ -371,10 +371,36 @@ def detalhes_setor(setor_id):
         )
     ).order_by(PequenoGrupo.nome).all()
 
+    membros_do_setor = set(setor.membros_do_setor_completos)
+    
+    lista_dizimistas = sorted(
+        [m for m in membros_do_setor if m.contribuiu_dizimo_ultimos_30d],
+        key=lambda m: m.nome_completo
+    )
+
+    lista_ctm_frequentes = sorted(
+        [m for m in membros_do_setor if m.presente_ctm_ultimos_30d],
+        key=lambda m: m.nome_completo
+    )
+
+    lista_nao_dizimistas = sorted(
+        [m for m in membros_do_setor if not m.contribuiu_dizimo_ultimos_30d],
+        key=lambda m: m.nome_completo
+    )
+
+    lista_nao_ctm_frequentes = sorted(
+        [m for m in membros_do_setor if not m.presente_ctm_ultimos_30d],
+        key=lambda m: m.nome_completo
+    )
+
     return render_template('grupos/setores/detalhes.html',  
                            setor=setor,
                            pgs_ativos=pgs_ativos,
                            pgs_multiplicados=pgs_multiplicados,
+                           lista_dizimistas=lista_dizimistas,
+                           lista_ctm_frequentes=lista_ctm_frequentes,
+                           lista_nao_dizimistas=lista_nao_dizimistas,
+                           lista_nao_ctm_frequentes=lista_nao_ctm_frequentes,
                            jornada_eventos=jornada_eventos,
                            config=Config, ano=ano, versao=versao)
 

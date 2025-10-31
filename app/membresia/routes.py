@@ -73,10 +73,19 @@ def save_profile_picture(file_data):
 @login_required
 @admin_required
 def index():
-    total_membros_ativos = Membro.query.filter_by(ativo=True).count()
+    TIPOS_RECEPCAO_MEMBRO = ['Aclamação', 'Membro', 'Batismo']
+    total_pessoas_ativas = Membro.query.filter_by(ativo=True).count()
+    total_membros_ativos = Membro.query.filter(
+        Membro.ativo == True,
+        Membro.status != 'Não-Membro'
+    ).count()
+    
+    total_nao_membros_ativos = Membro.query.filter(
+        Membro.ativo == True,
+        Membro.status == 'Não-Membro'
+    ).count()
     
     membros_por_status = db.session.query(Membro.status, func.count(Membro.id)).filter_by(ativo=True).group_by(Membro.status).all()
-    resumo_membros_por_status = {status: count for status, count in membros_por_status}
 
     hoje = date.today()
     quinze_dias_depois = hoje + timedelta(days=15)
@@ -157,7 +166,9 @@ def index():
         chart_labels_cargos=chart_labels_cargos_pg,
         chart_data_cargos=chart_data_cargos_pg,
         campus_colors=campus_colors,
-        status_colors=status_colors
+        status_colors=status_colors,
+        total_pessoas_ativas=total_pessoas_ativas, 
+        total_nao_membros_ativos=total_nao_membros_ativos
     )
 
 @membresia_bp.route('/perfil/editar', methods=['GET', 'POST'])

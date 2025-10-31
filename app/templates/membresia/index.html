@@ -28,10 +28,21 @@
     <div class="row mb-4">
         <div class="col-md-4">
             <div class="card text-white bg-primary mb-3 shadow-sm">
-                <div class="card-header">Total de Pessoas Ativas</div>
+                <div class="card-header">Total Geral de Pessoas Ativas</div>
                 <div class="card-body">
-                    <h5 class="card-title">{{ total_membros_ativos }}</h5>
+                    <h5 class="card-title">{{ total_pessoas_ativas }}</h5>
                 </div>
+                
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center text-dark">
+                        Membros Ativos
+                        <span class="badge bg-success rounded-pill">{{ total_membros_ativos }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center text-dark">
+                        Não-Membros Ativos
+                        <span class="badge bg-warning rounded-pill">{{ total_nao_membros_ativos }}</span>
+                    </li>
+                </ul>
             </div>
         </div>
         <div class="col-md-4">
@@ -47,7 +58,7 @@
                     </ul>
             </div>
         </div>
-        <div class="col-4">
+        <div class="col-md-4">
             <div class="card text-white bg-danger mb-3 shadow-sm">
                 <div class="card-header">Aniversariantes (Próximos 30 dias)</div>
                 {% if aniversariantes_do_mes %}
