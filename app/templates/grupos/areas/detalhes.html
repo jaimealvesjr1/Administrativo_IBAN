@@ -30,12 +30,12 @@
                 </div>
                 <div class="card-body">
                     <div class="row row-cols-1 row-cols-md-6 g-2">
-                        {{ render_meta_card('Facilitadores em Treinamento', area.meta_facilitadores_treinamento, area.num_facilitadores_treinamento_atuais_agregado, 'bi-person-badge') }}
-                        {{ render_meta_card('Anfitriões em Treinamento', area.meta_anfitrioes_treinamento, area.num_anfitrioes_treinamento_atuais_agregado, 'bi-house-heart') }}
-                        {{ render_meta_card('Participantes frequentes no CTM', area.meta_ctm_participantes, area.num_ctm_participantes_atuais_agregado, 'bi-book') }}
-                        {{ render_meta_card('Encontro com Deus', area.meta_encontro_deus_participantes, area.num_encontro_deus_participantes_atuais_agregado, 'bi-hands-praying') }}
-                        {{ render_meta_card('Batizados/ Aclamados', area.meta_batizados_aclamados, area.num_batizados_aclamados_atuais_agregado, 'bi-award') }}
-                        {{ render_meta_card('Multiplicações de PG', area.meta_multiplicacoes_pg, area.num_multiplicacoes_pg_atuais_agregado, 'bi-x-lg') }}
+                        {{ render_meta_card('Facilitadores em Treinamento', metricas_area.meta_facilitadores_treinamento, metricas_area.num_facilitadores_treinamento_atuais_agregado, 'bi-person-badge') }}
+                        {{ render_meta_card('Anfitriões em Treinamento', metricas_area.meta_anfitrioes_treinamento, metricas_area.num_anfitrioes_treinamento_atuais_agregado, 'bi-house-heart') }}
+                        {{ render_meta_card('Participantes frequentes no CTM', metricas_area.meta_ctm_participantes, metricas_area.num_ctm_participantes_atuais_agregado, 'bi-book') }}
+                        {{ render_meta_card('Encontro com Deus', metricas_area.meta_encontro_deus_participantes, metricas_area.num_encontro_deus_participantes_atuais_agregado, 'bi-hands-praying') }}
+                        {{ render_meta_card('Batizados/ Aclamados', metricas_area.meta_batizados_aclamados, metricas_area.num_batizados_aclamados_atuais_agregado, 'bi-award') }}
+                        {{ render_meta_card('Multiplicações de PG', metricas_area.meta_multiplicacoes_pg, metricas_area.num_multiplicacoes_pg_atuais_agregado, 'bi-x-lg') }}
                     </div>
                 </div>
             </div>
@@ -61,7 +61,7 @@
                     <h5 class="mb-0">Setores na Área</h5>
                 </div>
                 <div class="card-body">
-                    {% if area.setores.count() > 0 %}
+                    {% if pgs_ativos_por_setor %}
                         <ul class="list-group list-group-flush">
                         {% for setor_data in pgs_ativos_por_setor %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">

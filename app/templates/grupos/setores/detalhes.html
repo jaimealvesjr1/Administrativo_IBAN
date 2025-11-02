@@ -25,12 +25,12 @@
                 </div>
                 <div class="card-body">
                     <div class="row row-cols-1 row-cols-md-6 g-2">
-                        {{ render_meta_card('Facilitadores em Treinamento', setor.meta_facilitadores_treinamento, setor.num_facilitadores_treinamento_atuais_agregado, 'bi-person-badge') }}
-                        {{ render_meta_card('Anfitriões em Treinamento', setor.meta_anfitrioes_treinamento, setor.num_anfitrioes_treinamento_atuais_agregado, 'bi-house-heart') }}
-                        {{ render_meta_card('Participantes frequentes no CTM', setor.meta_ctm_participantes, setor.num_ctm_participantes_atuais_agregado, 'bi-book') }}
-                        {{ render_meta_card('Encontro com Deus', setor.meta_encontro_deus_participantes, setor.num_encontro_deus_participantes_atuais_agregado, 'bi-fire') }}
-                        {{ render_meta_card('Batizados/ Aclamados', setor.meta_batizados_aclamados, setor.num_batizados_aclamados_atuais_agregado, 'bi-calendar-heart') }}
-                        {{ render_meta_card('Multiplicações de PG', setor.meta_multiplicacoes_pg, setor.num_multiplicacoes_pg_atuais_agregado, 'bi-x') }}
+                        {{ render_meta_card('Facilitadores em Treinamento', metricas_setor.meta_facilitadores_treinamento, metricas_setor.num_facilitadores_treinamento_atuais_agregado, 'bi-person-badge') }}
+                        {{ render_meta_card('Anfitriões em Treinamento', metricas_setor.meta_anfitrioes_treinamento, metricas_setor.num_anfitrioes_treinamento_atuais_agregado, 'bi-house-heart') }}
+                        {{ render_meta_card('Participantes frequentes no CTM', metricas_setor.meta_ctm_participantes, metricas_setor.num_ctm_participantes_atuais_agregado, 'bi-book') }}
+                        {{ render_meta_card('Encontro com Deus', metricas_setor.meta_encontro_deus_participantes, metricas_setor.num_encontro_deus_participantes_atuais_agregado, 'bi-fire') }}
+                        {{ render_meta_card('Batizados/ Aclamados', metricas_setor.meta_batizados_aclamados, metricas_setor.num_batizados_aclamados_atuais_agregado, 'bi-calendar-heart') }}
+                        {{ render_meta_card('Multiplicações de PG', metricas_setor.meta_multiplicacoes_pg, metricas_setor.num_multiplicacoes_pg_atuais_agregado, 'bi-x') }}
                     </div>
                 </div>
             </div>
@@ -92,7 +92,7 @@
                 </div>
                 <div class="card-body">
                     <div class="text-center">
-                        <p class="mt-2"><strong>Total de Membros no Setor:</strong> {{ setor.num_participantes_totais_agregado }}</p>
+                        <p class="mt-2"><strong>Total de Membros no Setor:</strong> {{ num_participantes_totais }}</p>
                         <canvas id="dizimistasChart" style="max-height: 250px;"></canvas>
                         <button class="btn btn-sm btn-link mt-3 text-success" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDizimistas" aria-expanded="false" aria-controls="collapseDizimistas">
                             <i class="bi bi-person-lines-fill me-1"></i> Lista de Dizimistas ({{ lista_dizimistas|length }})
@@ -132,7 +132,7 @@
                 <div class="card-body">
                     <div class="text-center">
                         <canvas id="frequenciaCTMChart" style="max-height: 250px;"></canvas>
-                        <p class="mt-2"><strong>Total de Participantes:</strong> {{ setor.num_participantes_totais_agregado }}</p>
+                        <p class="mt-2"><strong>Total de Participantes:</strong> {{ num_participantes_totais }}</p>
                         <button class="btn btn-sm btn-link mt-3 text-success" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCTM" aria-expanded="false" aria-controls="collapseCTM">
                             <i class="bi bi-person-lines-fill me-1"></i> Lista de Alunos no CTM ({{ lista_ctm_frequentes|length }})
                         </button>
@@ -175,7 +175,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     $(document).ready(function() {
-        var dizimistasData = {{ setor.distribuicao_dizimistas_30d|tojson|safe }};
+        var dizimistasData = {{ distribuicao_dizimistas_30d|tojson|safe }};
         var dizimistasLabels = ['Dizimistas', 'Não Dizimistas'];
         var dizimistasCounts = [dizimistasData.dizimistas, dizimistasData.nao_dizimistas];
         
@@ -204,7 +204,7 @@
                 }
             }
         });
-        var frequenciaCTMData = {{ setor.distribuicao_frequencia_ctm|tojson|safe }};
+        var frequenciaCTMData = {{ distribuicao_frequencia_ctm|tojson|safe }};
         var frequenciaCTMLabels = ['Frequentes no CTM', 'Não Frequentes'];
         var frequenciaCTMCounts = [frequenciaCTMData.frequentes_ctm, frequenciaCTMData.nao_frequentes_ctm];
         

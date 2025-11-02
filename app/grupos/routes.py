@@ -1,16 +1,19 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
 from flask_login import login_required, current_user
 from app.extensions import db
-from app.grupos.models import Area, Setor, PequenoGrupo, AreaMetaVigente
+from app.grupos.models import Area, Setor, PequenoGrupo, AreaMetaVigente, setor_supervisores
 from app.grupos.forms import AreaForm, SetorForm, PequenoGrupoForm, AreaMetasForm, MultiplicacaoForm
+from app.eventos.models import Evento, participantes_evento
 from app.membresia.models import Membro
+from app.financeiro.models import Contribuicao
 from app.auth.models import User
 from app.jornada.models import registrar_evento_jornada, JornadaEvento
 from config import Config
 from app.decorators import admin_required, group_permission_required, leader_required
 from sqlalchemy import or_, and_, func
+from sqlalchemy.orm import joinedload
 from app.ctm.models import TurmaCTM, AulaRealizada, Presenca, ConclusaoCTM
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 grupos_bp = Blueprint('grupos', __name__, template_folder='templates')
 ano=Config.ANO_ATUAL
@@ -187,32 +190,179 @@ def detalhes_area(area_id):
     area = Area.query.get_or_404(area_id)
     jornada_eventos = area.jornada_eventos_area.order_by(JornadaEvento.data_evento.desc()).all()
 
+    meta_vigente = area.meta_vigente
+    data_inicio_meta = meta_vigente.data_inicio if meta_vigente else date.min
+    data_fim_meta = meta_vigente.data_fim if meta_vigente else date.max
+
+    setor_ids = [s.id for s in area.setores]
+    
+    pg_ids_ativos_query = db.session.query(PequenoGrupo.id)\
+                              .filter(PequenoGrupo.setor_id.in_(setor_ids), 
+                                      PequenoGrupo.ativo == True)
+    
+    pg_ids_ativos = [id[0] for id in pg_ids_ativos_query.all()]
+    num_pgs_ativos = len(pg_ids_ativos)
+
+    membro_ids_supervisores_area = {s.id for s in area.supervisores}
+    
+    membro_ids_supervisores_setor_query = db.session.query(setor_supervisores.c.supervisor_id)\
+                                              .filter(setor_supervisores.c.setor_id.in_(setor_ids))
+    membro_ids_supervisores_setor = {id[0] for id in membro_ids_supervisores_setor_query.all()}
+
+    membro_ids_pgs_query = db.session.query(Membro.id)\
+                               .filter(Membro.pg_id.in_(pg_ids_ativos))
+    membro_ids_pgs = {id[0] for id in membro_ids_pgs_query.all()}
+
+    facilitador_ids_query = db.session.query(PequenoGrupo.facilitador_id).filter(PequenoGrupo.id.in_(pg_ids_ativos))
+    anfitriao_ids_query = db.session.query(PequenoGrupo.anfitriao_id).filter(PequenoGrupo.id.in_(pg_ids_ativos))
+
+    membro_ids_lideres_pg = {id[0] for id in facilitador_ids_query.all()}
+    membro_ids_lideres_pg.update({id[0] for id in anfitriao_ids_query.all()})
+
+    membro_ids_da_area = (membro_ids_supervisores_area | 
+                          membro_ids_supervisores_setor | 
+                          membro_ids_pgs | 
+                          membro_ids_lideres_pg)
+    
+    if not membro_ids_da_area:
+        membro_ids_da_area = []
+
+    metricas_area = {}
+    
+    metricas_area['num_pequenos_grupos_ativos'] = num_pgs_ativos
+
+    if meta_vigente:
+        metricas_area['meta_facilitadores_treinamento'] = meta_vigente.meta_facilitadores_treinamento_pg * num_pgs_ativos
+        metricas_area['meta_anfitrioes_treinamento'] = meta_vigente.meta_anfitrioes_treinamento_pg * num_pgs_ativos
+        metricas_area['meta_ctm_participantes'] = meta_vigente.meta_ctm_participantes_pg * num_pgs_ativos
+        metricas_area['meta_encontro_deus_participantes'] = meta_vigente.meta_encontro_deus_participantes_pg * num_pgs_ativos
+        metricas_area['meta_batizados_aclamados'] = meta_vigente.meta_batizados_aclamados_pg * num_pgs_ativos
+        metricas_area['meta_multiplicacoes_pg'] = meta_vigente.meta_multiplicacoes_pg_pg * num_pgs_ativos
+    else:
+        metricas_area['meta_facilitadores_treinamento'] = 0
+        metricas_area['meta_anfitrioes_treinamento'] = 0
+        metricas_area['meta_ctm_participantes'] = 0
+        metricas_area['meta_encontro_deus_participantes'] = 0
+        metricas_area['meta_batizados_aclamados'] = 0
+        metricas_area['meta_multiplicacoes_pg'] = 0
+
+    trinta_dias_atras = date.today() - timedelta(days=30)
+    
+    # Subquery para presenças no CTM nos últimos 30 dias
+    subquery_ctm_presentes = db.session.query(Presenca.membro_id)\
+        .join(AulaRealizada)\
+        .filter(AulaRealizada.data >= trinta_dias_atras)\
+        .distinct()
+
+    # Query principal de membros
+    query_membros_indicadores = db.session.query(
+        Membro.status_treinamento_pg,
+        Membro.batizado_aclamado,
+        Membro.data_recepcao,
+        Membro.status,
+        Membro.id.in_(subquery_ctm_presentes).label('presente_ctm_30d')
+    ).filter(Membro.id.in_(membro_ids_da_area)).all()
+
+    metricas_area['num_facilitadores_treinamento_atuais_agregado'] = 0
+    metricas_area['num_anfitrioes_treinamento_atuais_agregado'] = 0
+    metricas_area['num_ctm_participantes_atuais_agregado'] = 0
+    metricas_area['num_batizados_aclamados_atuais_agregado'] = 0
+
+    for membro_indicador in query_membros_indicadores:
+        if membro_indicador.status_treinamento_pg == 'Facilitador em Treinamento':
+            metricas_area['num_facilitadores_treinamento_atuais_agregado'] += 1
+        if membro_indicador.status_treinamento_pg == 'Anfitrião em Treinamento':
+            metricas_area['num_anfitrioes_treinamento_atuais_agregado'] += 1
+        if membro_indicador.presente_ctm_30d:
+            metricas_area['num_ctm_participantes_atuais_agregado'] += 1
+        
+        if membro_indicador.data_recepcao and data_inicio_meta <= membro_indicador.data_recepcao <= data_fim_meta:
+            if membro_indicador.status == 'Não-Membro' and membro_indicador.batizado_aclamado:
+                metricas_area['num_batizados_aclamados_atuais_agregado'] += 1
+            elif membro_indicador.status != 'Não-Membro':
+                metricas_area['num_batizados_aclamados_atuais_agregado'] += 1
+    
+    eventos_encontro_ids = db.session.query(Evento.id).filter(
+        Evento.tipo_evento == 'Encontro com Deus',
+        Evento.concluido == True,
+        Evento.data_evento.between(data_inicio_meta, data_fim_meta)
+    ).all()
+
+    if eventos_encontro_ids:
+        metricas_area['num_encontro_deus_participantes_atuais_agregado'] = db.session.query(participantes_evento)\
+            .filter(participantes_evento.c.evento_id.in_([e_id[0] for e_id in eventos_encontro_ids]),
+                    participantes_evento.c.membro_id.in_(membro_ids_da_area))\
+            .count()
+    else:
+        metricas_area['num_encontro_deus_participantes_atuais_agregado'] = 0
+
+    metricas_area['num_multiplicacoes_pg_atuais_agregado'] = PequenoGrupo.query\
+        .filter(PequenoGrupo.setor_id.in_(setor_ids),
+                PequenoGrupo.data_multiplicacao.isnot(None),
+                PequenoGrupo.data_multiplicacao.between(data_inicio_meta, data_fim_meta))\
+        .count()
+
     dizimistas_por_setor_chart = { 'labels': [], 'dizimistas': [], 'nao_dizimistas': [] }
     ctm_por_setor = []
     membros_por_setor = []
     pgs_ativos_por_setor = []
 
+    trinta_dias_atras_contrib = datetime.now() - timedelta(days=30)
+
+    pgs_ativos_por_setor_query = db.session.query(Setor.id, func.count(PequenoGrupo.id))\
+        .join(PequenoGrupo, PequenoGrupo.setor_id == Setor.id)\
+        .filter(Setor.area_id == area_id, PequenoGrupo.ativo == True)\
+        .group_by(Setor.id).all()
+    pgs_ativos_por_setor_dict = dict(pgs_ativos_por_setor_query)
+
     for setor in area.setores:
-        dizimistas_data = setor.distribuicao_dizimistas_30d
-        dizimistas_por_setor_chart['labels'].append(setor.nome)
-        dizimistas_por_setor_chart['dizimistas'].append(dizimistas_data.get('dizimistas', 0))
-        dizimistas_por_setor_chart['nao_dizimistas'].append(dizimistas_data.get('nao_dizimistas', 0))
+        membro_ids_setor_query = db.session.query(Membro.id)\
+            .join(PequenoGrupo, Membro.pg_id == PequenoGrupo.id, isouter=True)\
+            .filter(PequenoGrupo.setor_id == setor.id, Membro.ativo == True)
+        
+        membro_ids_setor = {m[0] for m in membro_ids_setor_query.all()}
+        
+        lideres_pgs_setor_query = db.session.query(PequenoGrupo.facilitador_id, PequenoGrupo.anfitriao_id)\
+            .filter(PequenoGrupo.setor_id == setor.id, PequenoGrupo.ativo == True)
+        for f_id, a_id in lideres_pgs_setor_query.all():
+            membro_ids_setor.add(f_id)
+            membro_ids_setor.add(a_id)
 
-        ctm_data = setor.distribuicao_frequencia_ctm
-        ctm_por_setor.append({
-            'setor_nome': setor.nome,
-            'count': ctm_data.get('frequentes_ctm', 0)
-        })
+        for supervisor in setor.supervisores:
+             membro_ids_setor.add(supervisor.id)
 
-        membros_por_setor.append({
-            'setor_nome': setor.nome,
-            'count': len(setor.membros_do_setor_completos)
-        })
+        num_membros_setor = len(membro_ids_setor)
+        membros_por_setor.append({'setor_nome': setor.nome, 'count': num_membros_setor})
 
         pgs_ativos_por_setor.append({
             'id': setor.id,
             'nome': setor.nome,
-            'pgs_ativos': setor.pequenos_grupos.filter_by(ativo=True).count()
+            'pgs_ativos': pgs_ativos_por_setor_dict.get(setor.id, 0)
+        })
+
+        if num_membros_setor > 0:
+            dizimistas_30d_setor = db.session.query(func.count(Contribuicao.membro_id.distinct()))\
+                .filter(Contribuicao.membro_id.in_(membro_ids_setor),
+                        Contribuicao.tipo == 'Dízimo',
+                        Contribuicao.data_lanc >= trinta_dias_atras_contrib)\
+                .scalar() or 0
+            
+            ctm_frequentes_setor = db.session.query(func.count(Presenca.membro_id.distinct()))\
+                .join(AulaRealizada)\
+                .filter(Presenca.membro_id.in_(membro_ids_setor),
+                        AulaRealizada.data >= trinta_dias_atras)\
+                .scalar() or 0
+        else:
+            dizimistas_30d_setor = 0
+            ctm_frequentes_setor = 0
+
+        dizimistas_por_setor_chart['labels'].append(setor.nome)
+        dizimistas_por_setor_chart['dizimistas'].append(dizimistas_30d_setor)
+        dizimistas_por_setor_chart['nao_dizimistas'].append(num_membros_setor - dizimistas_30d_setor)
+        
+        ctm_por_setor.append({
+            'setor_nome': setor.nome,
+            'count': ctm_frequentes_setor
         })
     
     pgs_ativos_por_setor.sort(key=lambda x: x['nome'])
@@ -220,6 +370,7 @@ def detalhes_area(area_id):
     return render_template('grupos/areas/detalhes.html',
                            area=area,
                            jornada_eventos=jornada_eventos,
+                           metricas_area=metricas_area,
                            dizimistas_por_setor=dizimistas_por_setor_chart,
                            ctm_por_setor=ctm_por_setor,
                            membros_por_setor=membros_por_setor,
@@ -357,13 +508,18 @@ def detalhes_setor(setor_id):
     setor = Setor.query.get_or_404(setor_id)
     jornada_eventos = setor.jornada_eventos_setor.order_by(JornadaEvento.data_evento.desc()).all()
 
-    pgs_ativos = setor.pequenos_grupos.filter(
-        db.and_(
-            PequenoGrupo.ativo == True,
-            PequenoGrupo.data_multiplicacao.is_(None)
-        )
-    ).order_by(PequenoGrupo.nome).all()
-    
+    meta_vigente = setor.area.meta_vigente
+    data_inicio_meta = meta_vigente.data_inicio if meta_vigente else date.min
+    data_fim_meta = meta_vigente.data_fim if meta_vigente else date.max
+
+    pgs_ativos_query = setor.pequenos_grupos.filter(
+        PequenoGrupo.ativo == True,
+        PequenoGrupo.data_multiplicacao.is_(None)
+    )
+    pgs_ativos = pgs_ativos_query.order_by(PequenoGrupo.nome).all()
+    pgs_ativos_ids = [pg.id for pg in pgs_ativos]
+    num_pgs_ativos = len(pgs_ativos_ids)
+
     pgs_multiplicados = setor.pequenos_grupos.filter(
         db.and_(
             PequenoGrupo.ativo == False,
@@ -371,37 +527,157 @@ def detalhes_setor(setor_id):
         )
     ).order_by(PequenoGrupo.nome).all()
 
-    membros_do_setor = set(setor.membros_do_setor_completos)
+    membro_ids_supervisores_setor = {s.id for s in setor.supervisores}
     
-    lista_dizimistas = sorted(
-        [m for m in membros_do_setor if m.contribuiu_dizimo_ultimos_30d],
-        key=lambda m: m.nome_completo
-    )
+    membro_ids_pgs_query = db.session.query(Membro.id)\
+                               .filter(Membro.pg_id.in_(pgs_ativos_ids))
+    membro_ids_pgs = {id[0] for id in membro_ids_pgs_query.all()}
+    
+    facilitador_ids_query = db.session.query(PequenoGrupo.facilitador_id).filter(PequenoGrupo.id.in_(pgs_ativos_ids))
+    anfitriao_ids_query = db.session.query(PequenoGrupo.anfitriao_id).filter(PequenoGrupo.id.in_(pgs_ativos_ids))
+    
+    membro_ids_lideres_pg = {id[0] for id in facilitador_ids_query.all()}
+    membro_ids_lideres_pg.update({id[0] for id in anfitriao_ids_query.all()})
 
-    lista_ctm_frequentes = sorted(
-        [m for m in membros_do_setor if m.presente_ctm_ultimos_30d],
-        key=lambda m: m.nome_completo
-    )
+    membro_ids_do_setor = (membro_ids_supervisores_setor | 
+                           membro_ids_pgs | 
+                           membro_ids_lideres_pg)
+    
+    if not membro_ids_do_setor:
+        membro_ids_do_setor = []
 
-    lista_nao_dizimistas = sorted(
-        [m for m in membros_do_setor if not m.contribuiu_dizimo_ultimos_30d],
-        key=lambda m: m.nome_completo
-    )
+    num_participantes_totais = len(membro_ids_do_setor)
+    
+    metricas_setor = {}
+    
+    if meta_vigente:
+        metricas_setor['meta_facilitadores_treinamento'] = meta_vigente.meta_facilitadores_treinamento_pg * num_pgs_ativos
+        metricas_setor['meta_anfitrioes_treinamento'] = meta_vigente.meta_anfitrioes_treinamento_pg * num_pgs_ativos
+        metricas_setor['meta_ctm_participantes'] = meta_vigente.meta_ctm_participantes_pg * num_pgs_ativos
+        metricas_setor['meta_encontro_deus_participantes'] = meta_vigente.meta_encontro_deus_participantes_pg * num_pgs_ativos
+        metricas_setor['meta_batizados_aclamados'] = meta_vigente.meta_batizados_aclamados_pg * num_pgs_ativos
+        metricas_setor['meta_multiplicacoes_pg'] = meta_vigente.meta_multiplicacoes_pg_pg * num_pgs_ativos
+    else:
+        metricas_setor['meta_facilitadores_treinamento'] = 0
+        metricas_setor['meta_anfitrioes_treinamento'] = 0
+        metricas_setor['meta_ctm_participantes'] = 0
+        metricas_setor['meta_encontro_deus_participantes'] = 0
+        metricas_setor['meta_batizados_aclamados'] = 0
+        metricas_setor['meta_multiplicacoes_pg'] = 0
 
-    lista_nao_ctm_frequentes = sorted(
-        [m for m in membros_do_setor if not m.presente_ctm_ultimos_30d],
-        key=lambda m: m.nome_completo
-    )
+    trinta_dias_atras = date.today() - timedelta(days=30)
+    
+    subquery_ctm_presentes = db.session.query(Presenca.membro_id)\
+        .join(AulaRealizada)\
+        .filter(AulaRealizada.data >= trinta_dias_atras)\
+        .distinct()
+
+    query_membros_indicadores = db.session.query(
+        Membro.status_treinamento_pg,
+        Membro.batizado_aclamado,
+        Membro.data_recepcao,
+        Membro.status,
+        Membro.id.in_(subquery_ctm_presentes).label('presente_ctm_30d')
+    ).filter(Membro.id.in_(membro_ids_do_setor)).all()
+
+    metricas_setor['num_facilitadores_treinamento_atuais_agregado'] = 0
+    metricas_setor['num_anfitrioes_treinamento_atuais_agregado'] = 0
+    metricas_setor['num_ctm_participantes_atuais_agregado'] = 0
+    metricas_setor['num_batizados_aclamados_atuais_agregado'] = 0
+    
+    for membro_indicador in query_membros_indicadores:
+        if membro_indicador.status_treinamento_pg == 'Facilitador em Treinamento':
+            metricas_setor['num_facilitadores_treinamento_atuais_agregado'] += 1
+        if membro_indicador.status_treinamento_pg == 'Anfitrião em Treinamento':
+            metricas_setor['num_anfitrioes_treinamento_atuais_agregado'] += 1
+        if membro_indicador.presente_ctm_30d:
+            metricas_setor['num_ctm_participantes_atuais_agregado'] += 1
+        
+        if membro_indicador.data_recepcao and data_inicio_meta <= membro_indicador.data_recepcao <= data_fim_meta:
+            if membro_indicador.status == 'Não-Membro' and membro_indicador.batizado_aclamado:
+                metricas_setor['num_batizados_aclamados_atuais_agregado'] += 1
+            elif membro_indicador.status != 'Não-Membro':
+                metricas_setor['num_batizados_aclamados_atuais_agregado'] += 1
+
+    eventos_encontro_ids = db.session.query(Evento.id).filter(
+        Evento.tipo_evento == 'Encontro com Deus',
+        Evento.concluido == True,
+        Evento.data_evento.between(data_inicio_meta, data_fim_meta)
+    ).all()
+    
+    if eventos_encontro_ids:
+        metricas_setor['num_encontro_deus_participantes_atuais_agregado'] = db.session.query(participantes_evento)\
+            .filter(participantes_evento.c.evento_id.in_([e_id[0] for e_id in eventos_encontro_ids]),
+                    participantes_evento.c.membro_id.in_(membro_ids_do_setor))\
+            .count()
+    else:
+        metricas_setor['num_encontro_deus_participantes_atuais_agregado'] = 0
+
+    metricas_setor['num_multiplicacoes_pg_atuais_agregado'] = pgs_multiplicados_count = PequenoGrupo.query\
+        .filter(PequenoGrupo.setor_id == setor_id,
+                PequenoGrupo.data_multiplicacao.isnot(None),
+                PequenoGrupo.data_multiplicacao.between(data_inicio_meta, data_fim_meta))\
+        .count()
+
+    trinta_dias_atras_contrib = datetime.now() - timedelta(days=30)
+    
+    membros_do_setor = Membro.query.filter(Membro.id.in_(membro_ids_do_setor)).all()
+    
+    ids_dizimistas_30d_setor = {r[0] for r in db.session.query(Contribuicao.membro_id.distinct())\
+        .filter(Contribuicao.membro_id.in_(membro_ids_do_setor),
+                Contribuicao.tipo == 'Dízimo',
+                Contribuicao.data_lanc >= trinta_dias_atras_contrib)\
+        .all()}
+
+    ids_ctm_frequentes_setor = {r[0] for r in db.session.query(Presenca.membro_id.distinct())\
+        .join(AulaRealizada)\
+        .filter(Presenca.membro_id.in_(membro_ids_do_setor),
+                AulaRealizada.data >= trinta_dias_atras)\
+        .all()}
+
+    lista_dizimistas = []
+    lista_nao_dizimistas = []
+    lista_ctm_frequentes = []
+    lista_nao_ctm_frequentes = []
+    
+    for membro in membros_do_setor:
+        if membro.id in ids_dizimistas_30d_setor:
+            lista_dizimistas.append(membro)
+        else:
+            lista_nao_dizimistas.append(membro)
+            
+        if membro.id in ids_ctm_frequentes_setor:
+            lista_ctm_frequentes.append(membro)
+        else:
+            lista_nao_ctm_frequentes.append(membro)
+
+    lista_dizimistas.sort(key=lambda m: m.nome_completo)
+    lista_nao_dizimistas.sort(key=lambda m: m.nome_completo)
+    lista_ctm_frequentes.sort(key=lambda m: m.nome_completo)
+    lista_nao_ctm_frequentes.sort(key=lambda m: m.nome_completo)
+
+    distribuicao_dizimistas_30d = {
+        'dizimistas': len(lista_dizimistas),
+        'nao_dizimistas': len(lista_nao_dizimistas)
+    }
+    distribuicao_frequencia_ctm = {
+        'frequentes_ctm': len(lista_ctm_frequentes),
+        'nao_frequentes_ctm': len(lista_nao_ctm_frequentes)
+    }
 
     return render_template('grupos/setores/detalhes.html',  
                            setor=setor,
                            pgs_ativos=pgs_ativos,
                            pgs_multiplicados=pgs_multiplicados,
+                           jornada_eventos=jornada_eventos,
+                           metricas_setor=metricas_setor,
+                           num_participantes_totais=num_participantes_totais,
                            lista_dizimistas=lista_dizimistas,
                            lista_ctm_frequentes=lista_ctm_frequentes,
                            lista_nao_dizimistas=lista_nao_dizimistas,
                            lista_nao_ctm_frequentes=lista_nao_ctm_frequentes,
-                           jornada_eventos=jornada_eventos,
+                           distribuicao_dizimistas_30d=distribuicao_dizimistas_30d,
+                           distribuicao_frequencia_ctm=distribuicao_frequencia_ctm,
                            config=Config, ano=ano, versao=versao)
 
 @grupos_bp.route('/setores/<int:setor_id>/multiplicar_pgs', methods=['GET'])
@@ -746,44 +1022,148 @@ def criar_pg():
 @login_required
 @group_permission_required(PequenoGrupo, 'view')
 def detalhes_pg(pg_id):
-    pg = PequenoGrupo.query.get_or_404(pg_id)
+    pg = PequenoGrupo.query.options(
+        joinedload(PequenoGrupo.setor).joinedload(Setor.area),
+        joinedload(PequenoGrupo.facilitador),
+        joinedload(PequenoGrupo.anfitriao)
+    ).get_or_404(pg_id)
 
     if not pg.ativo:
-        return render_template('grupos/pgs/detalhes_inativo.html', pg=pg, ano=ano, versao=versao)
+        jornada_eventos = pg.jornada_eventos_pg.order_by(JornadaEvento.data_evento.desc()).all()
+        return render_template('grupos/pgs/detalhes_inativo.html', 
+                               pg=pg, 
+                               jornada_eventos=jornada_eventos, 
+                               ano=ano, 
+                               versao=versao)
     
-    participantes_pg_ids = [m.id for m in pg.membros_completos]
-    ctm_dados_alunos = []
+    meta_vigente = pg.setor.area.meta_vigente
+    data_inicio_meta = meta_vigente.data_inicio if meta_vigente else date.min
+    data_fim_meta = meta_vigente.data_fim if meta_vigente else date.max
+    
+    membro_ids_pgs_query = db.session.query(Membro.id)\
+                               .filter(Membro.pg_id == pg_id, Membro.ativo == True)
+    
+    membro_ids_pgs = {id[0] for id in membro_ids_pgs_query.all()}
+    
+    if pg.facilitador_id:
+        membro_ids_pgs.add(pg.facilitador_id)
+    if pg.anfitriao_id:
+        membro_ids_pgs.add(pg.anfitriao_id)
+        
+    if not membro_ids_pgs:
+        membro_ids_pgs = []
 
-    for membro in pg.membros_completos:
-        if membro.turmas_ctm:
-            for turma_ctm in membro.turmas_ctm:
-                total_aulas = AulaRealizada.query.filter_by(turma_id=turma_ctm.id).count()
-                
-                total_presencas = Presenca.query.filter(
-                    and_(
-                        Presenca.membro_id == membro.id,
-                        Presenca.aula_realizada.has(AulaRealizada.turma_id == turma_ctm.id)
-                    )
-                ).count()
-                
-                conclusao = ConclusaoCTM.query.filter_by(membro_id=membro.id, turma_id=turma_ctm.id).first()
-                status_conclusao = conclusao.status_conclusao if conclusao else 'Em andamento'
-                
-                ctm_dados_alunos.append({
-                    'membro': membro,
-                    'turma': turma_ctm,
-                    'classe': turma_ctm.classe,
-                    'total_aulas': total_aulas,
-                    'total_presencas': total_presencas,
-                    'status_conclusao': status_conclusao
-                })
+    metricas_pg = {}
+    
+    if meta_vigente:
+        metricas_pg['meta_facilitadores_treinamento'] = meta_vigente.meta_facilitadores_treinamento_pg
+        metricas_pg['meta_anfitrioes_treinamento'] = meta_vigente.meta_anfitrioes_treinamento_pg
+        metricas_pg['meta_ctm_participantes'] = meta_vigente.meta_ctm_participantes_pg
+        metricas_pg['meta_encontro_deus_participantes'] = meta_vigente.meta_encontro_deus_participantes_pg
+        metricas_pg['meta_batizados_aclamados'] = meta_vigente.meta_batizados_aclamados_pg
+    else:
+        metricas_pg['meta_facilitadores_treinamento'] = 0
+        metricas_pg['meta_anfitrioes_treinamento'] = 0
+        metricas_pg['meta_ctm_participantes'] = 0
+        metricas_pg['meta_encontro_deus_participantes'] = 0
+        metricas_pg['meta_batizados_aclamados'] = 0
+    
+    trinta_dias_atras = date.today() - timedelta(days=30)
 
+    subquery_ctm_presentes = db.session.query(Presenca.membro_id)\
+        .join(AulaRealizada)\
+        .filter(AulaRealizada.data >= trinta_dias_atras)\
+        .distinct()
+
+    query_membros_indicadores = db.session.query(
+        Membro.status_treinamento_pg,
+        Membro.batizado_aclamado,
+        Membro.data_recepcao,
+        Membro.status,
+        Membro.id.in_(subquery_ctm_presentes).label('presente_ctm_30d')
+    ).filter(Membro.id.in_(membro_ids_pgs)).all()
+    
+    metricas_pg['num_facilitadores_treinamento_atuais'] = 0
+    metricas_pg['num_anfitrioes_treinamento_atuais'] = 0
+    metricas_pg['num_ctm_participantes_atuais'] = 0
+    metricas_pg['num_batizados_aclamados_atuais'] = 0
+
+    for membro_indicador in query_membros_indicadores:
+        if membro_indicador.status_treinamento_pg == 'Facilitador em Treinamento':
+            metricas_pg['num_facilitadores_treinamento_atuais'] += 1
+        if membro_indicador.status_treinamento_pg == 'Anfitrião em Treinamento':
+            metricas_pg['num_anfitrioes_treinamento_atuais'] += 1
+        if membro_indicador.presente_ctm_30d:
+            metricas_pg['num_ctm_participantes_atuais'] += 1
+        
+        if membro_indicador.data_recepcao and data_inicio_meta <= membro_indicador.data_recepcao <= data_fim_meta:
+            if (membro_indicador.status == 'Não-Membro' and membro_indicador.batizado_aclamado) or \
+               (membro_indicador.status != 'Não-Membro'):
+                metricas_pg['num_batizados_aclamados_atuais'] += 1
+
+    eventos_encontro_ids = db.session.query(Evento.id).filter(
+        Evento.tipo_evento == 'Encontro com Deus',
+        Evento.concluido == True,
+        Evento.data_evento.between(data_inicio_meta, data_fim_meta)
+    ).all()
+    
+    if eventos_encontro_ids:
+        metricas_pg['num_encontro_deus_participantes_atuais'] = db.session.query(participantes_evento)\
+            .filter(participantes_evento.c.evento_id.in_([e_id[0] for e_id in eventos_encontro_ids]),
+                    participantes_evento.c.membro_id.in_(membro_ids_pgs))\
+            .count()
+    else:
+        metricas_pg['num_encontro_deus_participantes_atuais'] = 0
+
+    ctm_dados_alunos = db.session.query(
+        Membro,
+        TurmaCTM,
+        TurmaCTM.classe,
+        func.count(Presenca.id).label('total_presencas'),
+        ConclusaoCTM.status_conclusao
+    )\
+    .select_from(Membro)\
+    .join(Membro.turmas_ctm)\
+    .join(TurmaCTM.classe)\
+    .outerjoin(Presenca, and_(
+        Presenca.membro_id == Membro.id,
+        Presenca.aula_realizada.has(AulaRealizada.turma_id == TurmaCTM.id)
+    ))\
+    .outerjoin(ConclusaoCTM, and_(
+        ConclusaoCTM.membro_id == Membro.id,
+        ConclusaoCTM.turma_id == TurmaCTM.id
+    ))\
+    .filter(Membro.id.in_(membro_ids_pgs))\
+    .group_by(Membro.id, TurmaCTM.id, ConclusaoCTM.id)\
+    .all()
+
+    aulas_por_turma = dict(db.session.query(
+        AulaRealizada.turma_id, 
+        func.count(AulaRealizada.id)
+    ).group_by(AulaRealizada.turma_id).all())
+
+    ctm_dados_formatados = []
+    for membro, turma, classe, total_presencas, status_conclusao in ctm_dados_alunos:
+        ctm_dados_formatados.append({
+            'membro': membro,
+            'turma': turma,
+            'classe': classe,
+            'total_presencas': total_presencas,
+            'total_aulas': aulas_por_turma.get(turma.id, 0),
+            'status_conclusao': status_conclusao or 'Em Andamento'
+        })
+    
     jornada_eventos = pg.jornada_eventos_pg.order_by(JornadaEvento.data_evento.desc()).all()
-    membros_disponiveis = Membro.query.filter(Membro.id.notin_(participantes_pg_ids), Membro.pg_id == None).order_by(Membro.nome_completo).all()
+    membros_disponiveis = Membro.query.filter(
+        Membro.id.notin_(membro_ids_pgs), 
+        Membro.pg_id == None,
+        Membro.ativo == True
+    ).order_by(Membro.nome_completo).all()
 
     return render_template('grupos/pgs/detalhes.html',
                            pg=pg,
-                           ctm_dados_alunos=ctm_dados_alunos,
+                           metricas_pg=metricas_pg,
+                           ctm_dados_alunos=ctm_dados_formatados,
                            membros_disponiveis=membros_disponiveis,
                            jornada_eventos=jornada_eventos,
                            config=Config, ano=ano, versao=versao)
