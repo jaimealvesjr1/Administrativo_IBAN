@@ -220,7 +220,7 @@ def deletar_turma(turma_id):
         flash(f'Não é possível deletar a turma "{turma.nome}", pois ela está arquivada.', 'danger')
         return redirect(url_for('ctm.listar_ctm_unificada', tipo='turmas'))
     
-    if len(turma.alunos) > 0 or turma.aulas_realizadas.count() > 0:
+    if len(turma.alunos) > 0 or len(turma.aulas_realizadas) > 0:
         flash(f'Não é possível deletar a Turma "{turma.nome}" pois ela possui Alunos ou Aulas Realizadas vinculados.', 'danger')
         return redirect(url_for('ctm.listar_ctm_unificada', tipo='turmas'))
 
