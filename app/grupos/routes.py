@@ -307,7 +307,7 @@ def detalhes_area(area_id):
     membros_por_setor = []
     pgs_ativos_por_setor = []
 
-    trinta_dias_atras_contrib = datetime.now() - timedelta(days=30)
+    trinta_dias_atras_contrib = date.today() - timedelta(days=30)
 
     pgs_ativos_por_setor_query = db.session.query(Setor.id, func.count(PequenoGrupo.id))\
         .join(PequenoGrupo, PequenoGrupo.setor_id == Setor.id)\
