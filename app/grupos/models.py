@@ -67,6 +67,13 @@ class PequenoGrupo(db.Model):
     autorizacao_multiplicacao = db.Column(db.Boolean, default=False)
     ativo = db.Column(db.Boolean, default=True)
 
+    @property
+    def membros_para_indicadores(self):
+        membros = set(p for p in self.participantes.all())
+        if self.anfitriao and self.anfitriao.id != self.facilitador.id:
+            membros.add(self.anfitriao)
+        return list(membros)
+    
     facilitador = db.relationship('Membro', foreign_keys=[facilitador_id], back_populates='pgs_facilitados')
     anfitriao = db.relationship('Membro', foreign_keys=[anfitriao_id], back_populates='pgs_anfitriados')
     participantes = db.relationship('Membro', foreign_keys='Membro.pg_id', back_populates='pg_participante', lazy='dynamic')
