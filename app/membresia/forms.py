@@ -79,7 +79,7 @@ class EditarMembroForm(FlaskForm):
     nome_completo = StringField('Nome Completo', validators=[DataRequired(), Length(min=2, max=120)])
     data_nascimento = DateField('Data de Nascimento', format='%Y-%m-%d', validators=[DataRequired()])
     foto_perfil = FileField('Alterar Foto de Perfil')
-    campus = SelectField('Campus', choices=[(c, c) for c in Config.CAMPUS.keys()], validators=[DataRequired()])
+    campus = SelectField('Campus', choices=[(c, c) for c in Config.CAMPUS], validators=[DataRequired()])
     submit = SubmitField('Salvar Alterações')
     
     def __init__(self, *args, **kwargs):

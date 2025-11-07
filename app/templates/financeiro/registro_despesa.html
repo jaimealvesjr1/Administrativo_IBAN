@@ -1,0 +1,102 @@
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit, danger %}
+{% block title %}{{ title }} · IBAN{% endblock %}
+
+{% block content %}
+<div>
+    <div class="text-center mb-5">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
+    </div>
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+        <h2 class="text-center">
+            <strong>{{ title }}</strong>
+        </h2>
+
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            
+            <div class="mb-3">
+                {{ form.item_id.label(class="form-label") }}
+                {{ form.item_id(class="form-select", id="item_despesa_select2") }}
+                {% if form.item_id.errors %}
+                    {% for error in form.item_id.errors %}
+                        <div class="alert alert-danger mt-1">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="mb-3">
+                {{ form.centro_custo.label(class="form-label") }}
+                {{ form.centro_custo(class="form-select", id="centro_custo_despesa_select2") }}
+                {% if form.centro_custo.errors %}
+                    {% for error in form.centro_custo.errors %}
+                        <div class="alert alert-danger mt-1">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            
+            <div class="row">
+                <div class="mb-3 col-md-6">
+                    {{ form.valor.label(class="form-label") }}
+                    {{ form.valor(class="form-control", type="text", id="valor_despesa") }} 
+                    {% if form.valor.errors %}
+                        {% for error in form.valor.errors %}
+                            <div class="alert alert-danger mt-1">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3 col-md-6">
+                    {{ form.data_lanc.label(class="form-label") }}
+                    {{ form.data_lanc(class="form-control", type="date") }}
+                    {% if form.data_lanc.errors %}
+                        {% for error in form.data_lanc.errors %}
+                            <div class="alert alert-danger mt-1">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                {{ form.observacoes.label(class="form-label") }}
+                {{ form.observacoes(class="form-control", rows="3") }}
+                {% if form.observacoes.errors %}
+                    {% for error in form.observacoes.errors %}
+                        <div class="alert alert-danger mt-1">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            {{ submit('Salvar Lançamento') }}
+
+            <div class="text-end mt-3">
+                <a href="{{ url_for('financeiro.lancamentos_despesas') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Aplica o Select2 ao campo de item de despesa
+        $('#item_despesa_select2').select2({
+            allowClear: true,
+            width: '100%',
+            theme: 'bootstrap-5'        });
+
+        // Máscara de valor
+        $('#valor_despesa').mask('000.000.000.000.000,00', {reverse: true});
+
+        // Remove a máscara antes de enviar o form
+        $('form').on('submit', function() {
+            var valorFormatado = $('#valor_despesa').val();
+            var valorNumerico = valorFormatado.replace(/\./g, '').replace(',', '.');
+            $('#valor_despesa').val(valorNumerico);
+        });
+    });
+</script>
+{% endblock %}

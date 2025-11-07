@@ -7,37 +7,50 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><strong>Painel Administrativo - Financeiro</strong></h2>
-        {{ primary('Acessar Lançamentos', url_for('financeiro.lancamentos')) }}
+        <div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Acessar Lançamentos
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('financeiro.lancamentos_receitas') }}">Receitas (Contribuições)</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('financeiro.lancamentos_despesas') }}">Despesas</a></li>
+                </ul>
+            </div>
+             <a href="{{ url_for('financeiro.configuracao_financeira') }}" class="btn btn-outline-secondary ms-2" title="Configurar Categorias e Itens de Despesa">
+                <i class="bi bi-gear"></i> Configurações
+            </a>
+        </div>
     </div>
 
     <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card text-white bg-primary mb-3 shadow-sm">
-                <div class="card-header">Total Contribuído (Mês Atual)</div>
-                <div class="card-body">
-                    <h5 class="card-title">{{ total_mes_atual | currency  }}</h5>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card text-white bg-success mb-3 shadow-sm">
-                <div class="card-header">Nº de Contribuições (Mês Atual)</div>
+                <div class="card-header">Total Receitas (Mês Atual)</div>
                 <div class="card-body">
-                    <h5 class="card-title">{{ num_contribuicoes_mes }}</h5>
+                    <h5 class="card-title">{{ total_receitas_mes | currency  }}</h5>
+                    <p class="card-text"><small>{{ num_contribuicoes_mes }} contribuições</small></p>
                 </div>
             </div>
         </div>
-
-    </div>
-
-    <div class="row">
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow-lg p-4 rounded-4 mb-4">
-                <h3 class="mb-3 text-center">Contribuições por Campus por Mês (Ano Atual)</h3>
-                <div style="height: 400px;"><canvas id="graficoCampusMes"></canvas></div>
+        <div class="col-md-4">
+            <div class="card text-white bg-danger mb-3 shadow-sm">
+                <div class="card-header">Total Despesas (Mês Atual)</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ total_despesas_mes | currency  }}</h5>
+                     <p class="card-text"><small>{{ num_despesas_mes }} lançamentos</small></p>
+                </div>
+            </div>
+        </div>
+        
+        {% set saldo_class = 'bg-primary text-white' if saldo_mes_atual >= 0 else 'bg-warning text-white' %}
+        <div class="col-md-4">
+            <div class="card {{ saldo_class }} mb-3 shadow-sm">
+                <div class="card-header">Saldo (Mês Atual)</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ saldo_mes_atual | currency  }}</h5>
+                    <p class="card-text"><small>Receitas - Despesas</small></p>
+                </div>
             </div>
         </div>
     </div>
@@ -45,137 +58,106 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-lg p-4 rounded-4 mb-4">
-                <h3 class="mb-3 text-center">Contribuições por Status por Mês (Ano Atual)</h3>
-                <div style="height: 400px;"><canvas id="graficoStatusMes"></canvas></div>
+                <h3 class="mb-3 text-center">Contribuições por Campus</h3>
+                <small class="text-center text-muted mb-2">(Ano Atual)</small>
+                <div style="height: 400px;"><canvas id="graficoReceitasPorCC"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-6">
+            <div class="card shadow-lg p-4 rounded-4 mb-4">
+                <h3 class="mb-3 text-center">Despesas por Campus</h3>
+                <small class="text-center text-muted mb-2">(Ano Atual)</small>
+                <div style="height: 400px;"><canvas id="graficoDespesasPorCC"></canvas></div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="card shadow-lg p-4 rounded-4 mb-4">
+                <h3 class="mb-3 text-center">Despesas por Categoria</h3>
+                <small class="text-center text-muted mb-2">(Ano Atual)</small>
+                <div style="height: 400px;"><canvas id="graficoDespesasCat"></canvas></div>
             </div>
         </div>
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
-    $(document).ready(function() {
-
-        const estilo = getComputedStyle(document.documentElement);
-
-        const corPrimaria = estilo.getPropertyValue('--cor-primaria').trim() || '#021D40'; 
-        const corSecundaria = estilo.getPropertyValue('--cor-secundaria').trim() || '#BF0B3B';
-        const corDestaque = estilo.getPropertyValue('--cor-destaque').trim() || '#BF0B3B'; 
-        const corBranco = estilo.getPropertyValue('--cor-branco').trim() || '#ffffff';
-        const corTexto = estilo.getPropertyValue('--cor-texto').trim() || '#021D40';
-
-        const bsPrimary = estilo.getPropertyValue('--bs-primary').trim() || '#0d6efd';
-        const bsSecondary = estilo.getPropertyValue('--bs-secondary').trim() || '#6c757d';
-        const bsSuccess = estilo.getPropertyValue('--bs-success').trim() || '#198754';
-        const bsInfo = estilo.getPropertyValue('--bs-info').trim() || '#0dcaf0';
-        const bsWarning = estilo.getPropertyValue('--bs-warning').trim() || '#ffc107';
-        const bsDanger = estilo.getPropertyValue('--bs-danger').trim() || '#dc3545';
+    document.addEventListener("DOMContentLoaded", function() {
 
         const chartLabelsMeses = JSON.parse('{{ chart_labels_meses | tojson | safe }}');
-        const chartDatasetsCampusMes = JSON.parse('{{ chart_datasets_campus_mes | tojson | safe }}');
+        
+        // --- Opções Padrão para os Gráficos ---
+        const defaultChartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) { label += ': '; }
+                            if (context.parsed.y !== null) {
+                                label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { stacked: true }, // Empilha as barras
+                y: {
+                    stacked: true, // Empilha as barras
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toLocaleString('pt-BR');
+                        }
+                    }
+                }
+            }
+        };
 
-        const ctxCampusMes = document.getElementById('graficoCampusMes').getContext('2d');
-        new Chart(ctxCampusMes, {
+        // --- Gráfico 1: Receitas por Centro de Custo ---
+        const dataReceitasCC = JSON.parse('{{ chart_datasets_receitas_cc | tojson | safe }}');
+        const ctxReceitasCC = document.getElementById('graficoReceitasPorCC').getContext('2d');
+        new Chart(ctxReceitasCC, {
             type: 'bar', 
             data: {
                 labels: chartLabelsMeses,
-                datasets: chartDatasetsCampusMes
+                datasets: dataReceitasCC
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: { color: corTexto } 
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed.y !== null) {
-                                    label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                }
-                                return label;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: corTexto }, 
-                        grid: { color: 'rgba(200, 200, 200, 0.1)' } 
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: corTexto, 
-                            callback: function(value) {
-                                return 'R$ ' + value.toLocaleString('pt-BR');
-                            }
-                        },
-                        grid: { color: 'rgba(200, 200, 200, 0.1)' } 
-                    }
-                }
-            }
+            options: defaultChartOptions
         });
 
-        const chartDatasetsStatusMes = JSON.parse('{{ chart_datasets_status_mes | tojson | safe }}');
-
-        const ctxStatusMes = document.getElementById('graficoStatusMes').getContext('2d');
-        new Chart(ctxStatusMes, {
+        // --- Gráfico 2: Despesas por Centro de Custo ---
+        const dataDespesasCC = JSON.parse('{{ chart_datasets_despesas_cc | tojson | safe }}');
+        const ctxDespesasCC = document.getElementById('graficoDespesasPorCC').getContext('2d');
+        new Chart(ctxDespesasCC, {
             type: 'bar', 
             data: {
-                labels: chartLabelsMeses, 
-                datasets: chartDatasetsStatusMes
+                labels: chartLabelsMeses,
+                datasets: dataDespesasCC
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: { color: corTexto } 
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed.y !== null) {
-                                    label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                }
-                                return label;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: corTexto }, 
-                        grid: { color: 'rgba(200, 200, 200, 0.1)' } 
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: corTexto, 
-                            callback: function(value) {
-                                return 'R$ ' + value.toLocaleString('pt-BR');
-                            }
-                        },
-                        grid: { color: 'rgba(200, 200, 200, 0.1)' } 
-                    }
-                }
-            }
+            options: defaultChartOptions
         });
+        
+        // --- Gráfico 3: Despesas por Categoria ---
+        const dataDespesasCat = JSON.parse('{{ chart_datasets_despesas_cat | tojson | safe }}');
+        const ctxDespesasCat = document.getElementById('graficoDespesasCat').getContext('2d');
+        new Chart(ctxDespesasCat, {
+            type: 'bar', 
+            data: {
+                labels: chartLabelsMeses,
+                datasets: dataDespesasCat
+            },
+            options: defaultChartOptions
+        });
+
     });
 </script>
 {% endblock %}

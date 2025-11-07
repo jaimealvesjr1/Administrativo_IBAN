@@ -32,29 +32,21 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     TIMEZONE = 'America/Sao_Paulo'
-    VERSAO_APP = '2.8 - Multiplicação'
+    VERSAO_APP = '2.9 - Centros de Custo'
     ANO_ATUAL = datetime.now().year
 
-    IDS_OFERTA_ANONIMA_POR_CAMPUS = {
-        'Central': 90001,
-        'Concesso Elias': 90002,
-        'Capão': 90003,
-        'Cidade Nova': 90004,
-        'Perdigão': 90005,
-        'Pitangui': 90006,
-        'Desconhecido': 90000
-    }
+    ID_OFERTA_ANONIMA = 90000
 
-    CAMPUS = {
+    CORES_CAMPUS = {
         'Central':        '#0d6efd',
-        'Concesso Elias': '#6c757d',
+        'Concesso Elias': "#20c997",
         'Capão':          '#198754',
         'Cidade Nova':    '#dc3545',
         'Perdigão':       '#ffc107',
         'Pitangui':       '#0dcaf0',
     }
 
-    STATUS = {
+    CORES_STATUS = {
         'Facilitador em Treinamento': '#20c997',
         'Anfitrião em Treinamento':   '#0dcaf0',
         'Anfitrião de PG':    '#0d6efd',
@@ -64,9 +56,21 @@ class Config:
         'Sem Cargo':   "#6c757d", 
     }
 
-    TIPOS = ['Dízimo', 'Oferta'] # REMOVER
+    CAMPUS = [
+    'Central', 'Concesso Elias', 'Capão',
+    'Cidade Nova', 'Perdigão', 'Pitangui'
+    ]
+    
+    CENTROS_DE_CUSTO = ['Geral'] + CAMPUS
+    
+    STATUS = [
+    'Membro', 'Líder', 'Supervisor', 'Não-Membro'
+    ]
 
-    FORMAS = ['via Pix', 'em Espécie']
+    TIPOS = ['Dízimo', 'Oferta', 'Oferta Missionária']
+    TIPOS_DESPESA = ['Fixa', 'Variável']
+
+    FORMAS = ['via Pix', 'em Espécie', 'Boleto', 'Débito']
 
     JORNADA = {
         'LIDERANCA_ALTERADA': JORNADA_LIDERANCA_ALTERADA,

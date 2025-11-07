@@ -1,0 +1,206 @@
+{% extends 'base/layout.html' %}
+{% from 'base/components/forms.html' import field %}
+{% from 'base/components/buttons.html' import submit, danger %}
+{% block title %}Registro Financeiro · IBAN{% endblock %}
+
+{% block content %}
+<div>
+    <div class="text-center mb-5">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
+    </div>
+    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+        <h2 class="text-center">
+            <strong>Registro de Contribuição</strong>
+        </h2>
+
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            
+            <div class="mb-3">
+                {{ form.membro_id.label(class="form-label") }}
+                {{ form.membro_id(class="form-select", id="membro_financeiro_select2") }}
+                <small class="form-text text-muted mt-2 d-block">
+                    Não encontrou o contribuinte?
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#confirmarCadastroModal">Clique aqui para cadastrar</a>.
+                </small>
+            </div>
+
+            <div class="modal fade" id="confirmarCadastroModal" tabindex="-1" aria-labelledby="confirmarCadastroModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="confirmarCadastroModalLabel">Deseja cadastrar um novo contribuinte?</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Por favor, selecione o tipo de cadastro.</p>
+                        <div class="d-flex justify-content-around mt-3">
+                            <a href="{{ url_for('membresia.novo_membro', next=url_for('financeiro.nova_contribuicao')) }}" class="btn btn-primary">Cadastrar Membro</a>
+                            <a href="{{ url_for('membresia.cadastro_nao_membro', next=url_for('financeiro.nova_contribuicao')) }}" class="btn btn-secondary">Cadastrar Não-Membro</a>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-dismiss="modal">Cancelar</button>
+                    </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                {{ form.centro_custo.label(class="form-label") }}
+                {{ form.centro_custo(class="form-select", id="centro_custo_select") }}
+                {% if form.centro_custo.errors %}
+                    {% for error in form.centro_custo.errors %}
+                        <div class="alert alert-danger mt-1">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            
+            <div class="row">
+                <div class="mb-3 col-md-6">
+                    {{ form.tipo.label(class="form-label") }}
+                    {{ form.tipo(class="form-select", id="tipo_select2", data_placeholder="Selecione o Tipo") }}
+                    {% if form.tipo.errors %}
+                        {% for error in form.tipo.errors %}
+                            <div class="alert alert-danger mt-1">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3 col-md-6">
+                    {{ form.valor.label(class="form-label") }}
+                    {# Adicione um ID ao campo valor para facilitar a aplicação da máscara #}
+                    {{ form.valor(class="form-control", type="text", id="valor_contribuicao") }} 
+                    {% if form.valor.errors %}
+                        {% for error in form.valor.errors %}
+                            <div class="alert alert-danger mt-1">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="mb-3 col-md-6">
+                    {{ form.data_lanc.label(class="form-label") }}
+                    {{ form.data_lanc(class="form-control", type="date") }}
+                    {% if form.data_lanc.errors %}
+                        {% for error in form.data_lanc.errors %}
+                            <div class="alert alert-danger mt-1">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3 col-md-6">
+                    {{ form.forma.label(class="form-label") }}
+                    {{ form.forma(class="form-select", id="forma_select2", data_placeholder='Selecione a Forma') }}
+                    {% if form.forma.errors %}
+                        {% for error in form.forma.errors %}
+                            <div class="alert alert-danger mt-1">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                {{ form.observacoes.label(class="form-label") }}
+                {{ form.observacoes(class="form-control", rows="3") }}
+                {% if form.observacoes.errors %}
+                    {% for error in form.observacoes.errors %}
+                        <div class="alert alert-danger mt-1">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            {{ submit('Lançar Contribuição') }}
+
+            <div class="text-end mt-3">
+                <a href="{{ url_for('financeiro.lancamentos_receitas') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+<script>
+    $(document).ready(function() {
+        
+        // Passa as variáveis do Config para o JavaScript
+        const campusValidos = {{ Config.CAMPUS | tojson }};
+        const idAnonimo = {{ Config.ID_OFERTA_ANONIMA | default(0) }};
+
+        $('#membro_financeiro_select2').select2({
+            placeholder: "Clique para buscar ou digite o nome do contribuinte",
+            allowClear: true,
+            width: '100%',
+            theme: 'bootstrap-5',
+            ajax: {
+                url: "{{ url_for('financeiro.buscar_membros_financeiro') }}",
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        term: params.term
+                    };
+                },
+                processResults: function (data) {
+                    // data.items agora contém id, text, e campus
+                    return {
+                        results: data.items
+                    };
+                },
+                cache: true
+            }
+        });
+
+        // Inicializa os outros Select2
+        $('#tipo_select2, #forma_select2, #centro_custo_select').select2({
+            theme: 'bootstrap-5',
+            minimumResultsForSearch: Infinity,
+            placeholder: function(){
+                // Define o placeholder para os selects
+                if ($(this).is('#centro_custo_select')) {
+                    return "Selecione o Centro de Custo";
+                }
+                return $(this).data('placeholder');
+            },
+            allowClear: true
+        });
+
+        // --- LÓGICA DE AUTO-SELECT ATUALIZADA ---
+        $('#membro_financeiro_select2').on('select2:select', function (e) {
+            var data = e.params.data;
+            
+            // Verifica se o ID selecionado é o da Oferta Anônima
+            if (data.id == idAnonimo) {
+                // Se for, LIMPA o Centro de Custo para forçar o usuário a escolher
+                $('#centro_custo_select').val('').trigger('change');
+            } else {
+                // Se for um membro normal, faz o auto-select
+                var campusDoMembro = data.campus;
+                if (campusDoMembro && campusValidos.includes(campusDoMembro)) {
+                    $('#centro_custo_select').val(campusDoMembro).trigger('change');
+                } else {
+                    // Se o membro não tem campus, seleciona 'Geral'
+                    $('#centro_custo_select').val('Geral').trigger('change');
+                }
+            }
+        });
+        
+        // Limpa o Centro de Custo se o membro for desmarcado
+        $('#membro_financeiro_select2').on('select2:unselect', function (e) {
+            $('#centro_custo_select').val('').trigger('change');
+        });
+
+        // --- Lógica da máscara e do submit (sem alteração) ---
+        $('#valor_contribuicao').mask('000.000.000.000.000,00', {reverse: true});
+
+        $('form').on('submit', function() {
+            var valorFormatado = $('#valor_contribuicao').val();
+            var valorNumerico = valorFormatado.replace(/\./g, '').replace(',', '.');
+            $('#valor_contribuicao').val(valorNumerico);
+        });
+    });
+</script>
+{% endblock %}

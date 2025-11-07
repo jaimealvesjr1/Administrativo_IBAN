@@ -2,17 +2,16 @@
 {% extends 'base/layout.html' %}
 {% from 'base/components/forms.html' import field %}
 {% from 'base/components/buttons.html' import primary %}
-{% block title %}Lançamentos Financeiros · IBAN{% endblock %}
+{% block title %}Lançamentos de Receitas · IBAN{% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><strong>Lançamentos</strong></h2>
+        <h2><strong>Lançamentos de Receitas</strong></h2>
         <div>
-            <a href="{{ url_for('financeiro.download_lancamentos_excel', 
+            <a href="{{ url_for('financeiro.download_receitas_excel', 
                                 busca_nome=request.args.get('busca_nome', ''),
                                 tipo_filtro=request.args.get('tipo_filtro', ''),
-                                campus_filtro=request.args.get('campus_filtro', ''),
                                 status_filtro=request.args.get('status_filtro', ''),
                                 data_inicial=request.args.get('data_inicial', ''),
                                 data_final=request.args.get('data_final', '')) }}"
@@ -23,7 +22,7 @@
         </div>
     </div>
 
-    <form method="GET" action="{{ url_for('financeiro.lancamentos') }}" class="row g-3 mb-4">
+    <form method="GET" action="{{ url_for('financeiro.lancamentos_receitas') }}" class="row g-3 mb-4">
         <div class="col-md-3">
             {{ filter_form.busca_nome(class="form-control", placeholder="Buscar por nome") }}
         </div>
@@ -32,9 +31,6 @@
         </div>
         <div class="col-md-3">
             {{ filter_form.tipo_filtro(class="form-select", id="tipo_filtro_select2") }}
-        </div>
-        <div class="col-md-3">
-            {{ filter_form.campus_filtro(class="form-select", id="campus_filtro_select2") }}
         </div>
         <div class="col-md-4">
             {{ filter_form.data_inicial.label(class="form-label") }}
@@ -48,7 +44,7 @@
             {{ filter_form.submit_filter(class="btn btn-primary w-100") }}
         </div>
         <div class="col-md-2 d-flex align-items-end">
-            <a href="{{ url_for('financeiro.lancamentos') }}" class="btn btn-outline-secondary w-100">Limpar Filtros</a>
+            <a href="{{ url_for('financeiro.lancamentos_receitas') }}" class="btn btn-outline-secondary w-100">Limpar Filtros</a>
         </div>
     </form>
 
@@ -70,8 +66,8 @@
                     <th class="col-md-2">Valor</th>
                     <th class="col-md-1">Tipo</th>
                     <th class="col-md-1">Forma</th>
-                    <th class="col-md-1">Campus</th>
-                    <th class="col-md-2">Observações</th>
+                    <th class="col-md-2">Centro de Custo</th> 
+                    <th class="col-md-1">Obs.</th>
                     <th class="col-md-1">Ação</th>
                 </tr>
             </thead>
@@ -87,7 +83,13 @@
                     <td>{{ contribuicao.valor | currency }}</td>
                     <td>{{ contribuicao.tipo }}</td>
                     <td>{{ contribuicao.forma }}</td>
-                    <td>{{ contribuicao.membro.campus }}</td>
+                    <td>
+                        {% set cor = cores_map.get(contribuicao.centro_custo, '#6c757d') %}
+                        {% set cor_texto = '#000000' if cor == '#ffc107' else '#ffffff' %}
+                        <span class="badge" style="background-color: {{ cor }}; color: {{ cor_texto }};">
+                            {{ contribuicao.centro_custo if contribuicao.centro_custo else 'Geral' }}
+                        </span>
+                    </td>
                     <td>{{ contribuicao.observacoes if contribuicao.observacoes else '' }}</td>
                     <td>
                         <a href="{{ url_for('financeiro.editar_contribuicao', id=contribuicao.id) }}" class="btn btn-sm btn-outline-primary">Editar</a>
@@ -109,7 +111,7 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     $(document).ready(function() {
-        $('#tipo_filtro_select2, #campus_filtro_select2, #status_filtro_select2').select2({
+        $('#tipo_filtro_select2, #status_filtro_select2').select2({
             theme: 'bootstrap-5',
             minimumResultsForSearch: Infinity
         });

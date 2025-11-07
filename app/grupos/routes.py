@@ -246,7 +246,7 @@ def detalhes_area(area_id):
         metricas_area['meta_batizados_aclamados'] = 0
         metricas_area['meta_multiplicacoes_pg'] = 0
 
-    trinta_dias_atras = date.today() - timedelta(days=30)
+    trinta_dias_atras = date.today() - timedelta(days=35)
     
     # Subquery para presenças no CTM nos últimos 30 dias
     subquery_ctm_presentes = db.session.query(Presenca.membro_id)\
@@ -307,7 +307,7 @@ def detalhes_area(area_id):
     membros_por_setor = []
     pgs_ativos_por_setor = []
 
-    trinta_dias_atras_contrib = date.today() - timedelta(days=30)
+    trinta_dias_atras_contrib = date.today() - timedelta(days=35)
 
     pgs_ativos_por_setor_query = db.session.query(Setor.id, func.count(PequenoGrupo.id))\
         .join(PequenoGrupo, PequenoGrupo.setor_id == Setor.id)\
@@ -565,7 +565,7 @@ def detalhes_setor(setor_id):
         metricas_setor['meta_batizados_aclamados'] = 0
         metricas_setor['meta_multiplicacoes_pg'] = 0
 
-    trinta_dias_atras = date.today() - timedelta(days=30)
+    trinta_dias_atras = date.today() - timedelta(days=35)
     
     subquery_ctm_presentes = db.session.query(Presenca.membro_id)\
         .join(AulaRealizada)\
@@ -619,7 +619,7 @@ def detalhes_setor(setor_id):
                 PequenoGrupo.data_multiplicacao.between(data_inicio_meta, data_fim_meta))\
         .count()
 
-    trinta_dias_atras_contrib = datetime.now() - timedelta(days=30)
+    trinta_dias_atras_contrib = datetime.now() - timedelta(days=35)
     
     membros_do_setor = Membro.query.filter(Membro.id.in_(membro_ids_do_setor)).all()
     
@@ -1068,7 +1068,7 @@ def detalhes_pg(pg_id):
         metricas_pg['meta_encontro_deus_participantes'] = 0
         metricas_pg['meta_batizados_aclamados'] = 0
     
-    trinta_dias_atras = date.today() - timedelta(days=30)
+    trinta_dias_atras = date.today() - timedelta(days=35)
 
     subquery_ctm_presentes = db.session.query(Presenca.membro_id)\
         .join(AulaRealizada)\
