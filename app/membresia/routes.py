@@ -15,7 +15,7 @@ from werkzeug.datastructures import FileStorage
 import os
 import uuid
 from PIL import Image
-from app.decorators import admin_required, group_permission_required
+from app.decorators import admin_required, group_permission_required, secretaria_or_admin_required
 from unidecode import unidecode
 import re
 
@@ -71,7 +71,7 @@ def save_profile_picture(file_data):
 @membresia_bp.route('/')
 @membresia_bp.route('/index')
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def index():
     TIPOS_RECEPCAO_MEMBRO = ['Aclamação', 'Membro', 'Batismo']
     total_pessoas_ativas = Membro.query.filter_by(ativo=True).count()
@@ -219,7 +219,7 @@ def editar_proprio_perfil():
 
 @membresia_bp.route('/novo', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def novo_membro():
     form = MembroForm(membro=None)
     next_url = request.args.get('next')
@@ -268,7 +268,7 @@ def novo_membro():
 
 @membresia_bp.route('/listagem')
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def listagem():
     busca = request.args.get('busca', '')
     campus_filtro = request.args.get('campus', '')
@@ -291,7 +291,7 @@ def listagem():
 
 @membresia_bp.route('/<int:id>/editar', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def editar_membro(id):
     membro = Membro.query.get_or_404(id)
 
@@ -400,7 +400,7 @@ def buscar_membros_ctm():
 
 @membresia_bp.route('/<int:id>/desligar', methods=['POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def desligar_membro(id):
     membro = Membro.query.get_or_404(id)
 
@@ -515,7 +515,7 @@ def detalhes_membro(membro_id):
 
 @membresia_bp.route('/unificar', methods=['GET'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def unificar_membros():
     busca = request.args.get('busca', '').strip()
     membros_sugeridos = []
@@ -536,7 +536,7 @@ def unificar_membros():
 
 @membresia_bp.route('/unificar/revisar', methods=['POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def unificar_revisar():
     data = request.get_json()
     membros_ids = data.get('membros_ids', [])
@@ -565,7 +565,7 @@ def unificar_revisar():
 
 @membresia_bp.route('/unificar/processar', methods=['POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def unificar_processar():
     try:
         dados_revisao = request.form

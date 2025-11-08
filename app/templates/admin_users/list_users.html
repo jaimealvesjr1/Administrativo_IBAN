@@ -46,6 +46,8 @@
                             <span class="badge bg-danger me-1">Administrador</span>
                         {% elif user.has_permission('financeiro') %}
                             <span class="badge bg-info me-1">Tesoureiro</span>
+                        {% elif user.has_permission('secretaria') %}
+                            <span class="badge bg-primary me-1">Secretário</span>
                         {% endif %}
                         
                         {% if user.membro and user.membro.get_cargo_lideranca() != 'Nenhum' %}
@@ -55,7 +57,7 @@
                             {% endfor %}
                         {% endif %}
 
-                        {% if not user.has_permission('admin') and not user.has_permission('financeiro') and (not user.membro or user.membro.get_cargo_lideranca() == 'Nenhum') %}
+                        {% if not user.has_permission('admin') and not user.has_permission('financeiro') and not user.has_permission('secretaria') and (not user.membro or user.membro.get_cargo_lideranca() == 'Nenhum') %}
                             <span class="badge bg-secondary">Membro</span>
                         {% endif %}
                     </td>

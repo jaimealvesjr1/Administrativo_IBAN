@@ -145,7 +145,6 @@
                     };
                 },
                 processResults: function (data) {
-                    // data.items agora contém id, text, e campus
                     return {
                         results: data.items
                     };
@@ -157,11 +156,14 @@
         // Inicializa os outros Select2
         $('#tipo_select2, #forma_select2, #centro_custo_select').select2({
             theme: 'bootstrap-5',
-            minimumResultsForSearch: Infinity,
+            minimumResultsForSearch: Infinity, // Remove a busca para estes
             placeholder: function(){
                 // Define o placeholder para os selects
                 if ($(this).is('#centro_custo_select')) {
                     return "Selecione o Centro de Custo";
+                }
+                if ($(this).is('#tipo_select2')) {
+                    return "Selecione o Tipo";
                 }
                 return $(this).data('placeholder');
             },
@@ -176,21 +178,36 @@
             if (data.id == idAnonimo) {
                 // Se for, LIMPA o Centro de Custo para forçar o usuário a escolher
                 $('#centro_custo_select').val('').trigger('change');
+                
+                // --- NOVA LINHA ---
+                // DEFINE o Tipo como "Oferta"
+                $('#tipo_select2').val('Oferta').trigger('change');
+                // --- FIM DA NOVA LINHA ---
+
             } else {
                 // Se for um membro normal, faz o auto-select
                 var campusDoMembro = data.campus;
                 if (campusDoMembro && campusValidos.includes(campusDoMembro)) {
                     $('#centro_custo_select').val(campusDoMembro).trigger('change');
                 } else {
-                    // Se o membro não tem campus, seleciona 'Geral'
-                    $('#centro_custo_select').val('Geral').trigger('change');
+                    // Se o membro não tem campus, LIMPA o campo (para forçar a escolha)
+                    $('#centro_custo_select').val('').trigger('change');
                 }
+                
+                // --- NOVA LINHA ---
+                // Limpa o tipo (para forçar a escolha entre Dízimo/Oferta)
+                $('#tipo_select2').val('').trigger('change');
+                // --- FIM DA NOVA LINHA ---
             }
         });
         
-        // Limpa o Centro de Custo se o membro for desmarcado
+        // Limpa os campos se o membro for desmarcado
         $('#membro_financeiro_select2').on('select2:unselect', function (e) {
             $('#centro_custo_select').val('').trigger('change');
+            
+            // --- NOVA LINHA ---
+            $('#tipo_select2').val('').trigger('change');
+            // --- FIM DA NOVA LINHA ---
         });
 
         // --- Lógica da máscara e do submit (sem alteração) ---

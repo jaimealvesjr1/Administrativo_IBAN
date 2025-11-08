@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_file
 from flask_login import login_required, current_user
-from app.decorators import admin_required, group_permission_required
+from app.decorators import admin_required, group_permission_required, secretaria_or_admin_required
 from app.extensions import db
 from app.membresia.models import Membro
 from app.jornada.models import registrar_evento_jornada
@@ -18,7 +18,7 @@ versao = Config.VERSAO_APP
 
 @ctm_bp.route('/')
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def index():
     classes_total = ClasseCTM.query.count()
     turmas_total = TurmaCTM.query.filter_by(ativa=True).count()
@@ -47,7 +47,7 @@ def index():
 
 @ctm_bp.route('/listar')
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def listar_ctm_unificada():
     classes_with_aulas = db.session.query(
         ClasseCTM, 
@@ -68,7 +68,7 @@ def listar_ctm_unificada():
 
 @ctm_bp.route('/classes/criar', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def criar_classe():
     form = ClasseCTMForm()
     if form.validate_on_submit():
@@ -97,7 +97,7 @@ def criar_classe():
 
 @ctm_bp.route('/classes/editar/<int:classe_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def editar_classe(classe_id):
     classe = ClasseCTM.query.get_or_404(classe_id)
     form = ClasseCTMForm(obj=classe)
@@ -139,7 +139,7 @@ def editar_classe(classe_id):
 
 @ctm_bp.route('/classes/deletar/<int:classe_id>', methods=['POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def deletar_classe(classe_id):
     classe = ClasseCTM.query.get_or_404(classe_id)
     if classe.turmas.count() > 0:
@@ -158,7 +158,7 @@ def deletar_classe(classe_id):
 
 @ctm_bp.route('/turmas/criar', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def criar_turma():
     form = TurmaCTMForm()
     if form.validate_on_submit():
@@ -180,7 +180,7 @@ def criar_turma():
 
 @ctm_bp.route('/turmas/editar/<int:turma_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def editar_turma(turma_id):
     turma = TurmaCTM.query.get_or_404(turma_id)
     
@@ -212,7 +212,7 @@ def editar_turma(turma_id):
 
 @ctm_bp.route('/turmas/deletar/<int:turma_id>', methods=['POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def deletar_turma(turma_id):
     turma = TurmaCTM.query.get_or_404(turma_id)
     
@@ -286,7 +286,7 @@ def arquivar_turma(turma_id):
 
 @ctm_bp.route('/aulas-modelo/criar', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def criar_aula_modelo():
     form = AulaModeloForm()
     if form.validate_on_submit():
@@ -308,7 +308,7 @@ def criar_aula_modelo():
 
 @ctm_bp.route('/aulas-realizadas/criar', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def criar_aula_realizada():
     form = AulaRealizadaForm()
     if form.validate_on_submit():
@@ -336,7 +336,7 @@ def criar_aula_realizada():
 
 @ctm_bp.route('/aulas-modelo/editar/<int:aula_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def editar_aula_modelo(aula_id):
     aula = AulaModelo.query.get_or_404(aula_id)
     form = AulaModeloForm(obj=aula)
@@ -362,7 +362,7 @@ def editar_aula_modelo(aula_id):
 
 @ctm_bp.route('/aulas-realizadas/editar/<int:aula_realizada_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def editar_aula_realizada(aula_realizada_id):
     aula_realizada = AulaRealizada.query.get_or_404(aula_realizada_id)
     form = AulaRealizadaForm(obj=aula_realizada)
@@ -389,7 +389,7 @@ def editar_aula_realizada(aula_realizada_id):
 
 @ctm_bp.route('/aulas-modelo/deletar/<int:aula_id>', methods=['POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def deletar_aula_modelo(aula_id):
     aula = AulaModelo.query.get_or_404(aula_id)
     if aula.realizadas:
@@ -408,7 +408,7 @@ def deletar_aula_modelo(aula_id):
 
 @ctm_bp.route('/aulas-realizadas/deletar/<int:aula_realizada_id>', methods=['POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def deletar_aula_realizada(aula_realizada_id):
     aula = AulaRealizada.query.get_or_404(aula_realizada_id)
     
@@ -746,7 +746,7 @@ def confirmacao():
 
 @ctm_bp.route('/relatorio')
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def relatorio_ctm():
     turma_id = request.args.get('turma_id', '')
 
@@ -805,7 +805,7 @@ def relatorio_ctm():
 
 @ctm_bp.route('/download_relatorio')
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def download_excel_relatorio():
     turma_id = request.args.get('turma_id', '')
 

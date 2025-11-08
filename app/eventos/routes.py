@@ -2,7 +2,7 @@ from . import eventos_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, Blueprint
 from flask_login import login_required, current_user
 from app.extensions import db
-from app.decorators import admin_required
+from app.decorators import admin_required, secretaria_or_admin_required
 from .models import Evento, InscricaoEvento, participantes_evento
 from .forms import EventoForm, ConclusaoRecepcaoForm, InscricaoMembrosForm
 from app.membresia.models import Membro
@@ -20,7 +20,7 @@ versao=Config.VERSAO_APP
 @eventos_bp.route('/')
 @eventos_bp.route('/listar')
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def listar_eventos():
     eventos_ativos = Evento.query.filter_by(concluido=False).order_by(Evento.data_evento.desc()).all()
     eventos_concluidos = Evento.query.filter_by(concluido=True).order_by(Evento.data_evento.desc()).all()
@@ -34,7 +34,7 @@ def listar_eventos():
 
 @eventos_bp.route('/criar', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def criar_evento():
     form = EventoForm()
     if form.validate_on_submit():
@@ -60,7 +60,7 @@ def criar_evento():
 
 @eventos_bp.route('/<int:evento_id>/gerenciar', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def gerenciar_evento(evento_id):
     evento = Evento.query.get_or_404(evento_id)
     form_inscricao_membros = InscricaoMembrosForm()
@@ -100,7 +100,7 @@ def gerenciar_evento(evento_id):
 
 @eventos_bp.route('/<int:evento_id>/cadastrar_e_inscrever', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def cadastrar_e_inscrever(evento_id):
     evento = Evento.query.get_or_404(evento_id)
 
@@ -162,7 +162,7 @@ def cadastrar_e_inscrever(evento_id):
 
 @eventos_bp.route('/<int:evento_id>/editar', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def editar_evento(evento_id):
     evento = Evento.query.get_or_404(evento_id)
     form = EventoForm(obj=evento)
@@ -210,7 +210,7 @@ def detalhes_evento(evento_id):
 
 @eventos_bp.route('/<int:evento_id>/remover-participante/<int:membro_id>', methods=['POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def remover_participante(evento_id, membro_id):
     evento = Evento.query.get_or_404(evento_id)
     membro = Membro.query.get_or_404(membro_id)
@@ -266,7 +266,7 @@ def buscar_membros_ativos():
 
 @eventos_bp.route('/<int:evento_id>/concluir', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def concluir_evento(evento_id):
     """
     Conclui um evento e atualiza as informações dos membros participantes

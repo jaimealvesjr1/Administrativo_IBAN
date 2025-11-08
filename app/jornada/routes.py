@@ -2,13 +2,13 @@ from flask import Blueprint, flash, redirect, url_for, request
 from flask_login import login_required, current_user
 from app.extensions import db
 from .models import JornadaEvento
-from app.decorators import admin_required
+from app.decorators import admin_required, secretaria_or_admin_required
 
 jornada_bp = Blueprint('jornada', __name__, url_prefix='/jornada')
 
 @jornada_bp.route('/<int:event_id>/delete', methods=['POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def delete_jornada_evento(event_id):
     evento = JornadaEvento.query.get_or_404(event_id)
     

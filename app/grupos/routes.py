@@ -53,7 +53,7 @@ def listar_grupos_unificada():
     tipo_selecionado = request.args.get('tipo', 'pgs')
     status_pg = request.args.get('status_pg', 'ativos')
 
-    if current_user.has_permission('admin'):
+    if current_user.has_permission('admin') or current_user.has_permission('secretaria'):
         areas_query = Area.query
         setores_query = Setor.query
         pgs_query = PequenoGrupo.query

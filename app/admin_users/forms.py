@@ -51,13 +51,18 @@ class UserEditForm(FlaskForm):
     )
     permissions = SelectMultipleField(
         'Permissões',
-        choices=[('admin', 'Admin'), ('financeiro', 'Financeiro')],
+        choices=[
+            ('admin', 'Admin'), 
+            ('financeiro', 'Financeiro'), 
+            ('secretaria', 'Secretaria')
+        ], 
         widget=widgets.ListWidget(prefix_label=False), 
         option_widget=widgets.CheckboxInput()
     )
     submit = SubmitField('Salvar')
 
     def __init__(self, original_email, *args, **kwargs):
+        self.request_user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         self.original_email = original_email
 

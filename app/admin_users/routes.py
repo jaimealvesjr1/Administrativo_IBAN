@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.auth.models import User
 from app.membresia.models import Membro
-from app.decorators import admin_required
+from app.decorators import admin_required, secretaria_or_admin_required
 from .forms import RequestResetPasswordForm, ResetPasswordForm, UserEditForm
 from werkzeug.security import generate_password_hash
 from config import Config
@@ -12,16 +12,9 @@ from sqlalchemy import or_
 
 admin_users_bp = Blueprint('admin_users', __name__, url_prefix='/admin_users')
 
-def is_admin():
-    return current_user.is_authenticated and current_user.has_permission('admin')
-
-@admin_users_bp.before_request
-@login_required
-def require_admin_permission():
-    if not is_admin():
-        return redirect(url_for('membresia.index'))
-
 @admin_users_bp.route('/')
+@login_required
+@secretaria_or_admin_required
 def list_users():
     busca = request.args.get('busca', '')
 
@@ -41,19 +34,22 @@ def list_users():
 
 @admin_users_bp.route('/edit_user/<int:user_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@secretaria_or_admin_required
 def edit_user(user_id):
     user = User.query.get_or_404(user_id)
-    form = UserEditForm(original_email=user.email)
+    form = UserEditForm(original_email=user.email, user=current_user)
 
     if form.validate_on_submit():
+        
         user.email = form.email.data
-
         if form.password.data:
             user.set_password(form.password.data)
 
-        permissions_list = form.permissions.data
-        user.permissions = ','.join(permissions_list)
+        if current_user.has_permission('admin'):
+            permissions_list = form.permissions.data
+            user.permissions = ','.join(permissions_list)
+        elif 'permissions' in request.form:
+             flash('Alterações de permissão não autorizadas foram ignoradas.', 'warning')
 
         try:
             db.session.commit()
@@ -68,10 +64,11 @@ def edit_user(user_id):
         current_permissions = user.permissions.split(',') if user.permissions else []
         form.permissions.data = current_permissions
 
-    return render_template('admin_users/edit_user.html', form=form, user=user)
+    return render_template('admin_users/edit_user.html', form=form, user=user, ano=Config.ANO_ATUAL, versao=Config.VERSAO_APP)
 
 @admin_users_bp.route('/<int:user_id>/delete', methods=['POST'])
 @login_required
+@admin_required
 def delete_user(user_id):
     if user_id == current_user.id:
         flash('Você não pode excluir sua própria conta por aqui.', 'danger')

@@ -25,10 +25,23 @@ def financeiro_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def secretaria_or_admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.has_permission('secretaria') and not current_user.has_permission('admin'):
+            flash('Você não tem permissão de secretário para acessar esta página.', 'danger')
+            return redirect(url_for('main.index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 def leader_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if current_user.is_authenticated and current_user.has_permission('admin'):
+        if current_user.is_authenticated and (
+            current_user.has_permission('admin') or
+            current_user.has_permission('secretaria') or
+            current_user.is_leader()
+        ):
             return f(*args, **kwargs)
 
         if not current_user.is_authenticated or not current_user.is_leader():
@@ -42,6 +55,9 @@ def group_permission_required(model, permission, relationship_name=None):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if current_user.has_permission('admin'):
+                return f(*args, **kwargs)
+            
+            if current_user.has_permission('secretaria'):
                 return f(*args, **kwargs)
 
             if not current_user.membro:

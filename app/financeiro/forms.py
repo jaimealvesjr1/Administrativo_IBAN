@@ -25,12 +25,16 @@ class ContribuicaoForm(FlaskForm):
     observacoes = TextAreaField('Observações', render_kw={'rows': 3})
     submit = SubmitField('Lançar Contribuição')
 
-    def __init__(self, contribuicao=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.contribuicao = contribuicao
         self.tipo.choices = [(t, t) for t in Config.TIPOS]
         self.forma.choices = [(f, f) for f in Config.FORMAS]
-        self.centro_custo.choices = [('', 'Selecione o Centro de Custo')] + [(c, c) for c in Config.CENTROS_DE_CUSTO]
+
+        todos_ccs = Config.CENTROS_DE_CUSTO
+        ccs_receitas = [c for c in todos_ccs if c != 'Geral']
+
+        self.centro_custo.choices = [(c, c) for c in ccs_receitas]
+        self.centro_custo.choices.insert(0, ('', 'Selecione o Centro de Custo'))
 
     def validate_data_lanc(self, field):
         if field.data > date.today():
