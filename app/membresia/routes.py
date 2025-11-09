@@ -151,8 +151,8 @@ def index():
     chart_labels_cargos_pg = list(contagem_cargos.keys())
     chart_data_cargos_pg = list(contagem_cargos.values())
 
-    campus_colors = Config.CAMPUS
-    status_colors = Config.STATUS
+    campus_colors = Config.CORES_CAMPUS
+    status_colors = Config.CORES_STATUS
 
     return render_template(
         'membresia/index.html',
