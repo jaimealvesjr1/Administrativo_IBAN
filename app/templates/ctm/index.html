@@ -55,7 +55,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const campusPorTurma = {{ campus_por_turma|tojson|safe }};
-        const campusColors = {{ config.CAMPUS|tojson|safe }};
+        const campusColors = {{ config.CORES_CAMPUS|tojson|safe }};
         const turmas = Object.keys(campusPorTurma);
         const datasets = [];
         const allCampus = [...new Set(turmas.flatMap(turma => Object.keys(campusPorTurma[turma])))];
