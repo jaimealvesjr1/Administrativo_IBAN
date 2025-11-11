@@ -9,7 +9,7 @@
 
 {% macro alert(category, text) %}
   <div class="alert alert-{{ category }} alert-dismissible fade show auto-dismiss container mt-4" role="alert">
-    {{ icon(category) }} {{ text }}
+    <strong>{{ icon(category) }}</strong> {{ text }}
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
   </div>
 {% endmacro %}

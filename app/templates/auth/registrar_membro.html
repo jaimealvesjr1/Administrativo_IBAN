@@ -4,39 +4,45 @@
 {% block title %}Criar Acesso · IBAN{% endblock %}
 
 {% block content %}
-<div class="text-center mb-5">
-  <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
-</div>
-
 <div class="container">
-  <h1>Novo Usuário</h2>
-
-  <form method="POST">
-    {{ form.hidden_tag() }}
-
-    <div class="input-box">
-      {{ form.membro_id(class="form-select", id="membro_id_select2") }}
-    </div>
-
-    <div class="input-box">
-      {{ form.email(class="form-control", placeholder="Insira seu email") }}
-    </div>
-
-    <div class="input-box">
-      {{ form.password(class="form-control", placeholder="Insira sua senha") }}
-    </div>
-
-    <div class="input-box">
-      {{ form.password2(class="form-control", placeholder="Repita sua senha") }}
-    </div>
-
-    {{ submit('Criar Acesso') }}
-  </form>
-  <div class="register-link">
-      Já tem uma conta? <a href="{{ url_for('auth.login') }}">Faça login aqui</a>.
+  <div class="text-center mb-5">
+    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
   </div>
-  <div class="text-end mt-3">
-    <a href="{{ url_for('admin_users.list_users') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+
+  <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
+    <h2 class="text-center"><strong>Criação de Usuário</strong></h2>
+
+    <form method="POST">
+      {{ form.hidden_tag() }}
+
+      <div class="mb-3">
+        {{ form.membro_id.label(class="form-label") }}
+        {{ form.membro_id(class="form-select", id="membro_id_select2") }}
+      </div>
+
+      <div class="mb-3">
+        {{ form.email.label(class="form-label") }}
+        {{ form.email(class="form-control") }}
+      </div>
+
+      <div class="mb-3">
+        {{ form.password.label(class="form-label") }}
+        {{ form.password(class="form-control") }}
+      </div>
+
+      <div class="mb-3">
+        {{ form.password2.label(class="form-label") }}
+        {{ form.password2(class="form-control") }}
+      </div>
+
+      {{ submit('Criar Acesso') }}
+    </form>
+    <div class="text-center mt-3">
+        Já tem uma conta? <a href="{{ url_for('auth.login') }}">Faça login aqui</a>.
+    </div>
+    <div class="text-end mt-3">
+      <a href="{{ url_for('admin_users.list_users') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+    </div>
   </div>
 </div>
 
@@ -45,7 +51,7 @@
 <script>
     $(document).ready(function() {
         $('#membro_id_select2').select2({
-            placeholder: "Selecione o seu nome",
+            placeholder: "Clique para buscar seu nome:",
             allowClear: true,
             width: '100%',
             theme: 'bootstrap-5',

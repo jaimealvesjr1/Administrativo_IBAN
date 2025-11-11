@@ -2,13 +2,13 @@
 {% block title %}Página Inicial · Administrativo{% endblock %}
 
 {% block content %}
-<main>
-    <div class=" text-center mb-5">
+<div class="container text-center py-5">
+    <div class="mb-5">
         <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 200px;">
         <div class="d-flex justify-content-between align-items-center mt-3">
-            <h1>
+            <h1 style="color: var(--cor-primaria); margin-bottom: 0;">
             {% if current_user.is_authenticated and current_user.membro %}
-              Bem-vindo, <strong style="color: var(--cor-secundaria);">{{ " ".join(current_user.membro.nome_completo.split(' ')[:2]) }}</strong>!
+              Bem-vindo {{ " ".join(current_user.membro.nome_completo.split(' ')[:2]) }}!
               {% else %}
               IBAN Administrativo
             {% endif %}
@@ -79,5 +79,40 @@
             {% endif %}
         {% endif %}
     </div>
-</main>
+    </div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+    .module-button {
+        background-color: var(--cor-primaria);
+        color: var(--cor-branco);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+        display: block;
+        height: 150px;
+        width: 100%;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .module-button:hover:not(.disabled) {
+        background-color: var(--cor-secundaria);
+        transform: translateY(-3px);
+        color: var(--cor-branco);
+    }
+    .module-button.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    .module-button .icon-large {
+        font-size: 3rem;
+    }
+    body {
+        padding-top: 0 !important;
+    }
+    main.container {
+        padding: 0 !important;
+    }
+</style>
 {% endblock %}
