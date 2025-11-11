@@ -114,7 +114,12 @@ h2 {
   color: var(--cor-branco);
 }
 
-/* (REQ 2) CSS do Logo Circular */
+@media (max-width: 767.98px) {
+  .offcanvas-md.offcanvas-start {
+      width: var(--sidebar-width-lg);
+  }
+}
+
 .logo {
   text-align: center;
   margin-bottom: 30px;
@@ -141,7 +146,9 @@ h2 {
   list-style: none;
   padding: 0;
   margin: 0;
-  flex-grow: 1; 
+  flex-grow: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sidebar-link {
@@ -180,6 +187,7 @@ h2 {
 .sidebar-footer {
   padding: 0.5rem 0;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 .sidebar-footer .sidebar-link {
     transition: padding 0.3s ease; 
@@ -242,7 +250,7 @@ h2 {
   }
 }
 
-@media (min-width: 992px) {
+@media (min-width: 1292px) {
   .main-content {
     padding-left: var(--sidebar-width-lg);
   }
