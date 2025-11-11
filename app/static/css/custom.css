@@ -10,7 +10,6 @@ body {
   background: linear-gradient(to bottom right, #f8f9fa, #e2e6ea);
   color: var(--cor-texto);
   min-height: 100vh;
-  padding-top: 70px;
 }
 
 main {
@@ -34,6 +33,20 @@ main {
   background-color: white;
 }
 
+.icon-box {
+  position: relative; 
+  margin: 30px 0; 
+}
+
+.icon-box i {
+  position: absolute;
+  color: var(--cor-destaque);
+  right: 20px;
+  top: 70%;
+  transform: translateY(-50%);
+  font-size: 20px;
+}
+
 footer {
   text-align: center;
   font-size: 0.8rem;
@@ -55,28 +68,239 @@ h2 {
   padding: 5px 12px;
 }
 
-.navbar {
-  position: fixed;
-  top: 0;
-  width: 100%;
-  z-index: 1000;
-}
-
-.navbar-nav .nav-link {
-  color: var(--cor-branco);
-  font-weight: 500;
-  transition: background-color 0.3s, color 0.3s;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-}
-
-.navbar-nav .nav-link:hover:not(.disabled) {
-  background-color: var(--cor-secundaria);
-  color: var(--cor-branco);
-}
-
 .btn-outline-danger:hover {
   background-color: var(--cor-secundaria);
   color: var(--cor-branco);
   border-color: var(--cor-secundaria);
+}
+/* === INÍCIO: CSS DA NOVA SIDEBAR RESPONSIVA (v3) === */
+
+/* 1. Constantes de Tamanho */
+:root {
+  --sidebar-width-lg: 200px; /* Largura Desktop (completa) */
+  --sidebar-width-md: 70px;  /* Largura Tablet (icon-only) */
+  --mobile-topbar-height: 56px;
+}
+
+/* 2. Layout Principal */
+.main-wrapper {
+  min-height: 100vh;
+}
+
+.main-content {
+  flex-grow: 1;
+  width: 100%;
+  overflow-x: hidden;
+  padding-top: var(--mobile-topbar-height); 
+  transition: padding-left 0.3s ease;
+}
+
+.mobile-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--mobile-topbar-height);
+  z-index: 1030;
+}
+
+/* 3. Estilo da Sidebar (Base) */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  height: 100%; 
+  width: 100%; 
+  background-color: var(--cor-primaria);
+  color: var(--cor-branco);
+}
+
+/* (REQ 2) CSS do Logo Circular */
+.logo {
+  text-align: center;
+  margin-bottom: 30px;
+  flex-shrink: 0;
+  width: 100px; 
+  height: 100px; 
+  background-color: white;
+  border-radius: 50%; 
+  display: flex; 
+  justify-content: center;
+  align-items: center;
+  margin: 30px auto 30px auto; 
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); 
+  transition: all 0.3s ease;
+}
+
+.logo-img {
+  max-width: 70%; 
+  max-height: 70%; 
+  object-fit: contain; 
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1; 
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap; 
+  overflow: hidden; 
+}
+.sidebar-link-text {
+  transition: opacity 0.2s ease, display 0.3s ease;
+}
+
+.sidebar-link i {
+  font-size: 1.25rem;
+  margin-right: 1rem;
+  min-width: 24px; 
+  text-align: center;
+  transition: margin 0.3s ease, font-size 0.3s ease; 
+}
+
+.sidebar-link:hover,
+.sidebar-link.active {
+  color: var(--cor-branco);
+  background-color: var(--cor-secundaria);
+}
+
+.sidebar-link.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sidebar-footer {
+  padding: 0.5rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.sidebar-footer .sidebar-link {
+    transition: padding 0.3s ease; 
+}
+
+/* 4. Lógica Responsiva (Tablet e Desktop) */
+
+@media (min-width: 768px) {
+  .main-content {
+    padding-top: 0; 
+    padding-left: var(--sidebar-width-md); 
+  }
+
+  .offcanvas-md.offcanvas-start {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: var(--sidebar-width-md) !important; 
+    transform: none !important; 
+    visibility: visible !important; 
+    transition: width 0.3s ease; 
+    z-index: 1020;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .offcanvas-md.offcanvas-start .offcanvas-body {
+    height: 100%;
+    display: flex;
+  }
+
+  .sidebar-link-text {
+    display: none; 
+  }
+  
+  .logo {
+    width: 80px;
+    height: 80px;
+    margin: 30px auto 20px 10px;
+  }
+  .logo-img {
+      max-width: 60%; 
+      max-height: 60%;
+  }
+
+  .sidebar-link {
+    justify-content: center; 
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .sidebar-link i {
+    margin-right: 0; 
+    font-size: 1.5rem;
+  }
+  .sidebar-footer .sidebar-link {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+@media (min-width: 992px) {
+  .main-content {
+    padding-left: var(--sidebar-width-lg);
+  }
+
+  .offcanvas-md.offcanvas-start {
+    width: var(--sidebar-width-lg) !important;
+  }
+
+  .sidebar-link-text {
+    display: inline; 
+  }
+  
+  .logo {
+    width: 100px;
+    height: 100px;
+    margin: 20px auto 30px auto;
+  }
+  .logo-img {
+      max-width: 70%;
+      max-height: 70%;
+  }
+
+  .sidebar-link {
+    justify-content: flex-start; 
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  .sidebar-link i {
+    margin-right: 1rem; 
+    font-size: 1.25rem;
+  }
+  .sidebar-footer .sidebar-link {
+    justify-content: flex-start;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+.mobile-logo-btn {
+    margin: 0 !important;
+    box-shadow: none !important;
+
+    /* Define o tamanho */
+    width: 70px;
+    height: 70px;
+    
+    /* Posicionamento "Flutuante" */
+    position: absolute;
+    top: 20px;
+    right: 15px;  /* 15px da direita da tela */
+    z-index: 1031; /* Acima da topbar (1030) */
+
+    /* Garante que a imagem se ajuste */
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.mobile-logo-btn .logo-img {
+    max-width: 100%;
+    max-height: 100%;
 }

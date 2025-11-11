@@ -1,4 +1,4 @@
-{% extends 'base/layout.html' %}
+{% extends 'base/layout_simple.html' %}
 {% from 'base/components/forms.html' import field %}
 {% from 'base/components/buttons.html' import submit %}
 {% block title %}Login · IBAN{% endblock %}
@@ -10,12 +10,18 @@
   </div>
 
   <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
-    <h2 class="text-center" style="color: var(--cor-destaque);"><strong>Acesso Restrito</strong></h2>
+    <h2 class="text-center" style="color: var(--cor-destaque);"><strong>Login</strong></h2>
 
     <form method="POST">
       {{ form.hidden_tag() }}
-      {{ field(form.email, id="email", placeholder="Insira seu email") }}
-      {{ field(form.password, id="password", placeholder="Insira sua senha") }}
+      <div class="icon-box">
+        {{ field(form.email, id="email", placeholder="Insira seu email") }}
+        <i class="bi bi-person-fill"></i>
+      </div>
+      <div class="icon-box">
+        {{ field(form.password, id="password", placeholder="Insira sua senha") }}
+        <i class="bi bi-key-fill"></i>
+      </div>
       {{ submit('Entrar')}}
     </form>
     <div class="text-center mt-3">

@@ -1,13 +1,21 @@
 {% extends "base/base.html" %}
+
 {% block body %}
-    {% if show_navbar %}
-        {% include 'base/components/navbar.html' %}
-    {% endif %}
+    {% include 'base/components/mobile_topbar.html' %}
 
-    {% include 'base/components/alerts.html' %} 
+    <div class="main-wrapper">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">           
+            <div class="offcanvas-body p-0">
+                {% include 'base/components/sidebar.html' %}
+            </div>
+        </div>
 
-    <main class="container">
-        {% block content %}{% endblock %}
-        {% include 'base/components/footer.html' %}
-    </main>
+        <div class="main-content">
+            {% include 'base/components/alerts.html' %} 
+            <main class="container-fluid p-4">
+                {% block content %}{% endblock %}
+            </main>
+            {% include 'base/components/footer.html' %}
+        </div>
+    </div>
 {% endblock %}

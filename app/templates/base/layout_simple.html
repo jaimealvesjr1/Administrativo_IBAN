@@ -1,0 +1,9 @@
+{% extends "base/base.html" %}
+
+{% block body %}
+    {% include 'base/components/alerts.html' %} 
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    {% include 'base/components/footer.html' %}
+{% endblock %}

@@ -1,4 +1,4 @@
-{% extends 'base/layout.html' %}
+{% extends 'base/layout_simple.html' %}
 {% from 'base/components/forms.html' import field %}
 {% from 'base/components/buttons.html' import submit %}
 {% block title %}Criar Acesso · IBAN{% endblock %}
@@ -20,19 +20,22 @@
         {{ form.membro_id(class="form-select", id="membro_id_select2") }}
       </div>
 
-      <div class="mb-3">
+      <div class="mb-3 icon-box">
         {{ form.email.label(class="form-label") }}
         {{ form.email(class="form-control") }}
+        <i class="bi bi-person-fill"></i>
       </div>
 
-      <div class="mb-3">
+      <div class="mb-3 icon-box">
         {{ form.password.label(class="form-label") }}
         {{ form.password(class="form-control") }}
+        <i class="bi bi-key-fill"></i>
       </div>
 
-      <div class="mb-3">
+      <div class="mb-3 icon-box">
         {{ form.password2.label(class="form-label") }}
         {{ form.password2(class="form-control") }}
+        <i class="bi bi-key-fill"></i>
       </div>
 
       {{ submit('Criar Acesso') }}
