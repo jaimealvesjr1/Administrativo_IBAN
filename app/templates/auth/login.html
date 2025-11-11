@@ -4,23 +4,25 @@
 {% block title %}Login · IBAN{% endblock %}
 
 {% block content %}
+<div class="text-center mb-5">
+  <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
+</div>
 <div class="container">
-  <div class="text-center mb-5">
-    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
-  </div>
-
-  <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
-    <h2 class="text-center" style="color: var(--cor-destaque);"><strong>Acesso Restrito</strong></h2>
-
-    <form method="POST">
-      {{ form.hidden_tag() }}
+  <form method="POST">
+    <h1>Login</h1>
+    {{ form.hidden_tag() }}
+    <div class="input-box">
       {{ field(form.email, id="email", placeholder="Insira seu email") }}
-      {{ field(form.password, id="password", placeholder="Insira sua senha") }}
-      {{ submit('Entrar')}}
-    </form>
-    <div class="text-center mt-3">
-        Não tem uma conta? <a href="{{ url_for('auth.registrar_membro') }}">Crie seu acesso aqui</a>.
+      <i class="bi bi-person-fill"></i>
     </div>
+    <div class="input-box">
+      {{ field(form.password, id="password", placeholder="Insira sua senha") }}
+      <i class="bi bi-key-fill"></i>
+    </div>
+    {{ submit('Entrar')}}
+  </form>
+  <div class="register-link">
+      Não tem uma conta? <a href="{{ url_for('auth.registrar_membro') }}">Crie seu acesso</a>
   </div>
 </div>
 {% endblock %}

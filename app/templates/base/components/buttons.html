@@ -17,9 +17,9 @@
 {% endmacro %}
 
 {% macro submit(text='Salvar', attrs={}) %}
-<div class="d-grid mt-4">
-    <button type="submit" class="btn btn-custom" {{ _render_html_attributes(attrs) }}>
-        <strong>{{ text }}</strong>
+<div>
+    <button type="submit" class="btn-custom" {{ _render_html_attributes(attrs) }}>
+        {{ text }}
     </button>
 </div>
 {% endmacro %}

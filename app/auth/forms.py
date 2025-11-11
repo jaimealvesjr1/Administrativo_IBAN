@@ -15,7 +15,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Entrar')
 
 class MembroRegistrationForm(FlaskForm):
-    membro_id = SelectField('Seu Nome Completo (Membresia)', coerce=coerce_to_int_or_none, validators=[DataRequired()])
+    membro_id = SelectField('Seu Nome Completo', coerce=coerce_to_int_or_none, validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Senha', validators=[DataRequired()])
     password2 = PasswordField(

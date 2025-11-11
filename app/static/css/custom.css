@@ -1,37 +1,299 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
 :root {
   --cor-primaria: #021D40;
   --cor-secundaria: #BF0B3B;
   --cor-destaque: #BF0B3B;
-  --cor-branco: #ffffff;
   --cor-texto: #021D40;
 }
 
 body {
-  background: linear-gradient(to bottom right, #f8f9fa, #e2e6ea);
-  color: var(--cor-texto);
+  background: linear-gradient(to bottom right, #f6faff, #e2e6ea);
   min-height: 100vh;
-  padding-top: 70px;
 }
 
-main {
-  padding: 40px 20px;
+.sidebar {
+  width: 200px;
+  background-color: var(--cor-primaria);
+  color: white;
+  padding: 20px 0;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  transition: width 0.3s ease, left 0.3s ease, margin-left 0.3s ease;
+  z-index: 99;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 20px 0;
+  flex-shrink: 0;
+  width: 100px;
+  height: 100px;
+  background-color: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px auto 30px auto;
+  box-shadow: 0 0 10px rgba(0, 0, 0, .2);
+}
+
+.logo-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.nav-menu {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.top-items, .bottom-item {
+  list-style: none;
+}
+
+.nav-menu ul {
+  list-style: none;
+}
+
+.nav-menu ul li a {
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  text-decoration: none;
+  color: white;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.nav-menu ul li a:hover {
+    background-color: var(--cor-destaque);
+}
+
+.icon {
+  margin-right: 10px;
+  font-size: 18px;
+  min-width: 20px;
+}
+
+.menu-toggle {
+    display: none; 
+}
+
+.content {
+    flex-grow: 1;
+    margin-left: 200px;
+    padding: 30px;
+    background-color: white;
+    transition: margin-left 0.3s ease;
+}
+
+.container {
+  width: 420px;
+  background-color: white;
+  border: 2px solid rgba(255, 255, 255, .2);
+  border-radius: 10px;
+  color: #021D40;
+  padding: 30px 40px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, .2);
+  ;
+}
+
+.container h1 {
+  font-size: 36px;
+  color: var(--cor-secundaria);
+  font-weight: bold;
+  text-align: center;
+}
+
+.input-box {
+  position: relative;
+  width: 100%;
+  height: 50px;
+  margin: 30px 0;
+}
+
+.input-box input {
+  width: 100%;
+  height: 100%;
+  background-color: transparent;
+  border-radius: 40px;
+  outline: none;
+  font-size: 16px;
+  color: var(--cor-primaria);
+  padding: 20px 45px 20px 20px;
+}
+
+.input-box i {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  color: var(--cor-secundaria);
+  transform: translateY(-50%);
+  font-size: 20px;
+}
+
+.remember-forgot {
+  display: flex;
+  justify-content: space-between;
+}
+
+.remember-forgot label input {
+  accent-color: #fff;
+  margin-right: 5px;
+  margin: -15px 0 15px;
+}
+
+.remember-forgot a {
+  text-decoration: none;
+}
+
+.remember-forgot a:hover {
+  text-decoration: underline;
+}
+
+.input-box .select2-container--bootstrap-5 {
+    width: 100% !important; /* Garante que ocupe 100% do .input-box */
+    height: 100%;
+}
+
+/* 2. A caixa de seleção (o input visível) */
+.input-box .select2-container .select2-selection--single {
+    width: 100%;
+    height: 100%; /* Ocupa toda a altura do .input-box */
+    background-color: transparent;
+    border-radius: 40px; /* Borda arredondada como os outros inputs */
+    outline: none;
+    font-size: 16px;
+    color: var(--cor-primaria);
+    padding: 12px 45px 10px 20px; 
+    border: 1px solid #ced4da; /* Adicione uma borda padrão se seus inputs a tiverem */
+    /* Remove a sombra extra que o Select2 pode adicionar */
+    box-shadow: none; 
+}
+
+/* 3. O texto dentro da caixa de seleção */
+.input-box .select2-selection__rendered {
+    color: var(--cor-primaria);
+    line-height: 28px; /* Ajuda a centralizar o texto */
+    padding-left: 0; /* Remove padding padrão se houver */
+}
+
+/* 4. O ícone de seta (dropdown arrow) */
+.input-box .select2-selection__arrow {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    /* Adicione cor e tamanho para o ícone Select2, se necessário, ou remova o ícone padrão se quiser usar um ícone personalizado */
+}
+
+/* 5. Estilo de foco (quando o campo está clicado) */
+.input-box .select2-container--open .select2-selection--single {
+    border-color: var(--cor-secundaria) !important; /* Cor de destaque no foco */
+    box-shadow: 0 0 0 .25rem rgba(191, 11, 59, .25) !important; /* Shadow suave */
+}
+
+/* 6. A lista de opções (dropdown) */
+.select2-dropdown {
+    border-radius: 8px; /* Borda arredondada para o menu de opções */
+    border: 1px solid var(--cor-secundaria);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* 7. Alerta de erro de validação do Flask/WTForms */
+.select2-container.is-invalid .select2-selection--single {
+    border-color: #dc3545 !important;
 }
 
 .btn-custom {
   background-color: var(--cor-primaria);
-  color: var(--cor-branco);
+  color: white;
   border: none;
-  border-radius: 8px;
+  margin-top: 5px;
   transition: 0.3s;
+  width: 100%;
+  height: 50px;
+  border-radius: 40px;
+  font-weight: 500;
+  box-shadow: 0 0 10px rgba(0, 0, 0, .1);
+}
+
+.btn-outline-secondary {
+  border-radius: 40px;
+}
+
+.btn-outline-danger {
+  border-radius: 40px;
+}
+
+.btn-outline-danger:hover {
+  color: white !important;
 }
 
 .btn-custom:hover {
   background-color: var(--cor-secundaria);
-  color: var(--cor-branco);
+  color: white;
+}
+
+.register-link {
+  text-align: center;
+  font-size: 14px;
+  margin: 20px;
+}
+.register-link a {
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.register-link a:hover {
+  text-decoration: underline;
 }
 
 .card {
   background-color: white;
+}
+
+.module-button {
+    background-color: var(--cor-primaria);
+    color: white;
+    border-radius: 30px;
+    padding: 20px;
+    text-align: center;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    display: block;
+    height: 150px;
+    width: 100%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.module-button:hover:not(.disabled) {
+    background-color: var(--cor-secundaria);
+    transform: translateY(-3px);
+    color: white;
+}
+.module-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.module-button .icon-large {
+    font-size: 3rem;
 }
 
 footer {
@@ -55,28 +317,105 @@ h2 {
   padding: 5px 12px;
 }
 
-.navbar {
-  position: fixed;
-  top: 0;
-  width: 100%;
-  z-index: 1000;
-}
-
-.navbar-nav .nav-link {
-  color: var(--cor-branco);
-  font-weight: 500;
-  transition: background-color 0.3s, color 0.3s;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-}
-
-.navbar-nav .nav-link:hover:not(.disabled) {
-  background-color: var(--cor-secundaria);
-  color: var(--cor-branco);
-}
-
 .btn-outline-danger:hover {
   background-color: var(--cor-secundaria);
-  color: var(--cor-branco);
+  color: white;
   border-color: var(--cor-secundaria);
+}
+
+.content {
+    flex-grow: 1;
+    margin-left: 200px;
+    padding: 30px;
+    background-color: white;
+    transition: margin-left 0.3s ease;
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  .sidebar {
+    width: 60px;
+  }
+
+  .logo {
+    margin: 10px;
+  }
+
+  .logo h1 {
+      display: none; 
+  }
+
+  .nav-menu ul li a .nav-item {
+    display: none;
+  }
+
+  .nav-menu ul li a {
+    padding: 15px 0;
+    justify-content: center;
+  }
+
+  .nav-menu ul li a .icon {
+    margin-right: 0;
+  }
+
+  .content {
+    margin-left: 60px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 200px;
+    left: -250px;
+    z-index: 1000;
+    padding: 20px 0;
+  }
+
+  .sidebar .logo {
+    display: flex;
+    width: 80 px;
+    height: 80 px;
+    margin-top: 50px;
+  }
+
+  .nav-menu ul li a {
+    padding: 15px 20px;
+    justify-content: flex-start;
+  }
+
+  .nav-menu ul li a .icon {
+    margin-right: 10px;
+  }
+
+  .nav-menu ul li a span:not(.icon) {
+    display: inline;
+  }
+
+  .sidebar.open {
+      left: 0;
+  }
+
+  .content {
+    margin-left: 0;
+    padding-top: 60px;
+  }
+
+  .content.shifted {
+    margin-left: 0;
+    margin-left: 250px;
+  }
+
+  .menu-toggle {
+    display: block;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1001;
+    background: var(--cor-primaria);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 20px;
+    border-radius: 4px;
+  }
 }

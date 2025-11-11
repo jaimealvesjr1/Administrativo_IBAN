@@ -1,5 +1,92 @@
+<button class="menu-toggle" id="menuToggle">☰</button>
+
+<div class="sidebar" id="LatSidebar">
+  <div class="logo">
+    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" class="logo-img">
+  </div>
+  <nav class="nav-menu">
+    <ul>
+      {% if current_user.is_authenticated %}
+        {% if current_user.has_permission('admin') %}
+          <li>
+            <a href="{{ url_for('membresia.perfil', id=current_user.membro.id) }}"><span class="icon">👤</span><span class="nav-item">Perfil</span></a></li>
+          <li>
+            <a href="{{ url_for('grupos.listar_grupos_unificada') }}"><span class="icon">🏡</span><span class="nav-item">Grupos</span></a></li>
+          </li>
+          <li>
+            <a href="{{ url_for('membresia.index') }}"><span class="icon">👥</span><span class="nav-item">Membresia</span></a></li>
+          </li>
+          <li>
+            <a href="{{ url_for('ctm.index') }}"><span class="icon">📚</span><span class="nav-item">CTM</span></a></li>
+          </li>
+          <li>
+            <a href="{{ url_for('eventos.listar_eventos') }}"><span class="icon">📅</span><span class="nav-item">Eventos</span></a></li>
+          </li>
+          <li>
+            <a href="{{ url_for('financeiro.index') }}"><span class="icon">💰</span><span class="nav-item">Financeiro</span></a></li>
+          </li>
+          <li>
+            <a href="{{ url_for('admin_users.list_users') }}"><span class="icon">⚙️</span><span class="nav-item">Acessos</span></a></li>
+          </li>
+          {% else %}
+          {% if current_user.membro %}
+          <li>
+            <a href="{{ url_for('membresia.perfil', id=current_user.membro.id) }}"><span class="icon">👤</span><span class="nav-item">Perfil</span></a></li>
+          </li>
+          {% endif %}
+
+          {% if current_user.is_leader() or current_user.has_permission('secretaria') %}
+          <li>
+            <a href="{{ url_for('grupos.listar_grupos_unificada') }}"><span class="icon">🏡</span><span class="nav-item">Grupos</span></a></li>
+          </li>
+          {% endif %}
+          
+          {% if current_user.has_permission('secretaria') %}
+          <li>
+            <a href="{{ url_for('membresia.index') }}"><span class="icon">👥</span><span class="nav-item">Membresia</span></a></li>
+          </li>
+          <li>
+            <a href="{{ url_for('ctm.index') }}"><span class="icon">📚</span><span class="nav-item">CTM</span></a></li>
+          </li>
+          <li>
+            <a href="{{ url_for('eventos.listar_eventos') }}"><span class="icon">📅</span><span class="nav-item">Eventos</span></a></li>
+          </li>
+          {% endif %}
+
+          {% if current_user.has_permission('financeiro') %}
+          <li>
+            <a href="{{ url_for('financeiro.index') }}"><span class="icon">💰</span><span class="nav-item">Financeiro</span></a></li>
+          </li>
+          {% endif %}
+
+          {% if current_user.has_permission('secretaria') %} 
+          <li>
+            <a href="{{ url_for('admin_users.list_users') }}"><span class="icon">⚙️</span><span class="nav-item">Acessos</span></a></li>
+          </li>
+          {% endif %}
+
+          <li>
+            <a class="nav-link disabled" tabindex="-1" style="opacity: 0.6;"><span class="icon"></span>🎈<span class="nav-item">Kids (em breve)</span></a></li>
+          </li>
+          {% endif %}
+      {% endif %}
+    </ul>
+    <ul class="bottom-item">
+      <li><a href="{{ url_for('auth.logout') }}"><span class="icon">🚪</span> <span class="nav-item">Sair</span></a></li>
+    </ul>
+  </nav>
+</div>
+
+<script>
+  document.getElementById('menuToggle').onclick = function() {
+      document.getElementById('LatSidebar').classList.toggle('open');
+      document.getElementById('mainContent').classList.toggle('shifted');
+  };
+</script>
+
+{#
 <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--cor-primaria);">
-  <div class="container">
+  <div>
     {% if current_user.is_authenticated %}
       <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}"> 
         {% if current_user.membro %}
@@ -88,3 +175,4 @@
     </div>
   </div>
 </nav>
+#}
