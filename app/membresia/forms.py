@@ -62,7 +62,7 @@ class CadastrarNaoMembroForm(FlaskForm):
     def __init__(self, *args, membro=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.membro = membro
-        self.campus.choices = [(c, c) for c in Config.CAMPUS.keys()]
+        self.campus.choices = [(c, c) for c in Config.CAMPUS()]
 
     def validate_nome_completo(self, nome_completo):
         query = Membro.query.filter_by(nome_completo=nome_completo.data)
