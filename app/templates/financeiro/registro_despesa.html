@@ -13,7 +13,7 @@
             <strong>{{ title }}</strong>
         </h2>
 
-        <form method="POST">
+        <form method="POST" id="form-registro-despesa">
             {{ form.hidden_tag() }}
             
             <div class="mb-3">
@@ -76,27 +76,4 @@
         </form>
     </div>
 </div>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
-<script>
-    $(document).ready(function() {
-        // Aplica o Select2 ao campo de item de despesa
-        $('#item_despesa_select2').select2({
-            allowClear: true,
-            width: '100%',
-            theme: 'bootstrap-5'        });
-
-        // Máscara de valor
-        $('#valor_despesa').mask('000.000.000.000.000,00', {reverse: true});
-
-        // Remove a máscara antes de enviar o form
-        $('form').on('submit', function() {
-            var valorFormatado = $('#valor_despesa').val();
-            var valorNumerico = valorFormatado.replace(/\./g, '').replace(',', '.');
-            $('#valor_despesa').val(valorNumerico);
-        });
-    });
-</script>
 {% endblock %}

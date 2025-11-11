@@ -8,7 +8,7 @@
 {% block content %}
 <div class="container mt-4">
     <h2><strong>Painel Administrativo - CTM</strong></h2>
-    <ul class="nav nav-tabs" id="ctmTabs" role="tablist">
+    <ul class="nav nav-tabs" id="ctmTabs" role="tablist" data-tipo-selecionado="{{ tipo_selecionado }}">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="classes-tab" data-bs-toggle="tab" data-bs-target="#classes-content" type="button" role="tab" aria-controls="classes-content" aria-selected="true"><strong>Classes</strong></button>
         </li>
@@ -111,16 +111,4 @@
 ) }}
 {% endfor %}
 </div>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script>
-    $(document).ready(function() {
-        var tipoSelecionado = "{{ tipo_selecionado }}";
-        if (tipoSelecionado) {
-            $('#' + tipoSelecionado + '-tab').tab('show');
-        }
-    });
-</script>
 {% endblock %}

@@ -64,7 +64,11 @@
                     <td>
                         <a href="{{ url_for('admin_users.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-primary me-2">Editar</a>
                         {% if user.id != current_user.id %}
-                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" data-user-id="{{ user.id }}" data-user-email="{{ user.email }}">
+                        <button type="button" type="button" class="btn btn-sm btn-outline-danger"
+                        data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" 
+                        data-user-id="{{ user.id }}" 
+                        data-user-email="{{ user.email }}"
+                        data-delete-url="{{ url_for('admin_users.delete_user', user_id=user.id) }}">
                             Excluir
                         </button>
                         {% else %}
@@ -100,20 +104,4 @@
         </div>
     </div>
 </div>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var confirmDeleteModal = document.getElementById('confirmDeleteModal');
-        confirmDeleteModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            var userId = button.getAttribute('data-user-id');
-            var userEmail = button.getAttribute('data-user-email');
-
-            var modalUserEmail = confirmDeleteModal.querySelector('#modalUserEmail');
-            var deleteUserForm = confirmDeleteModal.querySelector('#deleteUserForm');
-
-            modalUserEmail.textContent = userEmail;
-            deleteUserForm.action = "{{ url_for('admin_users.delete_user', user_id=0) }}".replace('0', userId);
-        });
-    });
-</script>
 {% endblock %}

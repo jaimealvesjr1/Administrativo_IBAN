@@ -20,13 +20,3 @@
     {{ alert(category, text) }}
   {% endfor %}
 {% endif %}
-
-<script>
-  setTimeout(() => {
-    const alerts = document.querySelectorAll('.alert.auto-dismiss');
-    alerts.forEach(alert => {
-      const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
-      bsAlert.close();
-    });
-  }, 6000);
-</script>

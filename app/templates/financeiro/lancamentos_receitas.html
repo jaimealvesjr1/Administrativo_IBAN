@@ -104,17 +104,3 @@
     {% endif %}
 </div>
 {% endblock %}
-
-{% block scripts %}
-{# Scripts para Select2 #}
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script>
-    $(document).ready(function() {
-        $('#tipo_filtro_select2, #status_filtro_select2').select2({
-            theme: 'bootstrap-5',
-            minimumResultsForSearch: Infinity
-        });
-    });
-</script>
-{% endblock scripts %}

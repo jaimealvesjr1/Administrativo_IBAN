@@ -13,7 +13,7 @@
         Painel Administrativo - Grupos
         {% endif %}
     </strong></h2>
-    <ul class="nav nav-tabs" id="groupTabs" role="tablist">
+    <ul class="nav nav-tabs" id="groupTabs" role="tablist" data-tipo-selecionado="{{ tipo_selecionado }}">
         <li class="nav-item" role="presentation">
             <button class="nav-link {% if tipo_selecionado == 'pgs' %}active{% endif %}" id="pgs-tab" data-bs-toggle="tab" data-bs-target="#pgs-content" type="button" role="tab" aria-controls="pgs-content" aria-selected="true"><strong>Pequenos Grupos</strong></button>
         </li>
@@ -248,16 +248,4 @@
     {% endfor %}
 
 </div>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script>
-    $(document).ready(function() {
-        var tipoSelecionado = "{{ tipo_selecionado }}";
-        if (tipoSelecionado) {
-            $('#' + tipoSelecionado + '-tab').tab('show');
-        }
-    });
-</script>
 {% endblock %}

@@ -60,11 +60,14 @@
                         <h5 class="mb-0">Adicionar Participantes</h5>
                     </div>
                     <div class="card-body">
-                        <form method="POST">
+                        <form method="POST" id="form-inscrever-membros">
                             {{ form_inscricao_membros.hidden_tag() }}
                             <div class="mb-3">
                                 <label for="membros_select2" class="form-label">Pessoas cadastradas:</label>
-                                {{ form_inscricao_membros.membros(class="form-select", id="membros_select2") }}
+                                {{ form_inscricao_membros.membros(class="form-select", id="membros_select2",
+                                data-buscar-membros-url=url_for('eventos.buscar_membros_ativos'), 
+                                data-tipo-evento=evento.tipo_evento, 
+                                data-evento-id=evento.id) }}
                             </div>
                             {% if evento.tipo_evento == 'Encontro com Deus' %}
                             <small class="text-center text-muted mt-2 d-block">
@@ -79,36 +82,4 @@
         {% endif %}
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script>
-$(document).ready(function() {
-    $('#membros_select2').select2({
-        placeholder: "Selecione membros para inscrever",
-        allowClear: true,
-        width: '100%',
-        ajax: {
-            url: "{{ url_for('eventos.buscar_membros_ativos') }}",
-            dataType: 'json',
-            delay: 250,
-            data: function (params) {
-                return {
-                    q: params.term,
-                    tipo_evento: "{{ evento.tipo_evento }}",
-                    evento_id: "{{ evento.id }}"
-                };
-            },
-            processResults: function (data) {
-                return {
-                    results: data.results
-                };
-            },
-            cache: true
-        }
-    });
-});
-</script>
 {% endblock %}

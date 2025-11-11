@@ -78,9 +78,9 @@
                         </tbody>
                     </table>
                     <h6 class="card-subtitle mb-2">Adicionar novo participante:</h6>
-                    <form action="{{ url_for('grupos.adicionar_participante', pg_id=pg.id) }}" method="post" class="mb-3">
+                    <form action="{{ url_for('grupos.adicionar_participante', pg_id=pg.id) }}" method="post" class="mb-3" id="form-adicionar-participante">
                         <div class="input-group">
-                            <select class="form-select" name="membro_id" id="membro_select2" required>
+                            <select class="form-select" name="membro_id" id="membro_select2" required data-buscar-membros-url="{{ url_for('grupos.buscar_membros_pgs') }}">
                                 <option></option>
                             </select>
                             <button class="btn btn-primary" type="submit">Adicionar</button>
@@ -153,35 +153,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script>
-    $(document).ready(function() {
-        $('#membro_select2').select2({
-            placeholder: "Clique para buscar ou digite o nome do participante",
-            allowClear: true,
-            theme: 'bootstrap-5',
-            ajax: {
-                url: "{{ url_for('grupos.buscar_membros_pgs') }}",
-                dataType: 'json',
-                delay: 250,
-                data: function (params) {
-                    return {
-                        term: params.term
-                    };
-                },
-                processResults: function (data) {
-                    return {
-                        results: data.items
-                    };
-                },
-                cache: true
-            }
-        });
-    });
-</script>
 {% endblock %}

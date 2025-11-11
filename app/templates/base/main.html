@@ -81,38 +81,3 @@
     </div>
     </div>
 {% endblock %}
-
-{% block head_extra %}
-<style>
-    .module-button {
-        background-color: var(--cor-primaria);
-        color: var(--cor-branco);
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
-        transition: background-color 0.3s ease, transform 0.2s ease;
-        display: block;
-        height: 150px;
-        width: 100%;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    .module-button:hover:not(.disabled) {
-        background-color: var(--cor-secundaria);
-        transform: translateY(-3px);
-        color: var(--cor-branco);
-    }
-    .module-button.disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    .module-button .icon-large {
-        font-size: 3rem;
-    }
-    body {
-        padding-top: 0 !important;
-    }
-    main.container {
-        padding: 0 !important;
-    }
-</style>
-{% endblock %}

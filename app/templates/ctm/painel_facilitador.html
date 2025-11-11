@@ -155,7 +155,7 @@
                 </div>
                 <div class="modal-body">
                     <p>Selecione um membro para adicionar à turma:</p>
-                    <select class="form-select" name="membro_id" id="membro_id_select2"></select>
+                    <select class="form-select" name="membro_id" id="membro_id_select2" data-buscar-membros-url="{{ url_for('membresia.buscar_membros_ctm', turma_id=turma.id) }}"></select>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
@@ -218,38 +218,4 @@
 {% endfor %}
     
 </div>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script>
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
-    
-    $(document).ready(function() {
-        $('#membro_id_select2').select2({
-            dropdownParent: $('#adicionarAlunoModal'),
-            theme: "bootstrap-5",
-            placeholder: 'Pesquisar membro...',
-            ajax: {
-                url: '{{ url_for('membresia.buscar_membros_ctm', turma_id=turma.id) }}',
-                dataType: 'json',
-                delay: 250,
-                data: function (params) {
-                    return {
-                        term: params.term
-                    };
-                },
-                processResults: function (data) {
-                    return {
-                        results: data.items
-                    };
-                },
-                cache: true
-            }
-        });
-    });
-</script>
 {% endblock %}

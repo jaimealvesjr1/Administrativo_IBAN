@@ -38,48 +38,6 @@
                 </div>
             {% endfor %}
         </div>
-        <style>
-            .timeline {
-                position: relative;
-                padding-left: 30px;
-            }
-            .timeline::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                bottom: 0;
-                left: 10px;
-                width: 2px;
-                background-color: #3d8cdb;
-            }
-            .timeline-item {
-                position: relative;
-                margin-bottom: 20px;
-            }
-            .timeline-dot {
-                position: absolute;
-                top: 6px;
-                left: 0;
-                width: 12px;
-                height: 12px;
-                background-color: var(--cor-primaria);
-                border-radius: 50%;
-                transform: translateX(-50%);
-                z-index: 1;
-            }
-            .timeline-content {
-                margin-left: 20px;
-                border: 1px solid #e9ecef;
-                border-radius: 0.25rem;
-                box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            }
-            .timeline-dot.bg-primary { background-color: var(--bs-primary); }
-            .timeline-dot.bg-success { background-color: var(--bs-success); }
-            .timeline-dot.bg-info { background-color: var(--bs-info); }
-            .timeline-dot.bg-warning { background-color: var(--bs-warning); }
-            .timeline-dot.bg-danger { background-color: var(--bs-danger); }
-            .timeline-dot.bg-secondary { background-color: var(--bs-secondary); }
-        </style>
     {% else %}
         <p class="mt-4">Nenhum evento registrado ainda.</p>
     {% endif %}
