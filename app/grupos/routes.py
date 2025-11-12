@@ -687,6 +687,25 @@ def tela_multiplicacao_pgs(setor_id):
     setor = Setor.query.get_or_404(setor_id)
     pgs_do_setor = setor.pequenos_grupos.all()
 
+    for pg in pgs_do_setor:
+        pg.num_facilitadores_treinamento_atuais = 0
+        pg.num_anfitrioes_treinamento_atuais = 0
+        
+        # Usamos a propriedade 'membros_para_indicadores' do model (app/grupos/models.py)
+        # para incluir participantes e o anfitrião na contagem.
+        for membro in pg.membros_para_indicadores:
+            if membro.status_treinamento_pg == 'Facilitador em Treinamento':
+                pg.num_facilitadores_treinamento_atuais += 1
+            if membro.status_treinamento_pg == 'Anfitrião em Treinamento':
+                pg.num_anfitrioes_treinamento_atuais += 1
+        
+        # O template também usa 'pronto_para_multiplicar' para habilitar o botão
+        pg.pronto_para_multiplicar = (
+            pg.num_facilitadores_treinamento_atuais > 0 and
+            pg.num_anfitrioes_treinamento_atuais > 0 and
+            pg.autorizacao_multiplicacao
+        )
+
     form_multiplicacao = MultiplicacaoForm()
 
     pg_antigo_id = request.args.get('pg_id', type=int)
