@@ -379,7 +379,7 @@ html, body, #page-wrapper {
   margin: 0;
   padding: 0;
 }
-.d-flex.align-items-center.justify-content-center {
+.confirmation-wrapper {
   min-height: 100vh;
   width: 100vw;
   position: fixed;
@@ -387,6 +387,9 @@ html, body, #page-wrapper {
   left: 0;
   padding: 20px;
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* STYLES DA MAIN.HTML */
@@ -414,10 +417,4 @@ html, body, #page-wrapper {
 }
 .module-button .icon-large {
     font-size: 3rem;
-}
-body {
-    padding-top: 0 !important;
-}
-main.container {
-    padding: 0 !important;
 }

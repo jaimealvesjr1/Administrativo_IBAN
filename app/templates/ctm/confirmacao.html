@@ -2,7 +2,7 @@
 {% block title %}Confirmação de Presença · IBAN{% endblock %}
 
 {% block body %}
-  <div id="page-wrapper" class="{{ 'bg-success' if sucesso else 'bg-danger' }} text-white d-flex align-items-center justify-content-center">
+  <div id="page-wrapper" class="{{ 'bg-success' if sucesso else 'bg-danger' }} text-white confirmation-wrapper">
     <div class="container text-center py-4 mx-auto" style="max-width: 500px;">
       {% if sucesso %}
         <h1>Obrigado, {{ nome }}!</h1>

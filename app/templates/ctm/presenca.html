@@ -11,12 +11,12 @@
 
   <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
     <h2 class="text-center"><strong>Confirmação de Presença</strong></h2>
-    <form method="POST" action="{{ url_for('ctm.registrar_presenca_aluno') }}" id="form-ctm-presenca">
+    <form method="POST" action="{{ url_for('ctm.registrar_presenca_aluno') }}" id="form-ctm-presenca" data-buscar-membros-url="{{ url_for('ctm.buscar_membros') }}">
       {{ form.hidden_tag() }}
 
       <div class="mb-3">
         {{ form.membro_id.label(class="form-label") }} 
-        {{ form.membro_id(class="form-select", id="nome_aluno_select2", data_buscar_membros_url=url_for('ctm.buscar_membros')) }}
+        {{ form.membro_id(class="form-select", id="nome_aluno_select2") }} 
         
         <small class="form-text text-muted mt-2 d-block">
             Não encontrou seu nome? <a href="{{ url_for('membresia.cadastro_nao_membro') }}">Clique aqui para cadastrar</a>. 
