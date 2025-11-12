@@ -31,6 +31,21 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Dados do PG</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text"><strong>Facilitador:</strong> {{ pg.facilitador.nome_completo if pg.facilitador else 'N/A' }}</p>
+                    <p class="card-text"><strong>Anfitrião:</strong> {{ pg.anfitriao.nome_completo if pg.anfitriao else 'N/A' }}</p>
+                    <p class="card-text"><strong>Dia da Reunião:</strong> {{ pg.dia_reuniao }}</p>
+                    <p class="card-text"><strong>Horário da Reunião:</strong> {{ pg.horario_reuniao }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-secondary text-white">
                     <h5 class="mb-0">Participantes</h5>
@@ -92,21 +107,6 @@
                     </form>
                 </div>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Dados do PG</h5>
-                </div>
-                <div class="card-body">
-                    <p class="card-text"><strong>Facilitador:</strong> {{ pg.facilitador.nome_completo if pg.facilitador else 'N/A' }}</p>
-                    <p class="card-text"><strong>Anfitrião:</strong> {{ pg.anfitriao.nome_completo if pg.anfitriao else 'N/A' }}</p>
-                    <p class="card-text"><strong>Dia da Reunião:</strong> {{ pg.dia_reuniao }}</p>
-                    <p class="card-text"><strong>Horário da Reunião:</strong> {{ pg.horario_reuniao }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-8">
             {% if ctm_dados_alunos %}
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-success text-white">

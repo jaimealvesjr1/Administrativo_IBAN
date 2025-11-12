@@ -51,7 +51,9 @@
 
             <div class="mb-3">
                 {{ form.nome_completo.label(class="form-label") }}
-                {{ form.nome_completo(class="form-control", id="nome_completo", data_sugestoes_url=url_for('membresia.sugerir_membros')) }}
+                {% set sugestoes_url = url_for('membresia.sugerir_membros') %}
+
+                {{ form.nome_completo(class="form-control", id="nome_completo", data_sugestoes_url=sugestoes_url) }}
                 {% if form.nome_completo.errors %}
                     {% for error in form.nome_completo.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                 {% endif %}

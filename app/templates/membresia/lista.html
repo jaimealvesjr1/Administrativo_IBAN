@@ -2,10 +2,10 @@
 {% extends 'base/layout.html' %}
 {% from 'base/components/forms.html' import field %}
 {% from 'base/components/buttons.html' import primary, outline_danger %}
-{% block title %}Membresia · IBAN{% endblock %}
+{% from 'macros/pagination.html' import render_pagination %} {% block title %}Membresia · IBAN{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container-fluid">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><strong>Membresia</strong></h2>
     <div class="btn-group">
@@ -24,7 +24,7 @@
       <select name="status" class="form-select">
         <option value="">Todos os Status</option>
         {% for s in config['STATUS'] %}
-          <option value="{{ s }}">{{ s }}</option>
+          <option value="{{ s }}" {% if s == status %}selected{% endif %}>{{ s }}</option>
         {% endfor %}
       </select>
     </div>
@@ -32,7 +32,7 @@
       <select name="campus" class="form-select">
         <option value="">Todos os Campus</option>
         {% for c in config['CAMPUS'] %}
-          <option value="{{ c }}">{{ c }}</option>
+          <option value="{{ c }}" {% if c == campus %}selected{% endif %}>{{ c }}</option>
         {% endfor %}
       </select>
     </div>
@@ -42,10 +42,16 @@
     <div class="col-md-1 d-flex align-items-end">
       <a href="{{ url_for('membresia.listagem') }}" class="btn btn-outline-secondary w-100">Limpar</a>
     </div>
-
   </form>
 
-  <div class="table-responsive">
+{{ render_pagination(pagination, 'membresia.listagem', 
+  busca=busca, 
+  campus=campus, 
+  status=status
+) }}
+
+
+  <div class="table-responsive d-none d-md-block">
     <table class="table table-bordered table-striped">
       <thead class="table-light">
         <tr>
@@ -73,9 +79,51 @@
               <a href="{{ url_for('membresia.perfil', id=membro.id) }}" class="btn btn-sm btn-outline-primary">Perfil</a>
             </td>
           </tr>
+        {% else %}
+          <tr>
+            <td colspan="7" class="text-center">Nenhum membro encontrado com estes filtros.</td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  <div class="d-md-none">
+    {% for membro in membros %}
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-2">
+          <img src="{{ membro.get_foto_perfil_url() }}" alt="Foto" class="img-thumbnail rounded-circle" style="width: 60px; height: 60px; object-fit: cover;">
+          <div class="ms-3">
+            <h5 class="card-title mb-0" style="font-size: 1.1rem;">{{ membro.nome_completo }}</h5>
+            <small class="text-muted">
+              <span class="badge bg-secondary">{{ membro.status }}</span>
+              <span class="badge bg-info">{{ membro.campus }}</span>
+            </small>
+          </div>
+        </div>
+        <hr class="my-2">
+        <p class="card-text mb-1"><small>
+          <strong>Nascimento:</strong> {{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento else 'N/A' }}
+        </small></p>
+        <p class="card-text mb-2"><small>
+          <strong>Recepção:</strong> {{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao else 'N/A' }}
+        </small></p>
+        <a href="{{ url_for('membresia.perfil', id=membro.id) }}" class="btn btn-sm btn-outline-primary w-100">Ver Perfil</a>
+      </div>
+    </div>
+    {% else %}
+      <div class="alert alert-info text-center">
+        Nenhum membro encontrado com estes filtros.
+      </div>
+    {% endfor %}
+  </div>
+
+  {{ render_pagination(pagination, 'membresia.listagem', 
+      busca=busca, 
+      campus=campus, 
+      status=status
+  ) }}
+
 </div>
 {% endblock %}

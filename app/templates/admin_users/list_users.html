@@ -5,7 +5,7 @@
 {% block title %}Gerenciar Usuários · IBAN{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-4"><strong>Gerenciamento de Usuários</strong></h2>
         {{ primary('+ Novo Acesso', url_for('auth.registrar_membro')) }}
@@ -71,8 +71,6 @@
                         data-delete-url="{{ url_for('admin_users.delete_user', user_id=user.id) }}">
                             Excluir
                         </button>
-                        {% else %}
-                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Sua Conta</button>
                         {% endif %}
                     </td>
                 </tr>

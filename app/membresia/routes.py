@@ -270,6 +270,9 @@ def novo_membro():
 @login_required
 @secretaria_or_admin_required
 def listagem():
+    page = request.args.get('page', 1, type=int)
+    PER_PAGE = 30
+
     busca = request.args.get('busca', '')
     campus_filtro = request.args.get('campus', '')
     status_filtro = request.args.get('status', '')
@@ -283,11 +286,24 @@ def listagem():
     if status_filtro:
         query = query.filter_by(status=status_filtro)
     if recepcao_filtro:
-        query = query.filter_by(recepcao=recepcao_filtro)
+        query = query.filter_by(tipo_recepcao=recepcao_filtro) 
 
-    membros = query.order_by(Membro.nome_completo).all()
+    pagination = query.order_by(Membro.nome_completo).paginate(
+        page=page, per_page=PER_PAGE, error_out=False
+    )
+    membros = pagination.items
 
-    return render_template('membresia/lista.html', membros=membros, ano=ano, versao=versao)
+    return render_template(
+        'membresia/lista.html', 
+        membros=membros,
+        pagination=pagination,
+        ano=ano, 
+        versao=versao,
+        busca=busca,
+        campus_filtro=campus_filtro,
+        status_filtro=status_filtro,
+        recepcao_filtro=recepcao_filtro
+    )
 
 @membresia_bp.route('/<int:id>/editar', methods=['GET', 'POST'])
 @login_required

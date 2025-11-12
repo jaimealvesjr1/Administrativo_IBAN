@@ -5,10 +5,15 @@
 {% block title %}Painel CTM · IBAN{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><strong>Painel Administrativo do CTM</strong></h2>
-        <a href="{{ url_for('ctm.listar_ctm_unificada') }}" class="btn btn-primary">Acessar Cadastros</a>
+        <div>
+            <a href="{{ url_for('ctm.listar_ctm_unificada') }}" class="btn btn-primary me-2">Acessar Cadastros</a>
+            <a href="{{ url_for('ctm.relatorio_ctm') }}" class="btn btn-outline-secondary" title="Relatório de Presenças">
+                <i class="bi bi-file-earmark-text"></i> Relatórios
+            </a>
+        </div>
     </div>
 
     <div class="row row-cols-1 row-cols-md-3 g-4 mb-4">

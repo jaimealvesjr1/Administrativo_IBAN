@@ -40,7 +40,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">Dados da Área</h5>
@@ -76,29 +76,39 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-8">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Dizimistas por Setor (Últimos 30 dias)</h5>
+        <div class="col-md-9">
+            <div class="row">
+                <div class="col-xl-12">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">Dizimistas por Setor (Últimos 30 dias)</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="dizimistasChart"></canvas>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <canvas id="dizimistasChart"></canvas>
+                
+                <div class="col-xl-12">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0">Distribuição de Membros por Setor</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="setorMembrosChart"></canvas>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">Distribuição de Membros por Setor</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="setorMembrosChart"></canvas>
-                </div>
-            </div>
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">Participantes CTM por Setor</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="ctmFrequentesChart"></canvas>
+
+                <div class="col-12">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">Participantes CTM por Setor</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="ctmFrequentesChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

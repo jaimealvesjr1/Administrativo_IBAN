@@ -252,9 +252,18 @@ def nova_contribuicao():
 @login_required
 @financeiro_required
 def lancamentos_receitas():
+    page = request.args.get('page', 1, type=int)
+    PER_PAGE = 30
+
     filter_form = ContribuicaoFilterForm(request.args, meta={'csrf': False})
 
     query = Contribuicao.query.join(Membro)
+
+    busca_nome = ""
+    tipo_filtro = ""
+    status_filtro = ""
+    data_inicial = None
+    data_final = None
 
     if filter_form.validate():
         busca_nome = filter_form.busca_nome.data
@@ -287,13 +296,12 @@ def lancamentos_receitas():
                     flash(f"Erro no filtro '{field_label}': {error}", 'danger')
 
     soma_valores_query = query.with_entities(func.sum(Contribuicao.valor)).scalar()
+    soma_valores = round(float(soma_valores_query), 2) if soma_valores_query else 0.0
 
-    if soma_valores_query is None:
-        soma_valores_query = 0.0
-    else:
-        soma_valores_query = round(float(soma_valores_query), 2)
-
-    contribuicoes = query.order_by(Contribuicao.data_lanc.desc(), Membro.nome_completo).all()
+    pagination = query.order_by(Contribuicao.data_lanc.desc(), Membro.nome_completo).paginate(
+        page=page, per_page=PER_PAGE, error_out=False
+    )
+    contribuicoes = pagination.items
 
     cores_map = Config.CORES_CAMPUS.copy()
     if 'Geral' not in cores_map:
@@ -302,11 +310,17 @@ def lancamentos_receitas():
     return render_template(
         'financeiro/lancamentos_receitas.html',
         contribuicoes=contribuicoes,
-        soma_valores=soma_valores_query,
+        pagination=pagination,
+        soma_valores=soma_valores,
         filter_form=filter_form,
         versao=versao,
         ano=ano,
-        cores_map=cores_map
+        cores_map=cores_map,
+        busca_nome=busca_nome,
+        tipo_filtro=tipo_filtro,
+        status_filtro=status_filtro,
+        data_inicial=data_inicial,
+        data_final=data_final
     )
 
 @financeiro_bp.route('download_receitas_excel')
@@ -668,9 +682,16 @@ def editar_despesa(id):
 @login_required
 @financeiro_required
 def lancamentos_despesas():
+    page = request.args.get('page', 1, type=int)
+    PER_PAGE = 30
     filter_form = DespesaFilterForm(request.args, meta={'csrf': False})
     
     query = Despesa.query.join(ItemDespesa).join(CategoriaDespesa)
+
+    categoria_filtro = ""
+    item_filtro = ""
+    data_inicial = None
+    data_final = None
 
     if filter_form.validate():
         categoria_filtro = filter_form.categoria_filtro.data
@@ -687,13 +708,20 @@ def lancamentos_despesas():
         if data_final:
             query = query.filter(Despesa.data_lanc <= data_final)
     else:
-        # Lógica de flash de erro (copiar de lancamentos_receitas)
-        pass
+        for field_name, errors in filter_form.errors.items():
+            for error in errors:
+                if field_name != 'csrf_token':
+                    field_obj = getattr(filter_form, field_name, None)
+                    field_label = field_obj.label.text if field_obj and hasattr(field_obj, 'label') else field_name
+                    flash(f"Erro no filtro '{field_label}': {error}", 'danger')
 
     soma_valores_query = query.with_entities(func.sum(Despesa.valor)).scalar()
     soma_valores = round(float(soma_valores_query), 2) if soma_valores_query else 0.0
 
-    despesas = query.order_by(Despesa.data_lanc.desc(), CategoriaDespesa.nome, ItemDespesa.nome).all()
+    pagination = query.order_by(Despesa.data_lanc.desc(), CategoriaDespesa.nome, ItemDespesa.nome).paginate(
+        page=page, per_page=PER_PAGE, error_out=False
+    )
+    despesas = pagination.items
 
     cores_map = Config.CORES_CAMPUS.copy()
     if 'Geral' not in cores_map:
@@ -702,9 +730,14 @@ def lancamentos_despesas():
     return render_template(
         'financeiro/lancamentos_despesas.html',
         despesas=despesas,
+        pagination=pagination,
         soma_valores=soma_valores,
         filter_form=filter_form,
         versao=versao,
         ano=ano,
-        cores_map=cores_map
+        cores_map=cores_map,
+        categoria_filtro=categoria_filtro,
+        item_filtro=item_filtro,
+        data_inicial=data_inicial,
+        data_final=data_final
     )

@@ -2,10 +2,11 @@
 {% extends 'base/layout.html' %}
 {% from 'base/components/forms.html' import field %}
 {% from 'base/components/buttons.html' import primary %}
+{% from 'macros/pagination.html' import render_pagination %}
 {% block title %}Lançamentos de Despesas · IBAN{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><strong>Lançamentos de Despesas</strong></h2>
         <div>
@@ -20,7 +21,12 @@
             {{ primary('+ Nova Despesa', url_for('financeiro.nova_despesa')) }}
         </div>
     </div>
-
+{{ render_pagination(pagination, 'financeiro.lancamentos_despesas', 
+    categoria_filtro=categoria_filtro, 
+    item_filtro=item_filtro,
+    data_inicial=data_inicial,
+    data_final=data_final
+) }}
     <form method="GET" action="{{ url_for('financeiro.lancamentos_despesas') }}" class="row g-3 mb-4">
         <div class="col-md-4">
             {{ filter_form.categoria_filtro.label(class="form-label") }}
@@ -90,5 +96,11 @@
     {% else %}
     <div class="alert alert-info text-center">Nenhuma despesa encontrada com os filtros aplicados.</div>
     {% endif %}
+{{ render_pagination(pagination, 'financeiro.lancamentos_despesas', 
+    categoria_filtro=categoria_filtro, 
+    item_filtro=item_filtro,
+    data_inicial=data_inicial,
+    data_final=data_final
+) }}
 </div>
 {% endblock %}
