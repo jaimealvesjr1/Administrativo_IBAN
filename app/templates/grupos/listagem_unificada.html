@@ -249,3 +249,21 @@
 
 </div>
 {% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    if ($('#groupTabs').length) {
+        var tipoSelecionado = $('#groupTabs').data('tipo-selecionado');
+        if (tipoSelecionado) {
+            var tabSelector = '#groupTabs .nav-link[data-bs-target="#' + tipoSelecionado + '-content"]';
+            var tabElement = document.querySelector(tabSelector);
+            if (tabElement) {
+                var tab = new bootstrap.Tab(tabElement);
+                tab.show();
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

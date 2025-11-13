@@ -120,3 +120,17 @@
 ) }}
 </div>
 {% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    if ($('#tipo_filtro_select2').length) {
+         $('#tipo_filtro_select2, #status_filtro_select2').select2({
+            theme: 'bootstrap-5',
+            minimumResultsForSearch: Infinity
+        });
+    }
+});
+</script>
+{% endblock %}

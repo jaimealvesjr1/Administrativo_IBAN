@@ -154,3 +154,31 @@
     </div>
 </div>
 {% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    const $selectAddParticipante = $('#membro_select2');
+    if ($selectAddParticipante.length) {
+        const buscarMembrosUrl = $selectAddParticipante.data('buscar-membros-url');
+        $selectAddParticipante.select2({
+            placeholder: "Clique para buscar ou digite o nome do participante",
+            allowClear: true,
+            theme: 'bootstrap-5',
+            ajax: {
+                url: buscarMembrosUrl,
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return { term: params.term };
+                },
+                processResults: function (data) {
+                    return { results: data.items };
+                },
+                cache: true
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

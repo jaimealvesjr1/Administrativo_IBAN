@@ -104,3 +104,18 @@
 ) }}
 </div>
 {% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    if ($('#categoria_filtro_select2').length) {
+        $('#categoria_filtro_select2').select2({
+            theme: 'bootstrap-5',
+            minimumResultsForSearch: Infinity,
+            placeholder: "Selecione a Categoria",
+            allowClear: true
+        });
+    }
+});
+</script>
+{% endblock %}

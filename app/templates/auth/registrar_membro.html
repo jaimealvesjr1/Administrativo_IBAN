@@ -49,3 +49,19 @@
   </div>
 </div>
 {% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    // A segunda condição evita conflito com outros seletores de mesmo ID que usam AJAX
+    if ($('#membro_id_select2').length && !$('#membro_id_select2').data('ajax--url')) {
+        $('#membro_id_select2').select2({
+            placeholder: "Clique para buscar seu nome:",
+            allowClear: true,
+            width: '100%',
+            theme: 'bootstrap-5',
+        });
+    }
+});
+</script>
+{% endblock %}

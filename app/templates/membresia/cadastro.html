@@ -142,3 +142,58 @@
 ) }}
 {% endif %}
 {% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    const inputNomeCadastro = document.getElementById('nome_completo');
+    const alertaDiv = document.getElementById('alerta-duplicidade');
+    if (inputNomeCadastro && alertaDiv) {
+        const sugestoesLista = document.getElementById('sugestoes-lista');
+        const sugestoesUrl = $(inputNomeCadastro).data('sugestoes-url');
+        let timeout = null;
+
+        inputNomeCadastro.addEventListener('keyup', function() {
+            clearTimeout(timeout);
+            
+            timeout = setTimeout(function() {
+                const termoBusca = inputNomeCadastro.value.trim();
+                // Não busca se for um cadastro de anônimo (ID 90000)
+                if (termoBusca.length < 3 || termoBusca.includes('OFERTA ANÔNIMA')) { 
+                    alertaDiv.style.display = 'none';
+                    return;
+                }
+
+                fetch(`${sugestoesUrl}?q=${termoBusca}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.sugestoes.length > 0) {
+                            sugestoesLista.innerHTML = '';
+                            data.sugestoes.forEach(sugestao => {
+                                const item = document.createElement('div');
+                                item.innerHTML = `
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>
+                                            <i class="bi bi-person-circle me-1"></i>
+                                            <a href="${sugestao.perfil_url}" target="_blank">${sugestao.nome_completo}</a>
+                                        </span>
+                                        <small class="text-muted">
+                                            <span class="badge bg-secondary me-1">${sugestao.status}</span>
+                                            <span class="badge bg-info">${sugestao.campus}</span>
+                                        </small>
+                                    </div>
+                                    <hr class="my-1">
+                                `;
+                                sugestoesLista.appendChild(item);
+                            });
+                            alertaDiv.style.display = 'block';
+                        } else {
+                            alertaDiv.style.display = 'none';
+                        }
+                    });
+            }, 500);
+        });
+    }
+});
+</script>
+{% endblock %}

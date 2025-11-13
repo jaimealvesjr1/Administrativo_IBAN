@@ -32,7 +32,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     TIMEZONE = 'America/Sao_Paulo'
-    VERSAO_APP = '2.9.6 - Responsividade'
+    VERSAO_APP = '2.9.7 - Responsividade'
     ANO_ATUAL = datetime.now().year
 
     ID_OFERTA_ANONIMA = 90000
@@ -68,6 +68,7 @@ class Config:
     ]
 
     TIPOS = ['Dízimo', 'Oferta', 'Oferta Missionária']
+    
     TIPOS_DESPESA = ['Fixa', 'Variável']
 
     FORMAS = ['via Pix', 'em Espécie', 'Boleto', 'Débito']

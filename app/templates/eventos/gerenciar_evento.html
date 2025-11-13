@@ -84,3 +84,39 @@
     </div>
 </div>
 {% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    const $selectMembrosEvento = $('#membros_select2');
+    if ($selectMembrosEvento.length) {
+        const buscarMembrosUrl = $selectMembrosEvento.data('buscar-membros-url');
+        const tipoEvento = $selectMembrosEvento.data('tipo-evento');
+        const eventoId = $selectMembrosEvento.data('evento-id');
+        
+        $selectMembrosEvento.select2({
+            placeholder: "Selecione membros para inscrever",
+            allowClear: true,
+            width: '100%',
+            theme: 'bootstrap-5',
+            ajax: {
+                url: buscarMembrosUrl,
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        q: params.term,
+                        tipo_evento: tipoEvento,
+                        evento_id: eventoId
+                    };
+                },
+                processResults: function (data) {
+                    return { results: data.results };
+                },
+                cache: true
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

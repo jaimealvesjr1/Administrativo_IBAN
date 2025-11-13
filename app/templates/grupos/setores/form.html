@@ -41,3 +41,18 @@
     </div>
 </div>
 {% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    // O ID renderizado para form.supervisores será 'supervisores'
+    if ($('#supervisores').length) {
+        $('#supervisores').select2({
+            theme: "bootstrap-5",
+            width: $( this ).data( 'width' ) ? $( this ).data( 'width' ) : $( this ).hasClass( 'w-100' ) ? '100%' : 'style',
+            placeholder: 'Selecione os supervisores'
+        });
+    }
+});
+</script>
+{% endblock %}

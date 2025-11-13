@@ -112,3 +112,21 @@
 {% endfor %}
 </div>
 {% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    if ($('#ctmTabs').length) {
+        var tipoSelecionado = $('#ctmTabs').data('tipo-selecionado');
+        if (tipoSelecionado) {
+            var tabSelector = '#ctmTabs .nav-link[data-bs-target="#' + tipoSelecionado + '-content"]';
+            var tabElement = document.querySelector(tabSelector);
+            if (tabElement) {
+                var tab = new bootstrap.Tab(tabElement);
+                tab.show();
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

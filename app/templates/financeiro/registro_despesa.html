@@ -77,3 +77,33 @@
     </div>
 </div>
 {% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    const $formDespesa = $('#form-registro-despesa');
+    if ($formDespesa.length) {
+        $('#item_despesa_select2').select2({
+            allowClear: true,
+            width: '100%',
+            theme: 'bootstrap-5'
+        });
+        
+        $('#centro_custo_despesa_select2').select2({
+            theme: 'bootstrap-5',
+            minimumResultsForSearch: Infinity,
+            placeholder: "Selecione o Centro de Custo",
+            allowClear: true
+        });
+
+        $('#valor_despesa').mask('000.000.000.000.000,00', {reverse: true});
+
+        $formDespesa.on('submit', function() {
+            var valorFormatado = $('#valor_despesa').val();
+            var valorNumerico = valorFormatado.replace(/\./g, '').replace(',', '.');
+            $('#valor_despesa').val(valorNumerico);
+        });
+    }
+});
+</script>
+{% endblock %}

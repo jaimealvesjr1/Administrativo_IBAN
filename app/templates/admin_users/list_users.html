@@ -103,3 +103,25 @@
     </div>
 </div>
 {% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    var confirmDeleteModal = document.getElementById('confirmDeleteModal');
+    if (confirmDeleteModal) {
+        confirmDeleteModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var userId = button.getAttribute('data-user-id');
+            var userEmail = button.getAttribute('data-user-email');
+            var deleteActionUrl = button.getAttribute('data-delete-url');
+
+            var modalUserEmail = confirmDeleteModal.querySelector('#modalUserEmail');
+            var deleteUserForm = confirmDeleteModal.querySelector('#deleteUserForm');
+
+            modalUserEmail.textContent = userEmail;
+            deleteUserForm.action = deleteActionUrl;
+        });
+    }
+});
+</script>
+{% endblock %}

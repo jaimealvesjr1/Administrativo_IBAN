@@ -219,3 +219,31 @@
     
 </div>
 {% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    const $selectAddAluno = $('#membro_id_select2');
+    if ($selectAddAluno.length) {
+        const buscarMembrosUrl = $selectAddAluno.data('buscar-membros-url');
+        $selectAddAluno.select2({
+            dropdownParent: $('#adicionarAlunoModal'), // Necessário por estar dentro de um modal
+            theme: "bootstrap-5",
+            placeholder: 'Pesquisar membro...',
+            ajax: {
+                url: buscarMembrosUrl,
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return { term: params.term };
+                },
+                processResults: function (data) {
+                    return { results: data.items };
+                },
+                cache: true
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
