@@ -34,7 +34,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     TIMEZONE = 'America/Sao_Paulo'
-    VERSAO_APP = '2.9.9 - Responsividade'
+    VERSAO_APP = '2.9.10 - Responsividade'
     ANO_ATUAL = datetime.now().year
 
     ID_OFERTA_ANONIMA = 90000
@@ -74,6 +74,8 @@ class Config:
     TIPOS_DESPESA = ['Fixa', 'Variável']
 
     FORMAS = ['via Pix', 'em Espécie', 'Boleto', 'Débito']
+
+    RECORRENCIAS = ['Isolada', 'Semanal', 'Quinzenal', 'Mensal']
 
     JORNADA = {
         'LIDERANCA_ALTERADA': JORNADA_LIDERANCA_ALTERADA,

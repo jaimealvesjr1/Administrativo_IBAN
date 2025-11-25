@@ -54,6 +54,7 @@ class Despesa(db.Model):
     data_lanc = db.Column(db.Date, nullable=False, default=date.today, index=True)
     observacoes = db.Column(db.Text)
     centro_custo = db.Column(db.String(50), nullable=True, index=True)
+    recorrencia = db.Column(db.String(20), nullable=False, default='Isolada', index=True)
     
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

@@ -88,6 +88,7 @@ class DespesaForm(FlaskForm):
     data_lanc = DateField('Data', validators=[DataRequired(), lambda form, field: (
         True if field.data <= date.today() else ValidationError('A data de lançamento não pode ser futura.')
     )])
+    recorrencia = SelectField('Recorrência', validators=[DataRequired()], choices=[(r, r) for r in Config.RECORRENCIAS])
     observacoes = TextAreaField('Observações', render_kw={'rows': 3})
     submit = SubmitField('Lançar Despesa')
 
@@ -102,7 +103,7 @@ class DespesaForm(FlaskForm):
         self.item_id.choices = [
             (item.id, f"{item.nome} ({item.categoria.nome})") for item in itens
         ]
-
+        self.recorrencia.choices = [(r, r) for r in Config.RECORRENCIAS]
         self.item_id.choices.insert(0, ('', 'Selecione o item da despesa'))
 
 
@@ -111,6 +112,8 @@ class DespesaFilterForm(FlaskForm):
     
     categoria_filtro = SelectField('Filtro por Categoria', coerce=coerce_to_int_or_none, validators=[Optional()])
     item_filtro = SelectField('Por Item', coerce=coerce_to_int_or_none, validators=[Optional()])
+    recorrencia_filtro = SelectField('Por Recorrência', validators=[Optional()])
+    centro_custo_filtro = SelectField('Por Centro de Custo', validators=[Optional()])
     data_inicial = DateField('Data Inicial', format='%Y-%m-%d', validators=[Optional()])
     data_final = DateField('Data Final', format='%Y-%m-%d', validators=[Optional()])
     submit_filter = SubmitField('Filtrar')
@@ -120,3 +123,5 @@ class DespesaFilterForm(FlaskForm):
         self.categoria_filtro.choices = [('', 'Todas as Categorias')] + \
                                         [(c.id, c.nome) for c in CategoriaDespesa.query.order_by(CategoriaDespesa.nome).all()]
         self.item_filtro.choices = [('', 'Todos os Itens')]
+        self.recorrencia_filtro.choices = [('', 'Todas as Recorrências')] + [(r, r) for r in Config.RECORRENCIAS]
+        self.centro_custo_filtro.choices = [('', 'Todos os Centros de Custo')] + [(c, c) for c in Config.CENTROS_DE_CUSTO]

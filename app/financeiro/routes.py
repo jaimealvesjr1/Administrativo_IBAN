@@ -412,6 +412,7 @@ def download_receitas_excel():
 def download_despesas_excel():
     categoria_filtro = request.args.get('categoria_filtro', '')
     centro_custo_filtro = request.args.get('centro_custo_filtro', '')
+    recorrencia_filtro = request.args.get('recorrencia_filtro', '')
     data_inicial_str = request.args.get('data_inicial', '')
     data_final_str = request.args.get('data_final', '')
 
@@ -421,6 +422,8 @@ def download_despesas_excel():
         query = query.filter(ItemDespesa.categoria_id == int(categoria_filtro))
     if centro_custo_filtro:
         query = query.filter(Despesa.centro_custo == centro_custo_filtro)
+    if recorrencia_filtro:
+        query = query.filter(Despesa.recorrencia == recorrencia_filtro)
     if data_inicial_str:
         try:
             data_inicial = datetime.strptime(data_inicial_str, '%Y-%m-%d').date()
@@ -445,6 +448,7 @@ def download_despesas_excel():
             'Categoria': despesa.item.categoria.nome,
             'Item': despesa.item.nome,
             'Centro de Custo': despesa.centro_custo,
+            'Recorrência': despesa.recorrencia,
             'Valor': despesa.valor,
             'Observações': despesa.observacoes if despesa.observacoes else ''
         })
@@ -642,7 +646,8 @@ def nova_despesa():
             valor=form.valor.data,
             data_lanc=form.data_lanc.data,
             observacoes=form.observacoes.data,
-            centro_custo=form.centro_custo.data
+            centro_custo=form.centro_custo.data,
+            recorrencia=form.recorrencia.data
         )
         try:
             db.session.add(desp)
@@ -690,12 +695,16 @@ def lancamentos_despesas():
 
     categoria_filtro = ""
     item_filtro = ""
+    recorrencia_filtro = ""
+    centro_custo_filtro = ""
     data_inicial = None
     data_final = None
 
     if filter_form.validate():
         categoria_filtro = filter_form.categoria_filtro.data
-        item_filtro = filter_form.item_filtro.data # Implementação simples
+        item_filtro = filter_form.item_filtro.data
+        recorrencia_filtro = filter_form.recorrencia_filtro.data
+        centro_custo_filtro = filter_form.centro_custo_filtro.data
         data_inicial = filter_form.data_inicial.data
         data_final = filter_form.data_final.data
 
@@ -703,6 +712,10 @@ def lancamentos_despesas():
             query = query.filter(ItemDespesa.categoria_id == categoria_filtro)
         if item_filtro:
             query = query.filter(Despesa.item_id == item_filtro)
+        if recorrencia_filtro:
+            query = query.filter(Despesa.recorrencia == recorrencia_filtro)
+        if centro_custo_filtro:
+            query = query.filter(Despesa.centro_custo == centro_custo_filtro)
         if data_inicial:
             query = query.filter(Despesa.data_lanc >= data_inicial)
         if data_final:
@@ -738,6 +751,8 @@ def lancamentos_despesas():
         cores_map=cores_map,
         categoria_filtro=categoria_filtro,
         item_filtro=item_filtro,
+        recorrencia_filtro=recorrencia_filtro,
+        centro_custo_filtro=centro_custo_filtro,
         data_inicial=data_inicial,
         data_final=data_final
     )

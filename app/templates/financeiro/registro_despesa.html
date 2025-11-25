@@ -26,14 +26,26 @@
                 {% endif %}
             </div>
 
-            <div class="mb-3">
-                {{ form.centro_custo.label(class="form-label") }}
-                {{ form.centro_custo(class="form-select", id="centro_custo_despesa_select2") }}
-                {% if form.centro_custo.errors %}
-                    {% for error in form.centro_custo.errors %}
-                        <div class="alert alert-danger mt-1">{{ error }}</div>
-                    {% endfor %}
-                {% endif %}
+
+            <div class="row">
+                <div class="mb-3 col-md-6">
+                    {{ form.centro_custo.label(class="form-label") }}
+                    {{ form.centro_custo(class="form-select", id="centro_custo_despesa_select2") }}
+                    {% if form.centro_custo.errors %}
+                        {% for error in form.centro_custo.errors %}
+                            <div class="alert alert-danger mt-1">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                <div class="mb-3 col-md-6">
+                    {{ form.recorrencia.label(class="form-label") }}
+                    {{ form.recorrencia(class="form-select", id="recorrencia_select2") }}
+                    {% if form.recorrencia.errors %}
+                        {% for error in form.recorrencia.errors %}
+                            <div class="alert alert-danger mt-1">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
             </div>
             
             <div class="row">

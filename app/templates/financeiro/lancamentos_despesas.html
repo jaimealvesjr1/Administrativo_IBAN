@@ -25,26 +25,41 @@
 {{ render_pagination(pagination, 'financeiro.lancamentos_despesas', 
     categoria_filtro=categoria_filtro, 
     item_filtro=item_filtro,
+    recorrencia_filtro=recorrencia_filtro,
+    centro_custo_filtro=centro_custo_filtro,
     data_inicial=data_inicial,
     data_final=data_final
 ) }}
     <form method="GET" action="{{ url_for('financeiro.lancamentos_despesas') }}" class="row g-3 mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             {{ filter_form.categoria_filtro.label(class="form-label") }}
             {{ filter_form.categoria_filtro(class="form-select", id="categoria_filtro_select2") }}
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
+            {{ filter_form.centro_custo_filtro.label(class="form-label") }}
+            {{ filter_form.centro_custo_filtro(class="form-select", id="centro_custo_filtro_select2") }}
+        </div>
+        <div class="col-md-3">
+            {{ filter_form.item_filtro.label(class="form-label") }}
+            {{ filter_form.item_filtro(class="form-select", id="item_filtro_select2") }}
+        </div>
+        <div class="col-md-3">
+            {{ filter_form.recorrencia_filtro.label(class="form-label") }}
+            {{ filter_form.recorrencia_filtro(class="form-select", id="recorrencia_filtro_select2") }}
+        </div>
+        <div class="col-md-3">
             {{ filter_form.data_inicial.label(class="form-label") }}
             {{ filter_form.data_inicial(class="form-control", type="date", value=filter_form.data_inicial.data.strftime('%Y-%m-%d') if filter_form.data_inicial.data else '') }}
         </div>
-        <div class="col-md-4">
+        
+        <div class="col-md-3">
             {{ filter_form.data_final.label(class="form-label") }}
             {{ filter_form.data_final(class="form-control", type="date", value=filter_form.data_final.data.strftime('%Y-%m-%d') if filter_form.data_final.data else '') }}
         </div>
-        <div class="col-md-6 d-flex align-items-end">
+        <div class="col-md-3 d-flex align-items-end">
             {{ filter_form.submit_filter(class="btn btn-primary w-100") }}
         </div>
-        <div class="col-md-6 d-flex align-items-end">
+        <div class="col-md-3 d-flex align-items-end">
             <a href="{{ url_for('financeiro.lancamentos_despesas') }}" class="btn btn-outline-secondary w-100">Limpar Filtros</a>
         </div>
     </form>
@@ -66,8 +81,8 @@
                     <th style="width: 8%;">Categoria</th>
                     <th style="width: 8%;">Item</th>
                     <th style="width: 8%;">Valor</th>
-                    <th style="width: 8%;">C. de Custo</th>
-                    <th style="width: 50%;">Observações</th>
+                    <th style="width: 8%;">Centro de Custo</th>
+                    <th style="width: 8%;">Recorrência</th> <th style="width: 50%;">Obs.</th>
                     <th style="width: 10%;">Ação</th>
                 </tr>
             </thead>
@@ -85,7 +100,7 @@
                             {{ despesa.centro_custo if despesa.centro_custo else 'Geral' }}
                         </span>
                     </td>
-                    <td class="text-wrap">{{ despesa.observacoes if despesa.observacoes else '' }}</td>
+                    <td><span class="badge bg-info">{{ despesa.recorrencia }}</span></td> <td class="text-wrap">{{ despesa.observacoes if despesa.observacoes else '' }}</td>
                     <td>
                         <a href="{{ url_for('financeiro.editar_despesa', id=despesa.id) }}" class="btn btn-sm btn-outline-primary me-2">Editar</a>
                         {% if current_user.has_permission('admin') %}
@@ -107,17 +122,18 @@
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div>
                         <h5 class="card-title mb-0" style="font-size: 1.1rem;">
-                            {{ despesa.item.nome }}
-                        </h5>
-                        <small class="text-muted">
-                            <span class="badge bg-secondary me-1">{{ despesa.item.categoria.nome }}</span>
-                            {% set cor = cores_map.get(despesa.centro_custo, '#6c757d') %}
-                            {% set cor_texto = '#000000' if cor == '#ffc107' else '#ffffff' %}
-                            <span class="badge" style="background-color: {{ cor }}; color: {{ cor_texto }}; font-size: 0.75rem;">
-                                {{ despesa.centro_custo if despesa.centro_custo else 'Geral' }}
-                            </span>
-                        </small>
-                    </div>
+                        {{ despesa.item.nome }}
+                    </h5>
+                    <small class="text-muted">
+                        <span class="badge bg-secondary me-1">{{ despesa.item.categoria.nome }}</span>
+                        {% set cor = cores_map.get(despesa.centro_custo, '#6c757d') %}
+                        {% set cor_texto = '#000000' if cor == '#ffc107' else '#ffffff' %}
+                        <span class="badge" style="background-color: {{ cor }}; color: {{ cor_texto }}; font-size: 0.75rem;">
+                            {{ despesa.centro_custo if despesa.centro_custo else 'Geral' }}
+                        </span>
+                        <span class="badge bg-info" style="font-size: 0.75rem;">{{ despesa.recorrencia }}</span>
+                    </small>
+                </div>
                     <strong class="text-danger">{{ despesa.valor | currency }}</strong>
                 </div>
                 <hr class="my-2">
@@ -147,6 +163,8 @@
 {{ render_pagination(pagination, 'financeiro.lancamentos_despesas', 
     categoria_filtro=categoria_filtro, 
     item_filtro=item_filtro,
+    recorrencia_filtro=recorrencia_filtro,
+    centro_custo_filtro=centro_custo_filtro,
     data_inicial=data_inicial,
     data_final=data_final
 ) }}
@@ -162,6 +180,7 @@
 
 </div>
 {% endblock %}
+
 {% block scripts %}
 {{ super() }}
 <script>
@@ -171,6 +190,20 @@ $(document).ready(function() {
             theme: 'bootstrap-5',
             minimumResultsForSearch: Infinity,
             placeholder: "Selecione a Categoria",
+            allowClear: true
+        });
+    }
+    if ($('#recorrencia_filtro_select2').length) {
+        $('#recorrencia_filtro_select2').select2({
+            theme: 'bootstrap-5',
+            minimumResultsForSearch: Infinity
+        });
+    }
+    if ($('#centro_custo_filtro_select2').length) {
+        $('#centro_custo_filtro_select2').select2({
+            theme: 'bootstrap-5',
+            minimumResultsForSearch: Infinity,
+            placeholder: "Selecione o Centro de Custo",
             allowClear: true
         });
     }
