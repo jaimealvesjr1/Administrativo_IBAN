@@ -51,7 +51,7 @@ class Membro(db.Model):
     def contribuiu_dizimo_ultimos_30d(self):
         from app.financeiro.models import Contribuicao
         hoje = date.today()
-        trinta_dias_atras = hoje - timedelta(days=30)
+        trinta_dias_atras = hoje - timedelta(days=35)
         return db.session.query(Contribuicao.id).filter(
             Contribuicao.membro_id == self.id,
             Contribuicao.tipo == 'Dízimo',
@@ -60,7 +60,7 @@ class Membro(db.Model):
 
     @property
     def presente_ctm_ultimos_30d(self):
-        trinta_dias_atras = date.today() - timedelta(days=30)
+        trinta_dias_atras = date.today() - timedelta(days=35)
         return db.session.query(Presenca).join(AulaRealizada).filter(
             Presenca.membro_id == self.id,
             AulaRealizada.data >= trinta_dias_atras
