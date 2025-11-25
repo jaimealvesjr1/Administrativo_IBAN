@@ -7,6 +7,7 @@ from app.jornada.models import JornadaEvento, registrar_evento_jornada
 from app.financeiro.models import Contribuicao
 from app.ctm.models import ConclusaoCTM, Presenca
 from app.auth.models import User
+from app.grupos.models import PequenoGrupo, Setor, Area
 from config import Config
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, and_, or_
@@ -300,8 +301,8 @@ def listagem():
         ano=ano, 
         versao=versao,
         busca=busca,
-        campus_filtro=campus_filtro,
-        status_filtro=status_filtro,
+        campus=campus_filtro,
+        status=status_filtro,
         recepcao_filtro=recepcao_filtro
     )
 
@@ -618,6 +619,33 @@ def unificar_processar():
         db.session.add(membro_principal)
 
         for membro_secundario in membros_secundarios:
+            
+            pgs_facilitados_secundario = PequenoGrupo.query.filter_by(facilitador_id=membro_secundario.id).all()
+            PequenoGrupo.query.filter_by(facilitador_id=membro_secundario.id).update(
+                {PequenoGrupo.facilitador_id: membro_principal.id}, synchronize_session=False
+            )
+            for pg in pgs_facilitados_secundario:
+                 flash(f'O PG {pg.nome} teve o facilitador reatribuído para {membro_principal.nome_completo}.', 'warning')
+                
+            pgs_anfitriados_secundario = PequenoGrupo.query.filter_by(anfitriao_id=membro_secundario.id).all()
+            PequenoGrupo.query.filter_by(anfitriao_id=membro_secundario.id).update(
+                {PequenoGrupo.anfitriao_id: membro_principal.id}, synchronize_session=False
+            )
+            for pg in pgs_anfitriados_secundario:
+                 flash(f'O PG {pg.nome} teve o anfitrião reatribuído para {membro_principal.nome_completo}.', 'warning')
+
+            for setor in list(membro_secundario.setores_supervisionados):
+                setor.supervisores.remove(membro_secundario)
+                setor.supervisores.append(membro_principal)
+                db.session.add(setor)
+            
+            for area in list(membro_secundario.areas_supervisionadas):
+                area.supervisores.remove(membro_secundario)
+                area.supervisores.append(membro_principal)
+                db.session.add(area)
+            
+            db.session.flush() 
+
             conclusoes_secundarias = ConclusaoCTM.query.filter_by(membro_id=membro_secundario.id).all()
             turmas_concluidas_principal = {c.turma_id for c in ConclusaoCTM.query.filter_by(membro_id=membro_principal.id).all()}
             for conclusao in conclusoes_secundarias:

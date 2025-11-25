@@ -3,6 +3,7 @@
 {% from 'base/components/forms.html' import field %}
 {% from 'base/components/buttons.html' import primary %}
 {% from 'macros/pagination.html' import render_pagination %}
+{% from 'base/components/modals.html' import confirm_modal %}
 {% block title %}Lançamentos de Receitas · IBAN{% endblock %}
 
 {% block content %}
@@ -66,51 +67,58 @@
 ) }}
 
     {% if contribuicoes %}
-    <div class="table-responsive">
-        <table class="table table-striped table-hover shadow-sm rounded-4">
-            <thead class="table-light">
-                <tr>
-                    <th class="col-md-1">Data</th>
-                    <th class="col-md-3">Pessoa</th>
-                    <th class="col-md-2">Valor</th>
-                    <th class="col-md-1">Tipo</th>
-                    <th class="col-md-1">Forma</th>
-                    <th class="col-md-2">Centro de Custo</th> 
-                    <th class="col-md-1">Obs.</th>
-                    <th class="col-md-1">Ação</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for contribuicao in contribuicoes %}
-                <tr>
-                    <td>{{ contribuicao.data_lanc.strftime('%d/%m/%Y') }}</td>
-                    <td>
-                        <a href="{{ url_for('membresia.perfil', id=contribuicao.membro.id) }}">
-                            {{ contribuicao.membro.nome_completo }}
-                        </a>
-                    </td>
-                    <td>{{ contribuicao.valor | currency }}</td>
-                    <td>{{ contribuicao.tipo }}</td>
-                    <td>{{ contribuicao.forma }}</td>
-                    <td>
-                        {% set cor = cores_map.get(contribuicao.centro_custo, '#6c757d') %}
-                        {% set cor_texto = '#000000' if cor == '#ffc107' else '#ffffff' %}
-                        <span class="badge" style="background-color: {{ cor }}; color: {{ cor_texto }};">
-                            {{ contribuicao.centro_custo if contribuicao.centro_custo else 'Geral' }}
-                        </span>
-                    </td>
-                    <td>{{ contribuicao.observacoes if contribuicao.observacoes else '' }}</td>
-                    <td>
-                        <a href="{{ url_for('financeiro.editar_contribuicao', id=contribuicao.id) }}" class="btn btn-sm btn-outline-primary">Editar</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover shadow-sm rounded-4">
+                <thead class="table-light">
+                    <tr>
+                        <th class="col-md-1">Data</th>
+                        <th class="col-md-3">Pessoa</th>
+                        <th class="col-md-2">Valor</th>
+                        <th class="col-md-1">Tipo</th>
+                        <th class="col-md-1">Forma</th>
+                        <th class="col-md-2">Centro de Custo</th> 
+                        <th class="col-md-1">Obs.</th>
+                        <th class="col-md-1">Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contribuicao in contribuicoes %}
+                    <tr>
+                        <td>{{ contribuicao.data_lanc.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <a href="{{ url_for('membresia.perfil', id=contribuicao.membro.id) }}">
+                                {{ contribuicao.membro.nome_completo }}
+                            </a>
+                        </td>
+                        <td>{{ contribuicao.valor | currency }}</td>
+                        <td>{{ contribuicao.tipo }}</td>
+                        <td>{{ contribuicao.forma }}</td>
+                        <td>
+                            {% set cor = cores_map.get(contribuicao.centro_custo, '#6c757d') %}
+                            {% set cor_texto = '#000000' if cor == '#ffc107' else '#ffffff' %}
+                            <span class="badge" style="background-color: {{ cor }}; color: {{ cor_texto }};">
+                                {{ contribuicao.centro_custo if contribuicao.centro_custo else 'Geral' }}
+                            </span>
+                        </td>
+                        <td>{{ contribuicao.observacoes if contribuicao.observacoes else '' }}</td>
+                        <td>
+                            <a href="{{ url_for('financeiro.editar_contribuicao', id=contribuicao.id) }}" class="btn btn-sm btn-outline-primary">Editar</a>
+                            {% if current_user.has_permission('admin') %}
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteContribuicaoModal{{ contribuicao.id }}">
+                                Excluir
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     {% else %}
-    <div class="alert alert-info text-center">Nenhuma contribuição encontrada com os filtros aplicados.</div>
+        <div class="alert alert-info text-center">Nenhuma contribuição encontrada com os filtros aplicados.</div>
     {% endif %}
+</div>
+
 {{ render_pagination(pagination, 'financeiro.lancamentos_receitas', 
     busca_nome=busca_nome,
     tipo_filtro=tipo_filtro,
@@ -118,7 +126,16 @@
     data_inicial=data_inicial,
     data_final=data_final
 ) }}
-</div>
+
+{% for contribuicao in contribuicoes %}
+{{ confirm_modal(
+    id='confirmDeleteContribuicaoModal' ~ contribuicao.id,
+    title='Confirmar Exclusão de Contribuição',
+    body='Tem certeza que deseja excluir a contribuição de ' ~ contribuicao.membro.nome_completo ~ ' no valor de ' ~ (contribuicao.valor | currency) ~ '? Essa ação é irreversível.',
+    action_url=url_for('financeiro.delete_contribuicao', id=contribuicao.id)
+) }}
+{% endfor %}
+
 {% endblock %}
 
 {% block scripts %}

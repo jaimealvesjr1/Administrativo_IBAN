@@ -47,7 +47,8 @@
 {{ render_pagination(pagination, 'membresia.listagem', 
   busca=busca, 
   campus=campus, 
-  status=status
+  status=status,
+  recepcao_filtro=recepcao_filtro
 ) }}
 
 
@@ -119,11 +120,12 @@
     {% endfor %}
   </div>
 
-  {{ render_pagination(pagination, 'membresia.listagem', 
-      busca=busca, 
-      campus=campus, 
-      status=status
-  ) }}
+{{ render_pagination(pagination, 'membresia.listagem', 
+    busca=busca, 
+    campus=campus, 
+    status=status,
+    recepcao_filtro=recepcao_filtro
+) }}
 
 </div>
 {% endblock %}

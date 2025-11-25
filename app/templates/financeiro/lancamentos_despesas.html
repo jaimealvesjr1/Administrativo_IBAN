@@ -3,6 +3,7 @@
 {% from 'base/components/forms.html' import field %}
 {% from 'base/components/buttons.html' import primary %}
 {% from 'macros/pagination.html' import render_pagination %}
+{% from 'base/components/modals.html' import confirm_modal %}
 {% block title %}Lançamentos de Despesas · IBAN{% endblock %}
 
 {% block content %}
@@ -87,6 +88,11 @@
                     <td>{{ despesa.observacoes if despesa.observacoes else '' }}</td>
                     <td>
                         <a href="{{ url_for('financeiro.editar_despesa', id=despesa.id) }}" class="btn btn-sm btn-outline-primary">Editar</a>
+                        {% if current_user.has_permission('admin') %}
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteDespesaModal{{ despesa.id }}">
+                            Excluir
+                        </button>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -96,12 +102,23 @@
     {% else %}
     <div class="alert alert-info text-center">Nenhuma despesa encontrada com os filtros aplicados.</div>
     {% endif %}
+
 {{ render_pagination(pagination, 'financeiro.lancamentos_despesas', 
     categoria_filtro=categoria_filtro, 
     item_filtro=item_filtro,
     data_inicial=data_inicial,
     data_final=data_final
 ) }}
+
+{% for despesa in despesas %}
+{{ confirm_modal(
+    id='confirmDeleteDespesaModal' ~ despesa.id,
+    title='Confirmar Exclusão de Despesa',
+    body='Tem certeza que deseja excluir a despesa ' ~ despesa.item.nome ~ ' no valor de ' ~ (despesa.valor | currency) ~ '? Essa ação é irreversível.',
+    action_url=url_for('financeiro.delete_despesa', id=despesa.id)
+) }}
+{% endfor %}
+
 </div>
 {% endblock %}
 {% block scripts %}

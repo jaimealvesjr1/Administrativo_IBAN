@@ -22,6 +22,8 @@ JORNADA_PRESENCA_CTM = {'class': 'bg-info', 'icon': 'bi-bar-chart-line', 'label'
 JORNADA_MULTIPLICACAO = {'class': 'bg-success', 'icon': 'bi-award', 'label': 'Multiplicação de PG', 'categoria': 'Grupos'}
 JORNADA_PG_FECHADO = {'class': 'bg-danger', 'icon': 'bi-x-octagon-fill', 'label': 'PG Fechado', 'categoria': 'Grupos'}
 JORNADA_PRESENCA_CTM_REMOVIDA = {'class': 'bg-danger', 'icon': 'bi-person-dash', 'label': 'Presença CTM Removida', 'categoria': 'CTM'}
+JORNADA_CONTRIBUICAO_EXCLUIDA = {'class': 'bg-danger', 'icon': 'bi-trash', 'label': 'Receita Excluída', 'categoria': 'Financeiro'}
+JORNADA_DESPESA_EXCLUIDA = {'class': 'bg-danger', 'icon': 'bi-trash', 'label': 'Despesa Excluída', 'categoria': 'Financeiro'}
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'chave-secreta-segura'
@@ -32,7 +34,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     TIMEZONE = 'America/Sao_Paulo'
-    VERSAO_APP = '2.9.7 - Responsividade'
+    VERSAO_APP = '2.9.8 - Responsividade'
     ANO_ATUAL = datetime.now().year
 
     ID_OFERTA_ANONIMA = 90000
@@ -96,4 +98,6 @@ class Config:
         'EVENTO_CONCLUIDO': JORNADA_CONCLUSAO_EVENTO,
         'PRESENCA_CTM': JORNADA_PRESENCA_CTM,
         'PG_MULTIPLICADO': JORNADA_MULTIPLICACAO,
+        'CONTRIBUICAO_EXCLUIDA': JORNADA_CONTRIBUICAO_EXCLUIDA,
+        'DESPESA_EXCLUIDA': JORNADA_DESPESA_EXCLUIDA,
     }

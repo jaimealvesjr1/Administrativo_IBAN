@@ -741,3 +741,57 @@ def lancamentos_despesas():
         data_inicial=data_inicial,
         data_final=data_final
     )
+
+@financeiro_bp.route('/delete_contribuicao/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def delete_contribuicao(id):
+    contribuicao = Contribuicao.query.get_or_404(id)
+
+    nome_membro = contribuicao.membro.nome_completo
+    valor_contribuicao = contribuicao.valor
+    
+    db.session.delete(contribuicao)
+    
+    try:
+        db.session.commit()
+        flash(f'Contribuição de {contribuicao.membro.nome_completo} excluída com sucesso!', 'success')
+        
+        registrar_evento_jornada(
+            tipo_acao='CONTRIBUICAO_EXCLUIDA',
+            descricao_detalhada=f'Contribuição de {nome_membro} (R$ {valor_contribuicao}) excluída.', 
+            usuario_executor=current_user
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro interno ao tentar excluir a contribuição. Tente novamente ou contate o suporte. Detalhe: {str(e)}', 'danger') 
+
+    return redirect(url_for('financeiro.lancamentos_receitas'))
+
+@financeiro_bp.route('/delete_despesa/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def delete_despesa(id):
+    despesa = Despesa.query.get_or_404(id)
+    
+    nome_item = despesa.item.nome
+    valor_despesa = despesa.valor
+    
+    db.session.delete(despesa)
+    
+    try:
+        db.session.commit()
+        flash(f'Despesa "{nome_item}" no valor de R$ {valor_despesa} excluída com sucesso!', 'success')
+        
+        registrar_evento_jornada(
+            tipo_acao='DESPESA_EXCLUIDA',
+            descricao_detalhada=f'Despesa de {nome_item} (R$ {valor_despesa}) excluída.',
+            usuario_executor=current_user
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao excluir a despesa: {str(e)}', 'danger')
+
+    return redirect(url_for('financeiro.lancamentos_despesas'))
