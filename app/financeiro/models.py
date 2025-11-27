@@ -28,6 +28,7 @@ class Contribuicao(db.Model):
 
 class CategoriaDespesa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(20), nullable=True, index=True)
     nome = db.Column(db.String(100), nullable=False, unique=True)
     itens = db.relationship('ItemDespesa', backref='categoria', lazy='dynamic', cascade="all, delete-orphan")
 
@@ -36,12 +37,12 @@ class CategoriaDespesa(db.Model):
 
 class ItemDespesa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(20), nullable=True, index=True)
     nome = db.Column(db.String(150), nullable=False)
-    tipo_fixa_variavel = db.Column(db.String(20), nullable=False, default='Variável') # Fixa ou Variável
+    tipo_fixa_variavel = db.Column(db.String(20), nullable=False, default='Variável')
     categoria_id = db.Column(db.Integer, db.ForeignKey('categoria_despesa.id'), nullable=False, index=True)
     despesas = db.relationship('Despesa', backref='item', lazy='dynamic', cascade="all, delete-orphan")
     
-    # Garantir que o nome do item seja único dentro da categoria
     __table_args__ = (db.UniqueConstraint('nome', 'categoria_id', name='_nome_categoria_uc'),)
 
     def __repr__(self):

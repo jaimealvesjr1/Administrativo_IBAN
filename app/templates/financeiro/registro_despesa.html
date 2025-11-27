@@ -1,91 +1,97 @@
 {% extends 'base/layout.html' %}
 {% from 'base/components/forms.html' import field %}
-{% from 'base/components/buttons.html' import submit, danger %}
+{% from 'base/components/buttons.html' import submit %}
 {% block title %}{{ title }} · IBAN{% endblock %}
 
 {% block content %}
-<div>
-    <div class="text-center mb-5">
-        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
-    </div>
-    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
-        <h2 class="text-center">
-            <strong>{{ title }}</strong>
-        </h2>
-
-        <form method="POST" id="form-registro-despesa">
-            {{ form.hidden_tag() }}
-            
-            <div class="mb-3">
-                {{ form.item_id.label(class="form-label") }}
-                {{ form.item_id(class="form-select", id="item_despesa_select2") }}
-                {% if form.item_id.errors %}
-                    {% for error in form.item_id.errors %}
-                        <div class="alert alert-danger mt-1">{{ error }}</div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-
-
-            <div class="row">
-                <div class="mb-3 col-md-6">
-                    {{ form.centro_custo.label(class="form-label") }}
-                    {{ form.centro_custo(class="form-select", id="centro_custo_despesa_select2") }}
-                    {% if form.centro_custo.errors %}
-                        {% for error in form.centro_custo.errors %}
-                            <div class="alert alert-danger mt-1">{{ error }}</div>
-                        {% endfor %}
-                    {% endif %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0 rounded-3">
+                <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0 fw-bold"><i class="bi bi-receipt me-2"></i>{{ title }}</h4>
+                    <a href="{{ url_for('financeiro.lancamentos_despesas') }}" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </a>
                 </div>
-                <div class="mb-3 col-md-6">
-                    {{ form.recorrencia.label(class="form-label") }}
-                    {{ form.recorrencia(class="form-select", id="recorrencia_select2") }}
-                    {% if form.recorrencia.errors %}
-                        {% for error in form.recorrencia.errors %}
-                            <div class="alert alert-danger mt-1">{{ error }}</div>
-                        {% endfor %}
-                    {% endif %}
+                <div class="card-body p-4">
+                    <form method="POST" id="form-registro-despesa">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Dados da Transação</h6>
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.data_lanc.label(class="form-label fw-bold") }}
+                                {{ form.data_lanc(class="form-control form-control-lg", type="date") }}
+                                {% if form.data_lanc.errors %}
+                                    <div class="text-danger small">{{ form.data_lanc.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.valor.label(class="form-label fw-bold") }}
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text">R$</span>
+                                    
+                                    {# CORREÇÃO DO BUG: Formata o valor pré-existente para ter 2 casas e vírgula #}
+                                    {% set valor_formatado = "" %}
+                                    {% if form.valor.data %}
+                                        {% set valor_formatado = "%.2f"|format(form.valor.data)|replace(".", ",") %}
+                                    {% endif %}
+
+                                    {{ form.valor(class="form-control text-end fw-bold text-danger", type="text", id="valor_despesa", placeholder="0,00", value=valor_formatado) }}
+                                </div>
+                                {% if form.valor.errors %}
+                                    <div class="text-danger small">{{ form.valor.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Classificação Contábil</h6>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                {{ form.item_id.label(class="form-label fw-bold") }}
+                                {{ form.item_id(class="form-select", id="item_despesa_select2") }}
+                                <div class="form-text">Selecione a conta analítica correspondente (ex: 3.01... Salários).</div>
+                                {% if form.item_id.errors %}
+                                    <div class="text-danger small">{{ form.item_id.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.centro_custo.label(class="form-label fw-bold") }}
+                                {{ form.centro_custo(class="form-select", id="centro_custo_despesa_select2") }}
+                                {% if form.centro_custo.errors %}
+                                    <div class="text-danger small">{{ form.centro_custo.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.recorrencia.label(class="form-label fw-bold") }}
+                                {{ form.recorrencia(class="form-select", id="recorrencia_select2") }}
+                                {% if form.recorrencia.errors %}
+                                    <div class="text-danger small">{{ form.recorrencia.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Detalhes</h6>
+                            {{ form.observacoes.label(class="form-label fw-bold") }}
+                            {{ form.observacoes(class="form-control", rows="3", placeholder="Descreva os detalhes do lançamento (fornecedor, nf, motivo...)") }}
+                            {% if form.observacoes.errors %}
+                                <div class="text-danger small">{{ form.observacoes.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            {{ submit('Confirmar Lançamento', class="btn btn-primary btn-lg") }}
+                        </div>
+                    </form>
                 </div>
             </div>
-            
-            <div class="row">
-                <div class="mb-3 col-md-6">
-                    {{ form.valor.label(class="form-label") }}
-                    {{ form.valor(class="form-control", type="text", id="valor_despesa") }} 
-                    {% if form.valor.errors %}
-                        {% for error in form.valor.errors %}
-                            <div class="alert alert-danger mt-1">{{ error }}</div>
-                        {% endfor %}
-                    {% endif %}
-                </div>
-                
-                <div class="mb-3 col-md-6">
-                    {{ form.data_lanc.label(class="form-label") }}
-                    {{ form.data_lanc(class="form-control", type="date") }}
-                    {% if form.data_lanc.errors %}
-                        {% for error in form.data_lanc.errors %}
-                            <div class="alert alert-danger mt-1">{{ error }}</div>
-                        {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="mb-3">
-                {{ form.observacoes.label(class="form-label") }}
-                {{ form.observacoes(class="form-control", rows="3") }}
-                {% if form.observacoes.errors %}
-                    {% for error in form.observacoes.errors %}
-                        <div class="alert alert-danger mt-1">{{ error }}</div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-
-            {{ submit('Salvar Lançamento') }}
-
-            <div class="text-end mt-3">
-                <a href="{{ url_for('financeiro.lancamentos_despesas') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -98,7 +104,8 @@ $(document).ready(function() {
         $('#item_despesa_select2').select2({
             allowClear: true,
             width: '100%',
-            theme: 'bootstrap-5'
+            theme: 'bootstrap-5',
+            placeholder: "Pesquise pelo código ou nome da conta"
         });
         
         $('#centro_custo_despesa_select2').select2({
@@ -106,6 +113,11 @@ $(document).ready(function() {
             minimumResultsForSearch: Infinity,
             placeholder: "Selecione o Centro de Custo",
             allowClear: true
+        });
+        
+        $('#recorrencia_select2').select2({
+            theme: 'bootstrap-5',
+            minimumResultsForSearch: Infinity
         });
 
         $('#valor_despesa').mask('000.000.000.000.000,00', {reverse: true});

@@ -4,131 +4,120 @@
 {% block title %}Registro Financeiro · IBAN{% endblock %}
 
 {% block content %}
-<div>
-    <div class="text-center mb-5">
-        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
-    </div>
-    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
-        <h2 class="text-center">
-            <strong>Registro de Contribuição</strong>
-        </h2>
-
-        <form method="POST">
-            {{ form.hidden_tag() }}
-            
-            <div class="mb-3">
-                {{ form.membro_id.label(class="form-label") }}
-                {{ form.membro_id(class="form-select", id="membro_financeiro_select2") }}
-                <small class="form-text text-muted mt-2 d-block">
-                    Não encontrou o contribuinte?
-                    <a href="#" data-bs-toggle="modal" data-bs-target="#confirmarCadastroModal">Clique aqui para cadastrar</a>.
-                </small>
-            </div>
-
-            <div class="modal fade" id="confirmarCadastroModal" tabindex="-1" aria-labelledby="confirmarCadastroModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="confirmarCadastroModalLabel">Deseja cadastrar um novo contribuinte?</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Por favor, selecione o tipo de cadastro.</p>
-                        <div class="d-flex justify-content-around mt-3">
-                            <a href="{{ url_for('membresia.novo_membro', next=url_for('financeiro.nova_contribuicao')) }}" class="btn btn-primary">Cadastrar Membro</a>
-                            <a href="{{ url_for('membresia.cadastro_nao_membro', next=url_for('financeiro.nova_contribuicao')) }}" class="btn btn-secondary">Cadastrar Não-Membro</a>
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0 rounded-3">
+                <div class="card-header bg-success text-white py-3 d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0 fw-bold"><i class="bi bi-cash-coin me-2"></i>Registro de Contribuição</h4>
+                    <a href="{{ url_for('financeiro.lancamentos_receitas') }}" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </a>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" id="form-registro-receita">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Dados da Transação</h6>
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.data_lanc.label(class="form-label fw-bold") }}
+                                {{ form.data_lanc(class="form-control form-control-lg", type="date") }}
+                                {% if form.data_lanc.errors %}
+                                    <div class="text-danger small">{{ form.data_lanc.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.valor.label(class="form-label fw-bold") }}
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text">R$</span>
+                                    {# CORREÇÃO DO BUG: Formata o valor pré-existente para ter 2 casas e vírgula #}
+                                    {% set valor_formatado = "" %}
+                                    {% if form.valor.data %}
+                                        {% set valor_formatado = "%.2f"|format(form.valor.data)|replace(".", ",") %}
+                                    {% endif %}
+                                    
+                                    {{ form.valor(class="form-control text-end fw-bold text-success", type="text", id="valor_contribuicao", placeholder="0,00", value=valor_formatado) }}
+                                </div>
+                                {% if form.valor.errors %}
+                                    <div class="text-danger small">{{ form.valor.errors[0] }}</div>
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-dismiss="modal">Cancelar</button>
-                    </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="mb-3">
-                {{ form.centro_custo.label(class="form-label") }}
-                {{ form.centro_custo(class="form-select", id="centro_custo_select") }}
-                {% if form.centro_custo.errors %}
-                    {% for error in form.centro_custo.errors %}
-                        <div class="alert alert-danger mt-1">{{ error }}</div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            
-            <div class="row">
-                <div class="mb-3 col-md-6">
-                    {{ form.tipo.label(class="form-label") }}
-                    {{ form.tipo(class="form-select", id="tipo_select2", data_placeholder="Selecione o Tipo") }}
-                    {% if form.tipo.errors %}
-                        {% for error in form.tipo.errors %}
-                            <div class="alert alert-danger mt-1">{{ error }}</div>
-                        {% endfor %}
-                    {% endif %}
-                </div>
-                
-                <div class="mb-3 col-md-6">
-                    {{ form.valor.label(class="form-label") }}
-                    {# Adicione um ID ao campo valor para facilitar a aplicação da máscara #}
-                    {{ form.valor(class="form-control", type="text", id="valor_contribuicao") }} 
-                    {% if form.valor.errors %}
-                        {% for error in form.valor.errors %}
-                            <div class="alert alert-danger mt-1">{{ error }}</div>
-                        {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
 
-            <div class="row">
-                <div class="mb-3 col-md-6">
-                    {{ form.data_lanc.label(class="form-label") }}
-                    {{ form.data_lanc(class="form-control", type="date") }}
-                    {% if form.data_lanc.errors %}
-                        {% for error in form.data_lanc.errors %}
-                            <div class="alert alert-danger mt-1">{{ error }}</div>
-                        {% endfor %}
-                    {% endif %}
-                </div>
-                
-                <div class="mb-3 col-md-6">
-                    {{ form.forma.label(class="form-label") }}
-                    {{ form.forma(class="form-select", id="forma_select2", data_placeholder='Selecione a Forma') }}
-                    {% if form.forma.errors %}
-                        {% for error in form.forma.errors %}
-                            <div class="alert alert-danger mt-1">{{ error }}</div>
-                        {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-            
-            <div class="mb-3">
-                {{ form.observacoes.label(class="form-label") }}
-                {{ form.observacoes(class="form-control", rows="3") }}
-                {% if form.observacoes.errors %}
-                    {% for error in form.observacoes.errors %}
-                        <div class="alert alert-danger mt-1">{{ error }}</div>
-                    {% endfor %}
-                {% endif %}
-            </div>
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Origem e Classificação</h6>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                {{ form.membro_id.label(class="form-label fw-bold") }}
+                                {{ form.membro_id(class="form-select", id="membro_financeiro_select2") }}
+                                <div class="form-text d-flex justify-content-between">
+                                    <span>Selecione o membro ou visitante.</span>
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#confirmarCadastroModal" class="text-decoration-none">Cadastrar novo?</a>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.tipo.label(class="form-label fw-bold") }}
+                                {{ form.tipo(class="form-select", id="tipo_select2", data_placeholder="Selecione o Tipo") }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.forma.label(class="form-label fw-bold") }}
+                                {{ form.forma(class="form-select", id="forma_select2", data_placeholder='Selecione a Forma') }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.centro_custo.label(class="form-label fw-bold") }}
+                                {{ form.centro_custo(class="form-select", id="centro_custo_select") }}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Detalhes</h6>
+                            {{ form.observacoes.label(class="form-label fw-bold") }}
+                            {{ form.observacoes(class="form-control", rows="2", placeholder="Observações adicionais...") }}
+                        </div>
 
-            {{ submit('Lançar Contribuição') }}
-
-            <div class="text-end mt-3">
-                <a href="{{ url_for('financeiro.lancamentos_receitas') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+                        <div class="d-grid gap-2">
+                            {{ submit('Confirmar Entrada', class="btn btn-success btn-lg") }}
+                        </div>
+                    </form>
+                </div>
             </div>
-        </form>
+        </div>
     </div>
 </div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<div class="modal fade" id="confirmarCadastroModal" tabindex="-1" aria-labelledby="confirmarCadastroModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="confirmarCadastroModalLabel">Novo Cadastro</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center">
+            <p>Qual tipo de cadastro deseja realizar?</p>
+            <div class="d-grid gap-3 col-8 mx-auto">
+                <a href="{{ url_for('membresia.novo_membro', next=url_for('financeiro.nova_contribuicao')) }}" class="btn btn-primary">Membro (Comunga)</a>
+                <a href="{{ url_for('membresia.cadastro_nao_membro', next=url_for('financeiro.nova_contribuicao')) }}" class="btn btn-secondary">Não-Membro / Visitante</a>
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
 <script>
     $(document).ready(function() {
-        
-        // Passa as variáveis do Config para o JavaScript
         const campusValidos = {{ Config.CAMPUS | tojson }};
         const idAnonimo = {{ Config.ID_OFERTA_ANONIMA | default(0) }};
 
         $('#membro_financeiro_select2').select2({
-            placeholder: "Clique para buscar o nome do contribuinte",
+            placeholder: "Clique para buscar o nome",
             allowClear: true,
             width: '100%',
             theme: 'bootstrap-5',
@@ -136,81 +125,39 @@
                 url: "{{ url_for('financeiro.buscar_membros_financeiro') }}",
                 dataType: 'json',
                 delay: 250,
-                data: function (params) {
-                    return {
-                        term: params.term
-                    };
-                },
-                processResults: function (data) {
-                    return {
-                        results: data.items
-                    };
-                },
+                data: function (params) { return { term: params.term }; },
+                processResults: function (data) { return { results: data.items }; },
                 cache: true
             }
         });
 
-        // Inicializa os outros Select2
         $('#tipo_select2, #forma_select2, #centro_custo_select').select2({
             theme: 'bootstrap-5',
-            minimumResultsForSearch: Infinity, // Remove a busca para estes
-            placeholder: function(){
-                // Define o placeholder para os selects
-                if ($(this).is('#centro_custo_select')) {
-                    return "Selecione o Centro de Custo";
-                }
-                if ($(this).is('#tipo_select2')) {
-                    return "Selecione o Tipo";
-                }
-                return $(this).data('placeholder');
-            },
+            minimumResultsForSearch: Infinity,
+            width: '100%',
             allowClear: true
         });
 
-        // --- LÓGICA DE AUTO-SELECT ATUALIZADA ---
+        // Lógica de Auto-Select
         $('#membro_financeiro_select2').on('select2:select', function (e) {
             var data = e.params.data;
-            
-            // Verifica se o ID selecionado é o da Oferta Anônima
             if (data.id == idAnonimo) {
-                // Se for, LIMPA o Centro de Custo para forçar o usuário a escolher
                 $('#centro_custo_select').val('').trigger('change');
-                
-                // --- NOVA LINHA ---
-                // DEFINE o Tipo como "Oferta"
                 $('#tipo_select2').val('Oferta').trigger('change');
-                // --- FIM DA NOVA LINHA ---
-
             } else {
-                // Se for um membro normal, faz o auto-select
                 var campusDoMembro = data.campus;
                 if (campusDoMembro && campusValidos.includes(campusDoMembro)) {
                     $('#centro_custo_select').val(campusDoMembro).trigger('change');
                 } else {
-                    // Se o membro não tem campus, LIMPA o campo (para forçar a escolha)
                     $('#centro_custo_select').val('').trigger('change');
                 }
-                
-                // --- NOVA LINHA ---
-                // Limpa o tipo (para forçar a escolha entre Dízimo/Oferta)
                 $('#tipo_select2').val('').trigger('change');
-                // --- FIM DA NOVA LINHA ---
             }
         });
-        
-        // Limpa os campos se o membro for desmarcado
-        $('#membro_financeiro_select2').on('select2:unselect', function (e) {
-            $('#centro_custo_select').val('').trigger('change');
-            
-            // --- NOVA LINHA ---
-            $('#tipo_select2').val('').trigger('change');
-            // --- FIM DA NOVA LINHA ---
-        });
 
-        // --- Lógica da máscara e do submit (sem alteração) ---
         $('#valor_contribuicao').mask('000.000.000.000.000,00', {reverse: true});
 
-        $('form').on('submit', function() {
+        $('#form-registro-receita').on('submit', function() {
             var valorFormatado = $('#valor_contribuicao').val();
             var valorNumerico = valorFormatado.replace(/\./g, '').replace(',', '.');
             $('#valor_contribuicao').val(valorNumerico);

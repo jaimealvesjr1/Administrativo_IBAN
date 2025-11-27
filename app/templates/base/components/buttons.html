@@ -18,7 +18,15 @@
 
 {% macro submit(text='Salvar', attrs={}) %}
 <div class="d-grid mt-4">
-    <button type="submit" class="btn btn-custom" {{ _render_html_attributes(attrs) }}>
+    {% set final_attrs = kwargs.copy() %}
+    
+    {% if attrs %}
+        {% set _ = final_attrs.update(attrs) %}
+    {% endif %}
+
+    {% set btn_class = final_attrs.pop('class', 'btn-custom') %}
+    
+    <button type="submit" class="btn {{ btn_class }}" {{ _render_html_attributes(final_attrs) }}>
         <strong>{{ text }}</strong>
     </button>
 </div>

@@ -1,55 +1,95 @@
 {% set show_navbar = true %}
 {% extends 'base/layout.html' %}
 {% from 'base/components/buttons.html' import primary %}
-{% block title %}Painel Administrativo - Financeiro · IBAN{% endblock %}
+{% block title %}Visão Geral Financeira · IBAN{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><strong>Painel Administrativo - Financeiro</strong></h2>
+    <div class="d-flex justify-content-between align-items-center mb-5">
         <div>
-            <div class="btn-group">
-                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    Acessar Lançamentos
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('financeiro.lancamentos_receitas') }}">Receitas (Contribuições)</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('financeiro.lancamentos_despesas') }}">Despesas</a></li>
-                </ul>
-            </div>
-             <a href="{{ url_for('financeiro.configuracao_financeira') }}" class="btn btn-outline-secondary ms-2" title="Configurar Categorias e Itens de Despesa">
-                <i class="bi bi-gear"></i> Configurações
+            <h2 class="mb-1"><strong>Visão Geral Financeira</strong></h2>
+            <p class="text-muted mb-0">Acompanhamento de entradas, saídas e resultados do período.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('financeiro.lancamentos_receitas') }}" class="btn btn-outline-success">
+                <i class="bi bi-journal-arrow-up me-2"></i>Livro de Receitas
+            </a>
+            <a href="{{ url_for('financeiro.lancamentos_despesas') }}" class="btn btn-outline-danger">
+                <i class="bi bi-journal-arrow-down me-2"></i>Livro de Despesas
+            </a>
+             <a href="{{ url_for('financeiro.configuracao_financeira') }}" class="btn btn-outline-secondary" title="Configurar Plano de Contas">
+                <i class="bi bi-gear-fill"></i>
             </a>
         </div>
     </div>
 
-    <div class="row mb-4">
+    <div class="row mb-4 g-4">
         <div class="col-md-4">
-            <div class="card text-white bg-success mb-3 shadow-sm">
-                <div class="card-header">Total Receitas (Mês Atual)</div>
-                <div class="card-body">
-                    <h5 class="card-title">{{ total_receitas_mes | currency  }}</h5>
-                    <p class="card-text"><small>{{ num_contribuicoes_mes }} contribuições</small></p>
+            <div class="card border-0 shadow-sm h-100 overflow-hidden">
+                <div class="card-body position-relative">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-uppercase text-muted fw-bold small mb-1">Entradas (Mês Atual)</h6>
+                            <h3 class="text-success fw-bold mb-0 font-monospace">{{ total_receitas_mes | currency }}</h3>
+                        </div>
+                        <div class="icon-shape bg-success bg-opacity-10 text-success rounded-3 p-3">
+                            <i class="bi bi-graph-up-arrow fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-auto">
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">
+                            <i class="bi bi-receipt me-1"></i> {{ num_contribuicoes_mes }} lançamentos
+                        </span>
+                    </div>
+                </div>
+                <div class="progress" style="height: 4px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
         </div>
+
         <div class="col-md-4">
-            <div class="card text-white bg-danger mb-3 shadow-sm">
-                <div class="card-header">Total Despesas (Mês Atual)</div>
-                <div class="card-body">
-                    <h5 class="card-title">{{ total_despesas_mes | currency  }}</h5>
-                     <p class="card-text"><small>{{ num_despesas_mes }} lançamentos</small></p>
+            <div class="card border-0 shadow-sm h-100 overflow-hidden">
+                <div class="card-body position-relative">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-uppercase text-muted fw-bold small mb-1">Saídas (Mês Atual)</h6>
+                            <h3 class="text-danger fw-bold mb-0 font-monospace">{{ total_despesas_mes | currency }}</h3>
+                        </div>
+                        <div class="icon-shape bg-danger bg-opacity-10 text-danger rounded-3 p-3">
+                            <i class="bi bi-graph-down-arrow fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-auto">
+                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">
+                            <i class="bi bi-receipt me-1"></i> {{ num_despesas_mes }} lançamentos
+                        </span>
+                    </div>
+                </div>
+                <div class="progress" style="height: 4px;">
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
         </div>
         
-        {% set saldo_class = 'bg-primary text-white' if saldo_mes_atual >= 0 else 'bg-warning text-white' %}
+        {% set saldo_class = 'success' if saldo_mes_atual >= 0 else 'danger' %}
         <div class="col-md-4">
-            <div class="card {{ saldo_class }} mb-3 shadow-sm">
-                <div class="card-header">Saldo (Mês Atual)</div>
-                <div class="card-body">
-                    <h5 class="card-title">{{ saldo_mes_atual | currency  }}</h5>
-                    <p class="card-text"><small>Receitas - Despesas</small></p>
+            <div class="card border-0 shadow-sm h-100 overflow-hidden bg-{{ saldo_class }} text-white">
+                <div class="card-body position-relative">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-uppercase text-white-50 fw-bold small mb-1">Resultado do Período</h6>
+                            <h3 class="text-white fw-bold mb-0 font-monospace">{{ saldo_mes_atual | currency }}</h3>
+                        </div>
+                        <div class="icon-shape bg-white bg-opacity-25 text-white rounded-3 p-3">
+                            <i class="bi bi-wallet2 fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-auto">
+                        <small class="text-white-50">
+                            <i class="bi bi-info-circle me-1"></i> Receitas - Despesas
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -57,27 +97,39 @@
 
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card shadow-lg p-4 rounded-4 mb-4">
-                <h3 class="mb-3 text-center">Contribuições por Campus</h3>
-                <small class="text-center text-muted mb-2">(Ano Atual)</small>
-                <div style="height: 400px;"><canvas id="graficoReceitasPorCC"></canvas></div>
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-building me-2"></i>Entradas por Centro de Custo</h5>
+                    <small class="text-muted">Evolução acumulada (Ano Atual)</small>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div style="height: 350px;"><canvas id="graficoReceitasPorCC"></canvas></div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-6">
-            <div class="card shadow-lg p-4 rounded-4 mb-4">
-                <h3 class="mb-3 text-center">Despesas por Campus</h3>
-                <small class="text-center text-muted mb-2">(Ano Atual)</small>
-                <div style="height: 400px;"><canvas id="graficoDespesasPorCC"></canvas></div>
+    <div class="row mb-4 g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                 <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-building-dash me-2"></i>Saídas por Centro de Custo</h5>
+                    <small class="text-muted">Evolução acumulada (Ano Atual)</small>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div style="height: 350px;"><canvas id="graficoDespesasPorCC"></canvas></div>
+                </div>
             </div>
         </div>
-        <div class="col-6">
-            <div class="card shadow-lg p-4 rounded-4 mb-4">
-                <h3 class="mb-3 text-center">Despesas por Categoria</h3>
-                <small class="text-center text-muted mb-2">(Ano Atual)</small>
-                <div style="height: 400px;"><canvas id="graficoDespesasCat"></canvas></div>
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-tags me-2"></i>Saídas por Grupo de Contas</h5>
+                    <small class="text-muted">Evolução acumulada (Ano Atual)</small>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div style="height: 350px;"><canvas id="graficoDespesasCat"></canvas></div>
+                </div>
             </div>
         </div>
     </div>

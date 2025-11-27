@@ -262,6 +262,7 @@ def lancamentos_receitas():
     busca_nome = ""
     tipo_filtro = ""
     status_filtro = ""
+    centro_custo_filtro = ""
     data_inicial = None
     data_final = None
 
@@ -269,6 +270,7 @@ def lancamentos_receitas():
         busca_nome = filter_form.busca_nome.data
         tipo_filtro = filter_form.tipo_filtro.data
         status_filtro = filter_form.status_filtro.data
+        centro_custo_filtro = filter_form.centro_custo_filtro.data
         data_inicial = filter_form.data_inicial.data
         data_final = filter_form.data_final.data
 
@@ -276,6 +278,8 @@ def lancamentos_receitas():
             query = query.filter(Membro.nome_completo.ilike(f'%{busca_nome}%'))
         if tipo_filtro:
             query = query.filter(Contribuicao.tipo == tipo_filtro)
+        if centro_custo_filtro:
+            query = query.filter(Contribuicao.centro_custo == centro_custo_filtro)
         if status_filtro:
             if status_filtro == 'Facilitador':
                 query = query.filter(Membro.pgs_facilitados.any())
@@ -319,6 +323,7 @@ def lancamentos_receitas():
         busca_nome=busca_nome,
         tipo_filtro=tipo_filtro,
         status_filtro=status_filtro,
+        centro_custo_filtro=centro_custo_filtro,
         data_inicial=data_inicial,
         data_final=data_final
     )
@@ -597,7 +602,10 @@ def configuracao_financeira():
     if request.method == 'POST':
         if 'submit_categoria' in request.form and form_categoria.validate_on_submit():
             try:
-                nova_cat = CategoriaDespesa(nome=form_categoria.nome.data)
+                nova_cat = CategoriaDespesa(
+                    nome=form_categoria.nome.data,
+                    codigo=form_categoria.codigo.data 
+                )
                 db.session.add(nova_cat)
                 db.session.commit()
                 flash('Nova categoria de despesa criada com sucesso!', 'success')
@@ -611,6 +619,7 @@ def configuracao_financeira():
                 novo_item = ItemDespesa(
                     categoria_id=form_item.categoria_id.data,
                     nome=form_item.nome.data,
+                    codigo=form_item.codigo.data,
                     tipo_fixa_variavel=form_item.tipo_fixa_variavel.data
                 )
                 db.session.add(novo_item)
@@ -621,8 +630,8 @@ def configuracao_financeira():
                 db.session.rollback()
                 flash(f'Erro ao criar item: {str(e)}', 'danger')
     
-    categorias = CategoriaDespesa.query.order_by(CategoriaDespesa.nome).all()
-    itens = ItemDespesa.query.join(CategoriaDespesa).order_by(CategoriaDespesa.nome, ItemDespesa.nome).all()
+    categorias = CategoriaDespesa.query.order_by(CategoriaDespesa.codigo, CategoriaDespesa.nome).all()
+    itens = ItemDespesa.query.join(CategoriaDespesa).order_by(CategoriaDespesa.codigo, ItemDespesa.codigo, ItemDespesa.nome).all()
     
     return render_template(
         'financeiro/configuracao.html',
