@@ -74,6 +74,17 @@ class PequenoGrupo(db.Model):
             membros.add(self.anfitriao)
         return list(membros)
     
+    @property
+    def membros_completos(self):
+        membros = set()
+        if self.facilitador:
+            membros.add(self.facilitador)
+        if self.anfitriao:
+            membros.add(self.anfitriao)
+        membros.update(self.participantes.all())
+        
+        return sorted(list(membros), key=lambda m: m.nome_completo)
+    
     facilitador = db.relationship('Membro', foreign_keys=[facilitador_id], back_populates='pgs_facilitados')
     anfitriao = db.relationship('Membro', foreign_keys=[anfitriao_id], back_populates='pgs_anfitriados')
     participantes = db.relationship('Membro', foreign_keys='Membro.pg_id', back_populates='pg_participante', lazy='dynamic')
