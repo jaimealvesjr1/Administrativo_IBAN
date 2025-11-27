@@ -1,131 +1,137 @@
 {% set show_navbar = true %}
 {% extends 'base/layout.html' %}
-{% from 'base/components/forms.html' import field %}
 {% from 'base/components/buttons.html' import primary, outline_danger %}
-{% from 'macros/pagination.html' import render_pagination %} {% block title %}Membresia · IBAN{% endblock %}
+{% from 'macros/pagination.html' import render_pagination %} 
+
+{% block title %}Membresia · IBAN{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><strong>Membresia</strong></h2>
-    <div class="btn-group">
-        {% if current_user.has_permission('admin') or current_user.has_permission('secretaria') %}
-        {{ outline_danger('Unificar Cadastros', url_for('membresia.unificar_membros')) }}
-        {{ primary('+ Novo Membro', url_for('membresia.novo_membro')) }}
-        {% endif %}
-    </div>
-  </div>
-
-  <form method="get" class="row g-3 mb-4">
-    <div class="col-md-4">
-      <input type="text" name="busca" placeholder="Buscar por nome" class="form-control" value="{{ busca }}">
-    </div>
-    <div class="col-md-3">
-      <select name="status" class="form-select">
-        <option value="">Todos os Status</option>
-        {% for s in config['STATUS'] %}
-          <option value="{{ s }}" {% if s == status %}selected{% endif %}>{{ s }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-3">
-      <select name="campus" class="form-select">
-        <option value="">Todos os Campus</option>
-        {% for c in config['CAMPUS'] %}
-          <option value="{{ c }}" {% if c == campus %}selected{% endif %}>{{ c }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-1">
-      <button type="submit" class="btn btn-primary w-100">Filtrar</button>
-    </div>
-    <div class="col-md-1 d-flex align-items-end">
-      <a href="{{ url_for('membresia.listagem') }}" class="btn btn-outline-secondary w-100">Limpar</a>
-    </div>
-  </form>
-
-{{ render_pagination(pagination, 'membresia.listagem', 
-  busca=busca, 
-  campus=campus, 
-  status=status,
-  recepcao_filtro=recepcao_filtro
-) }}
-
-
-  <div class="table-responsive d-none d-md-block">
-    <table class="table table-bordered table-striped">
-      <thead class="table-light">
-        <tr>
-          <th class="text-center">Foto</th>
-          <th>Nome</th>
-          <th>Nascimento</th>
-          <th>Recepção</th>
-          <th>Status</th>
-          <th>Campus</th>
-          <th>Ação</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for membro in membros %}
-          <tr>
-            <td class="text-center align-middle">
-              <img src="{{ membro.get_foto_perfil_url() }}" alt="Foto" class="img-thumbnail rounded-circle" style="width: 50px; height: 50px; object-fit: cover;">
-            </td>
-            <td>{{ membro.nome_completo }}</td>
-            <td>{{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento }}</td>
-            <td>{{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao }}</td>
-            <td>{{ membro.status }}</td>
-            <td>{{ membro.campus }}</td>
-            <td>
-              <a href="{{ url_for('membresia.perfil', id=membro.id) }}" class="btn btn-sm btn-outline-primary">Perfil</a>
-            </td>
-          </tr>
-        {% else %}
-          <tr>
-            <td colspan="7" class="text-center">Nenhum membro encontrado com estes filtros.</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="d-md-none">
-    {% for membro in membros %}
-    <div class="card shadow-sm mb-3">
-      <div class="card-body">
-        <div class="d-flex align-items-center mb-2">
-          <img src="{{ membro.get_foto_perfil_url() }}" alt="Foto" class="img-thumbnail rounded-circle" style="width: 60px; height: 60px; object-fit: cover;">
-          <div class="ms-3">
-            <h5 class="card-title mb-0" style="font-size: 1.1rem;">{{ membro.nome_completo }}</h5>
-            <small class="text-muted">
-              <span class="badge bg-secondary">{{ membro.status }}</span>
-              <span class="badge bg-info">{{ membro.campus }}</span>
-            </small>
-          </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{{ url_for('membresia.index') }}" class="btn btn-outline-secondary me-3" title="Voltar ao Painel">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <h2 class="mb-0"><strong>Membresia</strong></h2>
         </div>
-        <hr class="my-2">
-        <p class="card-text mb-1"><small>
-          <strong>Nascimento:</strong> {{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento else 'N/A' }}
-        </small></p>
-        <p class="card-text mb-2"><small>
-          <strong>Recepção:</strong> {{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao else 'N/A' }}
-        </small></p>
-        <a href="{{ url_for('membresia.perfil', id=membro.id) }}" class="btn btn-sm btn-outline-primary w-100">Ver Perfil</a>
-      </div>
+        <div class="btn-group">
+            {% if current_user.has_permission('admin') or current_user.has_permission('secretaria') %}
+            {{ outline_danger(' Unificar Cadastros', url_for('membresia.unificar_membros'), icon='bi-people') }}
+            {{ primary(' Novo Cadastro', url_for('membresia.novo_membro'), icon='bi-plus-lg') }}
+            {% endif %}
+        </div>
     </div>
-    {% else %}
-      <div class="alert alert-info text-center">
-        Nenhum membro encontrado com estes filtros.
-      </div>
-    {% endfor %}
-  </div>
 
-{{ render_pagination(pagination, 'membresia.listagem', 
-    busca=busca, 
-    campus=campus, 
-    status=status,
-    recepcao_filtro=recepcao_filtro
-) }}
+    <div class="card mb-4 border-0 shadow-sm bg-light">
+        <div class="card-body py-3">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="small text-muted fw-bold">Buscar</label>
+                    <input type="text" name="busca" placeholder="Nome do membro..." class="form-control form-control-sm" value="{{ busca }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="small text-muted fw-bold">Status</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">Todos</option>
+                        {% for s in config['STATUS'] %}
+                        <option value="{{ s }}" {% if s == status %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="small text-muted fw-bold">Campus</label>
+                    <select name="campus" class="form-select form-select-sm">
+                        <option value="">Todos</option>
+                        {% for c in config['CAMPUS'] %}
+                        <option value="{{ c }}" {% if c == campus %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-filter"></i></button>
+                </div>
+                <div class="col-md-1">
+                    <a href="{{ url_for('membresia.listagem') }}" class="btn btn-outline-secondary btn-sm w-100" title="Limpar"><i class="bi bi-x-lg"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
 
+    {{ render_pagination(pagination, 'membresia.listagem', busca=busca, campus=campus, status=status, recepcao_filtro=recepcao_filtro) }}
+
+    <div class="table-responsive d-none d-md-block">
+        <table class="table table-hover align-middle" style="border-collapse: separate; border-spacing: 0;">
+            <thead class="table-light text-uppercase small text-muted">
+                <tr>
+                    <th class="border-bottom text-center" style="width: 60px;">Foto</th>
+                    <th class="border-bottom">Nome / Status</th>
+                    <th class="border-bottom">Nascimento</th>
+                    <th class="border-bottom">Recepção</th>
+                    <th class="border-bottom">Campus</th>
+                    <th class="border-bottom text-center" style="width: 100px;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for membro in membros %}
+                <tr class="bg-white border-bottom">
+                    <td class="text-center">
+                        <img src="{{ membro.get_foto_perfil_url() }}" alt="Foto" class="rounded-circle border" style="width: 40px; height: 40px; object-fit: cover;">
+                    </td>
+                    <td>
+                        <div class="d-flex flex-column">
+                            <span class="fw-bold text-dark">{{ membro.nome_completo }}</span>
+                            <small class="text-muted" style="font-size: 0.75rem;">{{ membro.status }}</small>
+                        </div>
+                    </td>
+                    <td>{{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento }}</td>
+                    <td>{{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao }}</td>
+                    <td><span class="badge bg-light text-dark border">{{ membro.campus }}</span></td>
+                    <td class="text-center">
+                        <div class="btn-group">
+                            <a href="{{ url_for('membresia.perfil', id=membro.id) }}" class="btn btn-sm btn-link text-decoration-none text-primary" title="Ver Perfil">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if current_user.has_permission('admin') or current_user.has_permission('secretaria') %}
+                            <a href="{{ url_for('membresia.editar_membro', id=membro.id) }}" class="btn btn-sm btn-link text-decoration-none text-secondary" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-search fs-1 d-block mb-2"></i>
+                        Nenhum membro encontrado com estes filtros.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-md-none">
+        {% for membro in membros %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body d-flex align-items-center">
+                <img src="{{ membro.get_foto_perfil_url() }}" alt="Foto" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                <div class="flex-grow-1">
+                    <h6 class="mb-0 fw-bold">{{ membro.nome_completo }}</h6>
+                    <small class="text-muted d-block">{{ membro.status }} · {{ membro.campus }}</small>
+                </div>
+                <a href="{{ url_for('membresia.perfil', id=membro.id) }}" class="btn btn-light btn-sm rounded-circle">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            Nenhum membro encontrado.
+        </div>
+        {% endfor %}
+    </div>
+
+    {{ render_pagination(pagination, 'membresia.listagem', busca=busca, campus=campus, status=status, recepcao_filtro=recepcao_filtro) }}
 </div>
 {% endblock %}

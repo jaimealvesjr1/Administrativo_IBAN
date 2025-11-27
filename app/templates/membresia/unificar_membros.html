@@ -5,11 +5,13 @@
 {% block title %}Unificar Membros · IBAN{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="container mt-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="{{ url_for('membresia.listagem') }}" class="btn btn-outline-secondary me-3" title="Voltar">
+            <i class="bi bi-arrow-left"></i>
+        </a>
         <h2><strong>Unificar Membros</strong></h2>
     </div>
-
     <p>Utilize esta ferramenta para buscar e unificar cadastros de membros que podem ter sido duplicados.<br>A busca ignora acentuação e é insensível a maiúsculas/minúsculas.</p>
     
     <form method="get" class="row g-3 mb-4">

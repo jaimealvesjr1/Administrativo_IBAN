@@ -1,96 +1,150 @@
 {% extends "base/layout.html" %}
 {% from 'base/components/forms.html' import field %}
-{% from 'base/components/buttons.html' import submit, danger %}
+{% from 'base/components/buttons.html' import submit %}
 
-{% block title %}{% if pg %}Editar Pequeno Grupo{% else %}Criar Pequeno Grupo{% endif %} · IBAN{% endblock %}
+{% block title %}{% if pg %}Editar PG{% else %}Novo PG{% endif %} · IBAN{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="text-center mb-4">
-        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
-    </div>
-    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
-        <h2 class="text-center">
-            <strong>{% if pg %}Editar PG: {{ pg.nome }}{% else %}Novo PG{% endif %}</strong>
-        </h2>
-        <form method="POST" enctype="multipart/form-data">
-            {{ form.hidden_tag() }}
-            {% set is_readonly = 'readonly' if not current_user.has_permission('admin') else '' %}
-            {% if not pg %}
-            {% endif %}
-            <div class="mb-3">
-                {{ form.facilitador.label (class="form-label") }}
-                {{ form.facilitador (class="form-select", id="facilitador_select") }}
-            </div>
-            <div class="mb-3">
-                {{ form.nome.label(class="form-label") }}
-                {% if pg %}
-                    {{ form.nome(class="form-control", **{'readonly': is_readonly} if is_readonly else {}) }}
-                {% else %}
-                    {{ form.nome(class="form-control") }}
-                {% endif %}
-            </div>
-            <div class="mb-3">
-                {{ form.anfitriao.label (class="form-label") }}
-                {{ form.anfitriao (class="form-select") }}
-            </div>
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0 rounded-3">
+                <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0 fw-bold">
+                        <i class="bi bi-people-fill me-2"></i>
+                        {% if pg %}Editar Pequeno Grupo{% else %}Criar Pequeno Grupo{% endif %}
+                    </h4>
+                    <a href="{{ url_for('grupos.listar_pgs') }}" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </a>
+                </div>
 
-            <div class="mb-3">
-                {{ form.setor.label (class="form-label") }}
-                {{ form.setor (class="form-select") }}
-            </div>
-            <div class="mb-3">
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        {{ form.dia_reuniao.label (class="form-label") }}
-                        {{ form.dia_reuniao (class="form-select") }}
-                    </div>
-                    <div class="col-md-6">
-                        {{ form.horario_reuniao.label (class="form-label") }}
-                        {{ form.horario_reuniao (class="form-control") }}
-                    </div>
+                <div class="card-body p-4">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        {% set is_readonly = 'readonly' if (pg and not current_user.has_permission('admin')) else '' %}
+
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Identificação</h6>
+                            </div>
+                            
+                            <div class="col-md-12 mb-3">
+                                {{ form.nome.label(class="form-label fw-bold") }}
+                                {% if pg and is_readonly %}
+                                    {{ form.nome(class="form-control form-control-lg bg-light", readonly=True) }}
+                                {% else %}
+                                    {{ form.nome(class="form-control form-control-lg", placeholder="Ex: PG Vida Nova") }}
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                {{ form.setor.label(class="form-label fw-bold") }}
+                                {{ form.setor(class="form-select", id="setor_select2") }}
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                {{ form.dia_reuniao.label(class="form-label fw-bold") }}
+                                {{ form.dia_reuniao(class="form-select", id="dia_select2") }}
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                {{ form.horario_reuniao.label(class="form-label fw-bold") }}
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-clock"></i></span>
+                                    {{ form.horario_reuniao(class="form-control", placeholder="19:30", id="horario_input") }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Liderança</h6>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.facilitador.label(class="form-label fw-bold") }}
+                                {{ form.facilitador(class="form-select", id="facilitador_select2") }}
+                                {% if form.facilitador.errors %}
+                                    <div class="text-danger small">{{ form.facilitador.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                {{ form.anfitriao.label(class="form-label fw-bold") }}
+                                {{ form.anfitriao(class="form-select", id="anfitriao_select2") }}
+                                {% if form.anfitriao.errors %}
+                                    <div class="text-danger small">{{ form.anfitriao.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 pt-2">
+                            {{ submit('Salvar Dados do PG', class="btn btn-primary btn-lg") }}
+                            
+                            {% set can_close = current_user.has_permission('admin') or is_area_supervisor or is_sector_supervisor %}
+                            {% if pg and pg.ativo and can_close %}
+                                <button type="button" class="btn btn-outline-danger mt-2" data-bs-toggle="modal" data-bs-target="#modalFecharPG">
+                                    <i class="bi bi-archive-fill me-2"></i>Fechar este PG
+                                </button>
+                            {% endif %}
+                        </div>
+                    </form>
                 </div>
             </div>
-            {{ submit('Salvar Alterações' if pg else 'Criar Pequeno Grupo') }}
-        </form>
-
-        {% set can_close = current_user.has_permission('admin') or is_area_supervisor or is_sector_supervisor %}
-        {% if pg and pg.ativo and can_close %}
-        <div class="mt-3">
-            <form method="POST" action="{{ url_for('grupos.fechar_pg', pg_id=pg.id) }}" 
-                    onsubmit="return confirm('ATENÇÃO: Fechar o PG irá congelar todas as informações. Tem certeza?');">
-                {{ form.hidden_tag() }}
-                <button type="submit" class="btn btn-danger w-100"><strong>Fechar PG</strong></button>
-            </form>
-        </div>
-        {% endif %}
-
-        <div class="text-end mt-3">
-            <a href="{{ url_for('grupos.listar_pgs') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
         </div>
     </div>
 </div>
 
+{% if pg and pg.ativo %}
+<div class="modal fade" id="modalFecharPG" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Fechar Pequeno Grupo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>ATENÇÃO: Fechar o PG irá congelar as informações e torná-lo inativo. Esta ação geralmente é feita quando o PG encerra suas atividades sem se multiplicar. Tem certeza?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{{ url_for('grupos.fechar_pg', pg_id=pg.id) }}">
+                    <button type="submit" class="btn btn-danger">Confirmar Fechamento</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const facilitadorSelect = document.getElementById('facilitador_select');
-        const nomeInput = document.getElementsByName('nome')[0];
-        
-        function suggestName() {
-            const selectedFacilitador = facilitadorSelect.value;
-            if (selectedFacilitador && selectedFacilitador != 0) {
-                window.location.href = "{{ url_for('grupos.criar_pg') }}?facilitador=" + selectedFacilitador;
-            }
-        }
-        
+        // Configuração do Select2
+        const select2Config = {
+            theme: 'bootstrap-5',
+            width: '100%'
+        };
+
+        $('#facilitador_select2').select2({ ...select2Config, placeholder: 'Selecione o Facilitador' });
+        $('#anfitriao_select2').select2({ ...select2Config, placeholder: 'Selecione o Anfitrião' });
+        $('#setor_select2').select2({ ...select2Config, placeholder: 'Selecione o Setor' });
+        $('#dia_select2').select2({ ...select2Config, minimumResultsForSearch: Infinity });
+
+        $('#horario_input').mask('00:00');
+
+        // Lógica de sugestão de nome (se for criação)
         {% if not pg %}
-            facilitadorSelect.addEventListener('change', suggestName);
-            
-            {% if nome_sugerido_base %}
-                if (!nomeInput.value) {
-                    nomeInput.value = "{{ nome_sugerido_base }}";
+            $('#facilitador_select2').on('change', function() {
+                const selectedVal = $(this).val();
+                if (selectedVal && selectedVal != 0) {
+                    // Redireciona para pegar o nome (mantendo o comportamento original do seu código)
+                    window.location.href = "{{ url_for('grupos.criar_pg') }}?facilitador=" + selectedVal;
                 }
-            {% endif %}
+            });
         {% endif %}
     });
 </script>

@@ -1,0 +1,175 @@
+{% set show_navbar = true %}
+{% extends 'base/layout.html' %}
+{% from 'base/components/buttons.html' import primary %}
+
+{% block title %}Visão Geral de Grupos · IBAN{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h2 class="mb-1"><strong>Visão Geral de Pequenos Grupos</strong></h2>
+            <p class="text-muted mb-0">Estatísticas e acompanhamento da estrutura de liderança.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('grupos.listar_grupos_unificada') }}" class="btn btn-outline-primary">
+                <i class="bi bi-list-ul me-2"></i>Gerenciar Estrutura
+            </a>
+            <a href="{{ url_for('grupos.criar_pg') }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-2"></i>Novo PG
+            </a>
+        </div>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4 mb-4">
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 overflow-hidden">
+                <div class="card-body position-relative">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-uppercase text-muted fw-bold small mb-1">PGs Ativos</h6>
+                            <h3 class="text-primary fw-bold mb-0 font-monospace">{{ total_pgs_ativos }}</h3>
+                        </div>
+                        <div class="icon-shape bg-primary bg-opacity-10 text-primary rounded-3 p-3">
+                            <i class="bi bi-house-check-fill fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 overflow-hidden">
+                <div class="card-body position-relative">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-uppercase text-muted fw-bold small mb-1">Multiplicados</h6>
+                            <h3 class="text-success fw-bold mb-0 font-monospace">{{ total_pgs_multiplicados }}</h3>
+                        </div>
+                        <div class="icon-shape bg-success bg-opacity-10 text-success rounded-3 p-3">
+                            <i class="bi bi-diagram-3-fill fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 overflow-hidden">
+                <div class="card-body position-relative">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-uppercase text-muted fw-bold small mb-1">Setores</h6>
+                            <h3 class="text-warning fw-bold mb-0 font-monospace">{{ total_setores }}</h3>
+                        </div>
+                        <div class="icon-shape bg-warning bg-opacity-10 text-warning rounded-3 p-3">
+                            <i class="bi bi-diagram-2-fill fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 overflow-hidden">
+                <div class="card-body position-relative">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-uppercase text-muted fw-bold small mb-1">Áreas</h6>
+                            <h3 class="text-danger fw-bold mb-0 font-monospace">{{ total_areas }}</h3>
+                        </div>
+                        <div class="icon-shape bg-danger bg-opacity-10 text-danger rounded-3 p-3">
+                            <i class="bi bi-diagram-3-fill fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-pie-chart-fill me-2"></i>PGs Ativos por Área</h5>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div style="height: 300px;"><canvas id="chartPGsArea"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-bar-chart-fill me-2"></i>PGs Ativos por Setor</h5>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div style="height: 300px;"><canvas id="chartPGsSetor"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const labelsPGsArea = {{ labels_pgs_area | tojson | safe }};
+        const dataPGsArea = {{ data_pgs_area | tojson | safe }};
+        
+        const labelsPGsSetor = {{ labels_pgs_setor | tojson | safe }};
+        const dataPGsSetor = {{ data_pgs_setor | tojson | safe }};
+
+        // Cores consistentes
+        const colors = ['#0d6efd', '#20c997', '#198754', '#dc3545', '#ffc107', '#0dcaf0', '#6610f2', '#fd7e14'];
+
+        // Gráfico 1: PGs por Área (Doughnut)
+        new Chart(document.getElementById('chartPGsArea'), {
+            type: 'doughnut',
+            data: {
+                labels: labelsPGsArea,
+                datasets: [{
+                    data: dataPGsArea,
+                    backgroundColor: colors,
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { usePointStyle: true } }
+                },
+                cutout: '60%'
+            }
+        });
+
+        // Gráfico 2: PGs por Setor (Barra)
+        new Chart(document.getElementById('chartPGsSetor'), {
+            type: 'bar',
+            data: {
+                labels: labelsPGsSetor,
+                datasets: [{
+                    label: 'Quantidade de PGs',
+                    data: dataPGsSetor,
+                    backgroundColor: '#20c997',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        grid: { borderDash: [2, 4] },
+                        ticks: { stepSize: 1 }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

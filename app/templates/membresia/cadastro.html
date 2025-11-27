@@ -1,191 +1,186 @@
 {% extends 'base/layout.html' %}
 {% from 'base/components/forms.html' import field %}
 {% from 'base/components/buttons.html' import submit, danger %}
-{% from 'base/components/modals.html' import confirm_modal, reactivate_modal %}
+{% from 'base/components/modals.html' import confirm_modal %}
+
 {% block title %}Cadastro de Pessoas · IBAN{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="text-center mb-4">
-        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo IBAN" style="max-height: 150px;">
-    </div>
-    <div class="card shadow-lg p-4 rounded-4 mx-auto" style="max-width: 500px;">
-        <h2 class="text-center">
-            {% if editar %}
-                {% if membro.status != 'Não-Membro' %}
-                    <strong>Editar Membro</strong>
-                {% else %}
-                    <strong>Editar Não-Membro</strong>
-                {% endif %}
-            {% else %}
-                {% if form.data_recepcao is defined %}
-                    <strong>Cadastro de Membro</strong>
-                {% else %}
-                    <strong>Cadastro de Não-Membro</strong>
-                {% endif %}
-            {% endif %}
-        </h2>
-
-        <form method="POST" enctype="multipart/form-data" id="form-membro-cadastro">
-            {{ form.hidden_tag() }}
-
-            {% if next_url %}
-            <input type="hidden" name="next" value="{{ next_url }}">
-            {% endif %}
-            
-            <div class="mb-3">
-                {% if editar and membro.foto_perfil %}
-                    <div class="text-center">
-                        <small class="form-text text-muted mt-2">Foto atual:</small><br>
-                        <img src="{{ membro.get_foto_perfil_url() }}" alt="Foto de Perfil" class="img-thumbnail mt-2" style="width: 100px; height: 100px; object-fit: cover;">
-                        <p class="small text-muted mt-1">Selecione uma nova foto para substituir a atual.</p>
-                    </div>
-                {% endif %}
-
-                {{ form.foto_perfil.label(class="form-label") }}
-                {{ form.foto_perfil(class="form-control") }}
-                {% if form.foto_perfil.errors %}
-                    {% for error in form.foto_perfil.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-                {% endif %}
-            </div>
-
-            <div class="mb-3">
-                {{ form.nome_completo.label(class="form-label") }}
-                {% set sugestoes_url = url_for('membresia.sugerir_membros') %}
-
-                {{ form.nome_completo(class="form-control", id="nome_completo", data_sugestoes_url=sugestoes_url) }}
-                {% if form.nome_completo.errors %}
-                    {% for error in form.nome_completo.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-                {% endif %}
-
-                <div id="alerta-duplicidade" class="mt-2" style="display: none;">
-                    <div class="card p-3 border-danger shadow-sm">
-                        <h6 class="card-title text-danger mb-2">Possíveis Duplicidades Encontradas:</h6>
-                        <div id="sugestoes-lista">
-                            </div>
-                        <p class="text-secondary mt-2 mb-0" style="font-size: 0.9rem;">
-                            Verifique os cadastros abaixo antes de prosseguir.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    {% if form.data_nascimento is defined %}
-                        {{ form.data_nascimento.label(class="form-label") }}
-                        {{ form.data_nascimento(class="form-control", type="date") }}
-                        {% if form.data_nascimento.errors %}
-                            {% for error in form.data_nascimento.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0 rounded-3">
+                <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0 fw-bold">
+                        <i class="bi bi-person-vcard me-2"></i>
+                        {% if editar %}
+                            {% if membro.status != 'Não-Membro' %}Editar Membro{% else %}Editar Não-Membro{% endif %}
+                        {% else %}
+                            {% if form.data_recepcao is defined %}Novo Membro{% else %}Novo Visitante{% endif %}
                         {% endif %}
-                    {% endif %}
+                    </h4>
+                    <a href="{{ url_for('membresia.listagem') }}" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </a>
                 </div>
 
-                <div class="{% if form.data_nascimento is defined %}col-md-6{% else %}col-md-12{% endif %}">
-                    {{ form.campus.label(class="form-label") }}
-                    {{ form.campus(class="form-select") }}
-                    {% if form.campus.errors %}
-                        {% for error in form.campus.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-            
-            {% if form.data_recepcao is defined %}
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    {{ form.data_recepcao.label(class="form-label") }}
-                    {{ form.data_recepcao(class="form-control", type="date") }}
-                    {% if form.data_recepcao.errors %}
-                        {% for error in form.data_recepcao.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    {{ form.tipo_recepcao.label(class="form-label") }}
-                    {{ form.tipo_recepcao(class="form-select") }}
-                    {% if form.tipo_recepcao.errors %}
-                        {% for error in form.tipo_recepcao.errors %}
-                            <div class="alert alert-danger mt-1">{{ error }}</div>
-                        {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    {{ form.obs_recepcao.label(class="form-label") }}
-                    {{ form.obs_recepcao(class="form-control") }}
-                    {% if form.obs_recepcao.errors %}
-                        {% for error in form.obs_recepcao.errors %}
-                            <div class="alert alert-danger mt-1">{{ error }}</div>
-                        {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
+                <div class="card-body p-4">
+                    <form method="POST" enctype="multipart/form-data" id="form-membro-cadastro">
+                        {{ form.hidden_tag() }}
 
-            {{ submit('Salvar Alterações' if editar else 'Adicionar Registro') }}
-            {% if editar and membro.status != 'Não-Membro' %}
-                {{ danger('Desligar Membro', '#modalDesligar') }}
-            {% endif %}
+                        {% if next_url %}
+                        <input type="hidden" name="next" value="{{ next_url }}">
+                        {% endif %}
 
-            <div class="text-end mt-3">
-                <a href="{{ url_for('membresia.listagem') }}" class="btn btn-outline-secondary">⬅ Voltar</a>
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Identificação Pessoal</h6>
+                            </div>
+
+                            <div class="col-md-3 text-center mb-3">
+                                <div class="position-relative d-inline-block">
+                                    {% if editar and membro.foto_perfil %}
+                                        <img src="{{ membro.get_foto_perfil_url() }}" alt="Foto" class="img-thumbnail rounded-circle shadow-sm" style="width: 120px; height: 120px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center border mx-auto" style="width: 120px; height: 120px;">
+                                            <i class="bi bi-camera text-secondary fs-1"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div class="mt-2">
+                                        {{ form.foto_perfil(class="form-control form-control-sm") }}
+                                    </div>
+                                </div>
+                                {% if form.foto_perfil.errors %}
+                                    <div class="text-danger small mt-1">{{ form.foto_perfil.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-9">
+                                <div class="mb-3">
+                                    {{ form.nome_completo.label(class="form-label fw-bold") }}
+                                    {% set sugestoes_url = url_for('membresia.sugerir_membros') %}
+                                    {{ form.nome_completo(class="form-control form-control-lg", id="nome_completo", data_sugestoes_url=sugestoes_url, placeholder="Nome completo do membro") }}
+                                    {% if form.nome_completo.errors %}
+                                        <div class="text-danger small">{{ form.nome_completo.errors[0] }}</div>
+                                    {% endif %}
+                                    
+                                    <div id="alerta-duplicidade" class="mt-2" style="display: none;">
+                                        <div class="alert alert-warning d-flex align-items-start shadow-sm">
+                                            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                                            <div>
+                                                <strong>Possíveis cadastros duplicados:</strong>
+                                                <div id="sugestoes-lista" class="mt-2 small bg-white p-2 rounded border"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        {% if form.data_nascimento is defined %}
+                                            {{ form.data_nascimento.label(class="form-label fw-bold") }}
+                                            {{ form.data_nascimento(class="form-control", type="date") }}
+                                            {% if form.data_nascimento.errors %}
+                                                <div class="text-danger small">{{ form.data_nascimento.errors[0] }}</div>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.campus.label(class="form-label fw-bold") }}
+                                        {{ form.campus(class="form-select") }}
+                                        {% if form.campus.errors %}
+                                            <div class="text-danger small">{{ form.campus.errors[0] }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.data_recepcao is defined %}
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Vínculo Eclesiástico</h6>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.data_recepcao.label(class="form-label fw-bold") }}
+                                {{ form.data_recepcao(class="form-control", type="date") }}
+                                {% if form.data_recepcao.errors %}
+                                    <div class="text-danger small">{{ form.data_recepcao.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.tipo_recepcao.label(class="form-label fw-bold") }}
+                                {{ form.tipo_recepcao(class="form-select") }}
+                                {% if form.tipo_recepcao.errors %}
+                                    <div class="text-danger small">{{ form.tipo_recepcao.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-12">
+                                {{ form.obs_recepcao.label(class="form-label fw-bold") }}
+                                {{ form.obs_recepcao(class="form-control", rows="2", placeholder="Informações adicionais sobre a recepção...") }}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-grid gap-2 pt-3">
+                            {{ submit('Salvar Cadastro', class="btn btn-primary btn-lg") }}
+                            
+                            {% if editar and membro.status != 'Não-Membro' %}
+                                <button type="button" class="btn btn-outline-danger mt-2" data-bs-toggle="modal" data-bs-target="#modalDesligar">
+                                    <i class="bi bi-person-x-fill me-2"></i>Desligar Membro
+                                </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
             </div>
-        </form>
+        </div>
     </div>
 </div>
+
 {% if editar and membro.status != 'Não-Membro' %}
 {{ confirm_modal(
     'modalDesligar',
     'Confirmar Desligamento',
-    'Tem certeza que deseja desligar este membro?',
+    'Tem certeza que deseja desligar este membro? O histórico será mantido, mas ele ficará inativo.',
     url_for('membresia.desligar_membro', id=membro.id)
 ) }}
 {% endif %}
 {% endblock %}
+
 {% block scripts %}
 {{ super() }}
 <script>
 $(document).ready(function() {
-    const inputNomeCadastro = document.getElementById('nome_completo');
+    // Lógica de sugestão de nomes (mantida e adaptada para o novo visual)
+    const inputNome = document.getElementById('nome_completo');
     const alertaDiv = document.getElementById('alerta-duplicidade');
-    if (inputNomeCadastro && alertaDiv) {
-        const sugestoesLista = document.getElementById('sugestoes-lista');
-        const sugestoesUrl = $(inputNomeCadastro).data('sugestoes-url');
-        let timeout = null;
+    
+    if (inputNome && alertaDiv) {
+        const listaSugestoes = document.getElementById('sugestoes-lista');
+        const url = inputNome.dataset.sugestoesUrl;
+        let timer;
 
-        inputNomeCadastro.addEventListener('keyup', function() {
-            clearTimeout(timeout);
+        inputNome.addEventListener('input', function() {
+            clearTimeout(timer);
+            const termo = this.value.trim();
             
-            timeout = setTimeout(function() {
-                const termoBusca = inputNomeCadastro.value.trim();
-                // Não busca se for um cadastro de anônimo (ID 90000)
-                if (termoBusca.length < 3 || termoBusca.includes('OFERTA ANÔNIMA')) { 
-                    alertaDiv.style.display = 'none';
-                    return;
-                }
+            if (termo.length < 3 || termo.includes('ANÔNIMA')) {
+                alertaDiv.style.display = 'none';
+                return;
+            }
 
-                fetch(`${sugestoesUrl}?q=${termoBusca}`)
-                    .then(response => response.json())
+            timer = setTimeout(() => {
+                fetch(`${url}?q=${termo}`)
+                    .then(r => r.json())
                     .then(data => {
                         if (data.sugestoes.length > 0) {
-                            sugestoesLista.innerHTML = '';
-                            data.sugestoes.forEach(sugestao => {
-                                const item = document.createElement('div');
-                                item.innerHTML = `
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span>
-                                            <i class="bi bi-person-circle me-1"></i>
-                                            <a href="${sugestao.perfil_url}" target="_blank">${sugestao.nome_completo}</a>
-                                        </span>
-                                        <small class="text-muted">
-                                            <span class="badge bg-secondary me-1">${sugestao.status}</span>
-                                            <span class="badge bg-info">${sugestao.campus}</span>
-                                        </small>
-                                    </div>
-                                    <hr class="my-1">
-                                `;
-                                sugestoesLista.appendChild(item);
-                            });
+                            listaSugestoes.innerHTML = data.sugestoes.map(s => `
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                    <a href="${s.perfil_url}" target="_blank" class="text-decoration-none fw-bold">${s.nome_completo}</a>
+                                    <span class="badge bg-light text-dark border">${s.status}</span>
+                                </div>
+                            `).join('');
                             alertaDiv.style.display = 'block';
                         } else {
                             alertaDiv.style.display = 'none';

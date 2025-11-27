@@ -9,7 +9,7 @@ from app.financeiro.models import Contribuicao
 from app.auth.models import User
 from app.jornada.models import registrar_evento_jornada, JornadaEvento
 from config import Config
-from app.decorators import admin_required, group_permission_required, leader_required
+from app.decorators import admin_required, group_permission_required, leader_required, secretaria_or_admin_required
 from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import joinedload
 from app.ctm.models import TurmaCTM, AulaRealizada, Presenca, ConclusaoCTM
@@ -29,7 +29,6 @@ def is_supervisor_do_setor(user_membro_id, pg):
     return pg.setor in membro.setores_supervisionados
 
 def is_supervisor_da_area(user_membro_id, pg):
-    """Verifica se o usuário é supervisor da área do PG."""
     if not pg.setor or not pg.setor.area:
         return False
     membro = Membro.query.get(user_membro_id)
@@ -38,8 +37,62 @@ def is_supervisor_da_area(user_membro_id, pg):
     return pg.setor.area in membro.areas_supervisionadas
 
 def is_pg_facilitator(user_membro_id, pg):
-    """Verifica se o usuário é facilitador do PG."""
     return pg.facilitador_id == user_membro_id
+
+
+@grupos_bp.route('/dashboard')
+@login_required
+@secretaria_or_admin_required
+def dashboard():
+    total_areas = Area.query.count()
+    total_setores = Setor.query.count()
+    
+    total_pgs_ativos = PequenoGrupo.query.filter_by(ativo=True).count()
+
+    total_pgs_multiplicados = PequenoGrupo.query.filter(
+        and_(PequenoGrupo.ativo == False, PequenoGrupo.data_multiplicacao.isnot(None))
+    ).count()
+    
+    total_membros_em_pg = Membro.query.join(PequenoGrupo, or_(
+        Membro.pg_id == PequenoGrupo.id,
+        PequenoGrupo.facilitador_id == Membro.id,
+        PequenoGrupo.anfitriao_id == Membro.id
+    )).filter(
+        Membro.ativo == True,
+        PequenoGrupo.ativo == True
+    ).distinct().count()
+    
+    pgs_por_area_query = db.session.query(Area.nome, func.count(PequenoGrupo.id))\
+        .join(Setor, Setor.area_id == Area.id)\
+        .join(PequenoGrupo, PequenoGrupo.setor_id == Setor.id)\
+        .filter(PequenoGrupo.ativo == True)\
+        .group_by(Area.nome).all()
+    
+    labels_pgs_area = [r[0] for r in pgs_por_area_query]
+    data_pgs_area = [r[1] for r in pgs_por_area_query]
+
+    pgs_por_setor_query = db.session.query(Setor.nome, func.count(PequenoGrupo.id))\
+        .join(PequenoGrupo, PequenoGrupo.setor_id == Setor.id)\
+        .filter(PequenoGrupo.ativo == True)\
+        .group_by(Setor.nome).all()
+        
+    labels_pgs_setor = [r[0] for r in pgs_por_setor_query]
+    data_pgs_setor = [r[1] for r in pgs_por_setor_query]
+
+    return render_template(
+        'grupos/index.html',
+        total_areas=total_areas,
+        total_setores=total_setores,
+        total_pgs_ativos=total_pgs_ativos,
+        total_pgs_multiplicados=total_pgs_multiplicados,
+        total_membros_em_pg=total_membros_em_pg,
+        labels_pgs_area=labels_pgs_area,
+        data_pgs_area=data_pgs_area,
+        labels_pgs_setor=labels_pgs_setor,
+        data_pgs_setor=data_pgs_setor,
+        ano=ano,
+        versao=versao
+    )
 
 @grupos_bp.route('/')
 @grupos_bp.route('/index')

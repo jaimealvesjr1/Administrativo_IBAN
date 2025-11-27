@@ -2,18 +2,29 @@
 {% extends "base/layout.html" %}
 {% from 'base/components/modals.html' import confirm_modal %}
 {% from 'base/components/buttons.html' import primary %}
+
 {% block title %}Listagem de Grupos · IBAN{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <h2><strong>
-        {% if current_user.membro %}
-        Grupos Liderados
-        {% elif current_user.has_permission('admin') %}
-        Painel Administrativo - Grupos
-        {% endif %}
-    </strong></h2>
-    <ul class="nav nav-tabs" id="groupTabs" role="tablist" data-tipo-selecionado="{{ tipo_selecionado }}">
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary me-3" title="Voltar ao Painel">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <h2 class="mb-0">
+                <strong>
+                {% if current_user.membro %}
+                    Grupos Liderados
+                {% elif current_user.has_permission('admin') %}
+                    Painel Administrativo - Grupos
+                {% endif %}
+                </strong>
+            </h2>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-4" id="groupTabs" role="tablist" data-tipo-selecionado="{{ tipo_selecionado }}">
         <li class="nav-item" role="presentation">
             <button class="nav-link {% if tipo_selecionado == 'pgs' %}active{% endif %}" id="pgs-tab" data-bs-toggle="tab" data-bs-target="#pgs-content" type="button" role="tab" aria-controls="pgs-content" aria-selected="true"><strong>Pequenos Grupos</strong></button>
         </li>
@@ -24,72 +35,97 @@
             <button class="nav-link {% if tipo_selecionado == 'areas' %}active{% endif %}" id="areas-tab" data-bs-toggle="tab" data-bs-target="#areas-content" type="button" role="tab" aria-controls="areas-content" aria-selected="false"><strong>Áreas</strong></button>
         </li>
     </ul>
+
     <div class="tab-content" id="groupTabsContent">
+        
         <div class="tab-pane fade {% if tipo_selecionado == 'pgs' %}show active{% endif %}" id="pgs-content" role="tabpanel" aria-labelledby="pgs-tab">
-            <div class="d-flex justify-content-between align-items-center mt-3">
-                <h4 class="mb-0"><strong>Pequenos Grupos</strong></h4>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="text-muted mb-0">Gerenciamento de PGs</h5>
                 {% if current_user.has_permission('admin') %}
-                    {{ primary('+ Novo PG', url_for('grupos.criar_pg')) }}
+                    {{ primary(' Novo PG', url_for('grupos.criar_pg'), icon='bi-plus-lg') }}
                 {% endif %}
             </div>
-            <form method="get" class="row g-3 mb-4 mt-2">
-                <input type="hidden" name="tipo" value="pgs">
-                <div class="col-md-3">
-                    <input type="text" name="busca" placeholder="Buscar por nome do PG" class="form-control" value="{{ busca }}">
+
+            <div class="card mb-4 border-0 shadow-sm bg-light">
+                <div class="card-body py-3">
+                    <form method="get" class="row g-2 align-items-end">
+                        <input type="hidden" name="tipo" value="pgs">
+                        <div class="col-md-3">
+                            <label class="small text-muted fw-bold">Buscar</label>
+                            <input type="text" name="busca" placeholder="Nome do PG..." class="form-control form-control-sm" value="{{ busca }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="small text-muted fw-bold">Status</label>
+                            <select name="status_pg" class="form-select form-select-sm">
+                                <option value="ativos" {% if status_pg == 'ativos' %}selected{% endif %}>Ativos</option>
+                                <option value="multiplicados" {% if status_pg == 'multiplicados' %}selected{% endif %}>Multiplicados</option>
+                                <option value="inativos" {% if status_pg == 'inativos' %}selected{% endif %}>Inativos</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small text-muted fw-bold">Setor</label>
+                            <select name="setor_filtro" class="form-select form-select-sm">
+                                <option value="">Todos</option>
+                                {% for setor in todos_setores %}
+                                    <option value="{{ setor.id }}" {% if setor_filtro|int == setor.id %}selected{% endif %}>{{ setor.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small text-muted fw-bold">Área</label>
+                            <select name="area_filtro" class="form-select form-select-sm">
+                                <option value="">Todas</option>
+                                {% for area in todas_areas %}
+                                    <option value="{{ area.id }}" {% if area_filtro|int == area.id %}selected{% endif %}>{{ area.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-filter"></i></button>
+                        </div>
+                    </form>
                 </div>
-                <div class="col-md-2">
-                    <select name="status_pg" class="form-select">
-                        <option value="ativos" {% if status_pg == 'ativos' %}selected{% endif %}>PGs Ativos</option>
-                        <option value="multiplicados" {% if status_pg == 'multiplicados' %}selected{% endif %}>PGs Multiplicados</option>
-                        <option value="inativos" {% if status_pg == 'inativos' %}selected{% endif %}>PGs Inativos</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select name="setor_filtro" class="form-select">
-                        <option value="">Todos os Setores</option>
-                        {% for setor in todos_setores %}
-                            <option value="{{ setor.id }}" {% if setor_filtro|int == setor.id %}selected{% endif %}>{{ setor.nome }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select name="area_filtro" class="form-select">
-                        <option value="">Todas as Áreas</option>
-                        {% for area in todas_areas %}
-                            <option value="{{ area.id }}" {% if area_filtro|int == area.id %}selected{% endif %}>{{ area.nome }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100">Filtrar</button>
-                </div>
-            </form>
+            </div>
+
             {% if pgs %}
-                <div class="table-responsive mt-3">
-                    <table class="table table-striped table-hover">
-                        <thead>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" style="border-collapse: separate; border-spacing: 0;">
+                        <thead class="table-light text-uppercase small text-muted">
                             <tr>
-                                <th scope="col">Nome do PG</th>
-                                <th scope="col">Facilitador</th>
-                                <th scope="col">Anfitrião</th>
-                                <th scope="col">Setor</th>
-                                <th scope="col">Dia/Hora</th>
-                                <th scope="col">Ações</th>
+                                <th class="border-bottom ps-3">Nome do PG</th>
+                                <th class="border-bottom">Liderança</th>
+                                <th class="border-bottom">Setor</th>
+                                <th class="border-bottom">Encontros</th>
+                                <th class="border-bottom text-center">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for pg in pgs %}
-                            <tr>
-                                <td><a href="{{ url_for('grupos.detalhes_pg', pg_id=pg.id) }}">{{ pg.nome }}</a></td>
-                                <td>{{ pg.facilitador.nome_completo if pg.facilitador else 'N/A' }}</td>
-                                <td>{{ pg.anfitriao.nome_completo if pg.anfitriao else 'N/A' }}</td>
-                                <td>{{ pg.setor.nome if pg.setor else 'N/A' }}</td>
-                                <td>{{ pg.dia_reuniao }} às {{ pg.horario_reuniao }}</td>
+                            <tr class="bg-white border-bottom">
+                                <td class="ps-3">
+                                    <a href="{{ url_for('grupos.detalhes_pg', pg_id=pg.id) }}" class="fw-bold text-decoration-none text-dark">{{ pg.nome }}</a>
+                                </td>
                                 <td>
-                                    <a href="{{ url_for('grupos.editar_pg', pg_id=pg.id) }}" class="btn btn-sm btn-info">Editar</a>
-                                    {% if current_user.has_permission('admin') %}
-                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeletePGModal{{ pg.id }}">Deletar</button>
-                                    {% endif %}
+                                    <small class="d-block text-muted"><i class="bi bi-person-fill me-1"></i>{{ pg.facilitador.nome_completo if pg.facilitador else 'N/A' }}</small>
+                                    <small class="d-block text-muted"><i class="bi bi-house-door-fill me-1"></i>{{ pg.anfitriao.nome_completo if pg.anfitriao else 'N/A' }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">{{ pg.setor.nome if pg.setor else 'N/A' }}</span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ pg.dia_reuniao }} às {{ pg.horario_reuniao }}</small>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('grupos.editar_pg', pg_id=pg.id) }}" class="btn btn-sm btn-link text-decoration-none text-secondary" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        {% if current_user.has_permission('admin') %}
+                                        <button type="button" class="btn btn-sm btn-link text-decoration-none text-danger" data-bs-toggle="modal" data-bs-target="#confirmDeletePGModal{{ pg.id }}" title="Excluir">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -97,62 +133,83 @@
                     </table>
                 </div>
             {% else %}
-                <p class="mt-3">Nenhum Pequeno Grupo.</p>
+                <div class="alert alert-light text-center border py-5">
+                    <i class="bi bi-people fs-1 text-muted"></i>
+                    <p class="mt-3 text-muted">Nenhum Pequeno Grupo encontrado.</p>
+                </div>
             {% endif %}
         </div>
 
         <div class="tab-pane fade {% if tipo_selecionado == 'setores' %}show active{% endif %}" id="setores-content" role="tabpanel" aria-labelledby="setores-tab">
             <div class="d-flex justify-content-between align-items-center mt-3">
-                <h4 class="mb-0"><strong>Setores</strong></h4>
+                <h5 class="text-muted mb-0">Gerenciamento de Setores</h5>
                 {% if current_user.has_permission('admin') %}
-                    {{ primary('+ Novo Setor', url_for('grupos.criar_setor')) }}
+                    {{ primary(' Novo Setor', url_for('grupos.criar_setor'), icon='bi-plus-lg') }}
                 {% endif %}
             </div>
-            <form method="get" class="row g-3 mb-4 mt-2">
-                <input type="hidden" name="tipo" value="setores">
-                <div class="col-md-6">
-                    <input type="text" name="busca" placeholder="Buscar por nome do Setor" class="form-control" value="{{ busca }}">
+
+            <div class="card mb-4 border-0 shadow-sm bg-light">
+                <div class="card-body py-3">
+                    <form method="get" class="row g-2 align-items-end">
+                        <input type="hidden" name="tipo" value="setores">
+                        <div class="col-md-6">
+                            <label class="small text-muted fw-bold">Buscar</label>
+                            <input type="text" name="busca" placeholder="Nome do Setor..." class="form-control form-control-sm" value="{{ busca }}">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="small text-muted fw-bold">Área</label>
+                            <select name="area_filtro" class="form-select form-select-sm">
+                                <option value="">Todas</option>
+                                {% for area in todas_areas %}
+                                    <option value="{{ area.id }}" {% if area_filtro|int == area.id %}selected{% endif %}>{{ area.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-filter"></i></button>
+                        </div>
+                    </form>
                 </div>
-                <div class="col-md-5">
-                    <select name="area_filtro" class="form-select">
-                        <option value="">Todas as Áreas</option>
-                        {% for area in todas_areas %}
-                            <option value="{{ area.id }}" {% if area_filtro|int == area.id %}selected{% endif %}>{{ area.nome }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-1">
-                    <button type="submit" class="btn btn-primary w-100">Filtrar</button>
-                </div>
-            </form>
+            </div>
+
             {% if setores %}
-                <div class="table-responsive mt-3">
-                    <table class="table table-striped table-hover">
-                        <thead>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" style="border-collapse: separate; border-spacing: 0;">
+                        <thead class="table-light text-uppercase small text-muted">
                             <tr>
-                                <th scope="col">Nome do Setor</th>
-                                <th scope="col">Supervisor</th>
-                                <th scope="col">Área</th>
-                                <th scope="col">Ações</th>
+                                <th class="border-bottom ps-3">Nome do Setor</th>
+                                <th class="border-bottom">Supervisores</th>
+                                <th class="border-bottom">Área</th>
+                                <th class="border-bottom text-center">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for setor in setores %}
-                            <tr>
-                                <td><a href="{{ url_for('grupos.detalhes_setor', setor_id=setor.id) }}">{{ setor.nome }}</a></td>
+                            <tr class="bg-white border-bottom">
+                                <td class="ps-3">
+                                    <a href="{{ url_for('grupos.detalhes_setor', setor_id=setor.id) }}" class="fw-bold text-decoration-none text-dark">{{ setor.nome }}</a>
+                                </td>
                                 <td>
                                     {% for supervisor in setor.supervisores %}
-                                        <span class="badge bg-secondary me-1">{{ supervisor.nome_completo }}</span>
+                                        <span class="badge bg-light text-dark border me-1">{{ supervisor.nome_completo }}</span>
                                     {% else %}
-                                        Nenhum
+                                        <span class="text-muted small">Vago</span>
                                     {% endfor %}
                                 </td>
-                                <td>{{ setor.area.nome if setor.area else 'N/A' }}</td>
                                 <td>
-                                    <a href="{{ url_for('grupos.editar_setor', setor_id=setor.id) }}" class="btn btn-sm btn-info">Editar</a>
-                                    {% if current_user.has_permission('admin') %}
-                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteSetorModal{{ setor.id }}">Deletar</button>
-                                    {% endif %}
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">{{ setor.area.nome if setor.area else 'N/A' }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('grupos.editar_setor', setor_id=setor.id) }}" class="btn btn-sm btn-link text-decoration-none text-secondary" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        {% if current_user.has_permission('admin') %}
+                                            <button type="button" class="btn btn-sm btn-link text-decoration-none text-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteSetorModal{{ setor.id }}" title="Excluir">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -160,54 +217,72 @@
                     </table>
                 </div>
             {% else %}
-                <p class="mt-3">Nenhum Setor.</p>
+                <div class="alert alert-light text-center border py-5">
+                    <i class="bi bi-diagram-2 fs-1 text-muted"></i>
+                    <p class="mt-3 text-muted">Nenhum Setor encontrado.</p>
+                </div>
             {% endif %}
         </div>
 
         <div class="tab-pane fade {% if tipo_selecionado == 'areas' %}show active{% endif %}" id="areas-content" role="tabpanel" aria-labelledby="areas-tab">
             <div class="d-flex justify-content-between align-items-center mt-3">
-                <h4 class="mb-0"><strong>Áreas</strong></h4>
+                <h5 class="text-muted mb-0">Gerenciamento de Áreas</h5>
                 {% if current_user.has_permission('admin') %}
-                    {{ primary('+ Nova Área', url_for('grupos.criar_area')) }}
+                    {{ primary(' Nova Área', url_for('grupos.criar_area'), icon='bi-plus-lg') }}
                 {% endif %}
             </div>
-            <form method="get" class="row g-3 mb-4 mt-2">
-                <input type="hidden" name="tipo" value="areas">
-                <div class="col-md-11">
-                    <input type="text" name="busca" placeholder="Buscar por nome da Área" class="form-control" value="{{ busca }}">
+
+            <div class="card mb-4 border-0 shadow-sm bg-light">
+                <div class="card-body py-3">
+                    <form method="get" class="row g-2 align-items-end">
+                        <input type="hidden" name="tipo" value="areas">
+                        <div class="col-md-11">
+                            <label class="small text-muted fw-bold">Buscar</label>
+                            <input type="text" name="busca" placeholder="Nome da Área..." class="form-control form-control-sm" value="{{ busca }}">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-filter"></i></button>
+                        </div>
+                    </form>
                 </div>
-                <div class="col-md-1">
-                    <button type="submit" class="btn btn-primary w-100">Filtrar</button>
-                </div>
-            </form>
+            </div>
+
             {% if areas %}
-                <div class="table-responsive mt-3">
-                    <table class="table table-striped table-hover">
-                        <thead>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" style="border-collapse: separate; border-spacing: 0;">
+                        <thead class="table-light text-uppercase small text-muted">
                             <tr>
-                                <th scope="col">Nome da Área</th>
-                                <th scope="col">Supervisor</th>
-                                <th scope="col">Data de Criação</th>
-                                <th scope="col">Ações</th>
+                                <th class="border-bottom ps-3">Nome da Área</th>
+                                <th class="border-bottom">Supervisores</th>
+                                <th class="border-bottom">Criação</th>
+                                <th class="border-bottom text-center">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for area in areas %}
-                            <tr>
-                                <td><a href="{{ url_for('grupos.detalhes_area', area_id=area.id) }}">{{ area.nome }}</a></td>
+                            <tr class="bg-white border-bottom">
+                                <td class="ps-3">
+                                    <a href="{{ url_for('grupos.detalhes_area', area_id=area.id) }}" class="fw-bold text-decoration-none text-dark">{{ area.nome }}</a>
+                                </td>
                                 <td>
                                     {% for supervisor in area.supervisores %}
-                                        <span class="badge bg-secondary me-1">{{ supervisor.nome_completo }}</span>
+                                        <span class="badge bg-light text-dark border me-1">{{ supervisor.nome_completo }}</span>
                                     {% else %}
-                                        Nenhum
+                                        <span class="text-muted small">Vago</span>
                                     {% endfor %}
                                 </td>
-                                <td>{{ area.data_criacao|format_datetime }}</td>
-                                <td>
-                                    <a href="{{ url_for('grupos.editar_area', area_id=area.id) }}" class="btn btn-sm btn-info">Editar</a>
-                                    {% if current_user.has_permission('admin') %}
-                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteAreaModal{{ area.id }}">Deletar</button>
-                                    {% endif %}
+                                <td><small class="text-muted">{{ area.data_criacao|format_datetime }}</small></td>
+                                <td class="text-center">
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('grupos.editar_area', area_id=area.id) }}" class="btn btn-sm btn-link text-decoration-none text-secondary" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        {% if current_user.has_permission('admin') %}
+                                            <button type="button" class="btn btn-sm btn-link text-decoration-none text-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteAreaModal{{ area.id }}" title="Excluir">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -215,7 +290,10 @@
                     </table>
                 </div>
             {% else %}
-                <p class="mt-3">Nenhuma Área.</p>
+                <div class="alert alert-light text-center border py-5">
+                    <i class="bi bi-diagram-3 fs-1 text-muted"></i>
+                    <p class="mt-3 text-muted">Nenhuma Área encontrada.</p>
+                </div>
             {% endif %}
         </div>
     </div>
@@ -223,8 +301,8 @@
     {% for pg in pgs %}
         {{ confirm_modal(
             id='confirmDeletePGModal' ~ pg.id,
-            title='Confirmar Exclusão de Pequeno Grupo',
-            body='Tem certeza que deseja deletar o Pequeno Grupo ' ~ pg.nome ~ '? Atenção: Isso desvinculará todos os participantes e não pode ser desfeito.',
+            title='Excluir PG',
+            body='Tem certeza que deseja deletar o PG ' ~ pg.nome ~ '? Esta ação desvincula participantes e é irreversível.',
             action_url=url_for('grupos.deletar_pg', pg_id=pg.id)
         ) }}
     {% endfor %}
@@ -232,8 +310,8 @@
     {% for setor in setores %}
         {{ confirm_modal(
             id='confirmDeleteSetorModal' ~ setor.id,
-            title='Confirmar Exclusão de Setor',
-            body='Tem certeza que deseja deletar o Setor ' ~ setor.nome ~ '? Atenção: Isso não pode ser desfeito e só é possível se não houver Pequenos Grupos vinculados.',
+            title='Excluir Setor',
+            body='Tem certeza que deseja deletar o Setor ' ~ setor.nome ~ '? Apenas possível se não houver PGs vinculados.',
             action_url=url_for('grupos.deletar_setor', setor_id=setor.id)
         ) }}
     {% endfor %}
@@ -241,8 +319,8 @@
     {% for area in areas %}
         {{ confirm_modal(
             id='confirmDeleteAreaModal' ~ area.id,
-            title='Confirmar Exclusão de Área',
-            body='Tem certeza que deseja deletar a Área ' ~ area.nome ~ '? Atenção: Isso não pode ser desfeito e só é possível se não houver Setores vinculados.',
+            title='Excluir Área',
+            body='Tem certeza que deseja deletar a Área ' ~ area.nome ~ '? Apenas possível se não houver Setores vinculados.',
             action_url=url_for('grupos.deletar_area', area_id=area.id)
         ) }}
     {% endfor %}
