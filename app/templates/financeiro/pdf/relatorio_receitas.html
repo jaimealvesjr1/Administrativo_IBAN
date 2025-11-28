@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    {% include 'financeiro/pdf/style_pdf.html' %}
+    <style>
+        .summary-box {
+            background-color: #f0fff4;
+            border: 1px solid #c6f6d5;
+            padding: 10px;
+            margin-bottom: 20px;
+            text-align: right;
+            font-size: 11pt;
+            border-radius: 4px;
+            color: #22543d;
+        }
+        .total-final {
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 2px solid #2d3748;
+            text-align: right;
+            font-size: 12pt;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Relatório de Receitas</h1>
+        <p>ENTRADAS E CONTRIBUIÇÕES</p>
+    </div>
+
+    <div class="meta-info">
+        <table style="width: 100%; border: none; margin: 0;">
+            <tr style="border: none;">
+                <td style="border: none; padding: 0;">
+                    <strong>Gerado em:</strong> {{ data_geracao }}<br>
+                    <strong>Período:</strong> {{ periodo_str }}<br>
+                    <strong>Filtros:</strong> {{ filtros_str }}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="summary-box">
+        <strong>TOTAL RECEBIDO:</strong> 
+        R$ {{ "{:,.2f}".format(total_valor).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 12%;">Data</th>
+                <th style="width: 30%;">Contribuinte</th>
+                <th style="width: 15%;">Tipo / Forma</th>
+                <th style="width: 15%;">Centro de Custo</th>
+                <th style="width: 13%;">Obs.</th>
+                <th style="width: 15%;" class="text-end">Valor</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rec in receitas %}
+            <tr>
+                <td>{{ rec.data_lanc.strftime('%d/%m/%Y') }}</td>
+                <td>
+                    <strong>{{ rec.membro.nome_completo }}</strong><br>
+                    <span style="color: #718096; font-size: 8pt;">{{ rec.membro.status }}</span>
+                </td>
+                <td>
+                    {{ rec.tipo }}<br>
+                    <span style="color: #718096; font-size: 8pt;">{{ rec.forma }}</span>
+                </td>
+                <td>{{ rec.centro_custo }}</td>
+                <td>{{ rec.observacoes if rec.observacoes else '-' }}</td>
+                <td class="text-end">
+                    R$ {{ "{:,.2f}".format(rec.valor).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="text-center" style="padding: 20px;">Nenhuma receita encontrada.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if receitas %}
+    <div class="total-final">
+        TOTAL FINAL: R$ {{ "{:,.2f}".format(total_valor).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+    </div>
+    {% endif %}
+</body>
+</html>

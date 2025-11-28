@@ -17,13 +17,8 @@
             <h2 class="mb-0"><strong>Gestão de Despesas</strong></h2>
         </div>
         <div>
-            <a href="{{ url_for('financeiro.download_despesas_excel', 
-                                categoria_filtro=request.args.get('categoria_filtro', ''),
-                                centro_custo_filtro=request.args.get('centro_custo_filtro', ''),
-                                data_inicial=request.args.get('data_inicial', ''),
-                                data_final=request.args.get('data_final', '')) }}"
-            class="btn btn-success me-2">
-                <i class="bi bi-file-earmark-excel"></i> Excel
+            <a href="#" id="btn-relatorio-pdf" class="btn btn-danger me-2" target="_blank">
+                <i class="bi bi-file-earmark-pdf"></i> Relatório PDF
             </a>
             {{ primary('+ Novo Lançamento', url_for('financeiro.nova_despesa')) }}
         </div>
@@ -265,9 +260,21 @@ $(document).ready(function() {
         width: '100%',
         allowClear: true
     };
+
     if ($('#categoria_filtro_select2').length) $('#categoria_filtro_select2').select2({ ...select2Config, placeholder: "Grupo" });
     if ($('#recorrencia_filtro_select2').length) $('#recorrencia_filtro_select2').select2({ ...select2Config, placeholder: "Tipo", minimumResultsForSearch: Infinity });
     if ($('#centro_custo_filtro_select2').length) $('#centro_custo_filtro_select2').select2({ ...select2Config, placeholder: "Centro de Custo" });
+
+    function atualizarLinkPDF(abaAtiva) {
+        var status = (abaAtiva === 'pagas-tab') ? 'pagas' : 'pendentes';
+        
+        var urlParams = new URLSearchParams(window.location.search);
+        
+        urlParams.set('status_relatorio', status);
+        
+        var novaUrl = "{{ url_for('financeiro.download_despesas_pdf') }}" + "?" + urlParams.toString();
+        $('#btn-relatorio-pdf').attr('href', novaUrl);
+    }
 
     var triggerTabList = [].slice.call(document.querySelectorAll('#despesasTabs button'))
     triggerTabList.forEach(function (triggerEl) {
@@ -275,6 +282,8 @@ $(document).ready(function() {
             var cardTotal = $('#card-total');
             var valorTotal = $('#valor-total');
             var labelTotal = $('#label-total');
+
+            atualizarLinkPDF(event.target.id);
 
             if (event.target.id === 'pagas-tab') {
                 cardTotal.removeClass('bg-warning text-dark').addClass('bg-danger text-white');
@@ -287,8 +296,12 @@ $(document).ready(function() {
             }
         })
     });
+
+    atualizarLinkPDF('pagas-tab');
 });
 </script>
+
+{# CSS PERSONALIZADO: Apenas para a animação suave do card de total #}
 <style>
     .transition-colors {
         transition: background-color 0.3s ease, color 0.3s ease;

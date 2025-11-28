@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_file
+from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_file, make_response
 from flask_login import login_required, current_user
 from app.extensions import db
 from datetime import datetime, date
@@ -15,6 +15,7 @@ from app.jornada.models import registrar_evento_jornada, JornadaEvento
 from app.filters import format_currency
 import pandas as pd
 import io, random
+from weasyprint import HTML
 from app.decorators import admin_required, financeiro_required, group_permission_required
 
 financeiro_bp = Blueprint('financeiro', __name__, url_prefix='/financeiro')
@@ -318,10 +319,10 @@ def lancamentos_receitas():
         data_final=data_final
     )
 
-@financeiro_bp.route('download_receitas_excel')
+@financeiro_bp.route('download_receitas_pdf')
 @login_required
 @financeiro_required
-def download_receitas_excel():
+def download_receitas_pdf():
     busca_nome = request.args.get('busca_nome', '')
     tipo_filtro = request.args.get('tipo_filtro', '')
     status_filtro = request.args.get('status_filtro', '')
@@ -330,13 +331,17 @@ def download_receitas_excel():
     data_final_str = request.args.get('data_final', '')
 
     query = Contribuicao.query.join(Membro)
+    filtros_texto = []
 
     if busca_nome:
         query = query.filter(Membro.nome_completo.ilike(f'%{busca_nome}%'))
+        filtros_texto.append(f"Nome: {busca_nome}")
     if tipo_filtro:
         query = query.filter(Contribuicao.tipo == tipo_filtro)
-    if centro_custo_filtro: # NOVO
+        filtros_texto.append(f"Tipo: {tipo_filtro}")
+    if centro_custo_filtro:
         query = query.filter(Contribuicao.centro_custo == centro_custo_filtro)
+        filtros_texto.append(f"Centro de Custo: {centro_custo_filtro}")
     if status_filtro:
         if status_filtro == 'Facilitador':
             query = query.filter(Membro.pgs_facilitados.any())
@@ -344,138 +349,124 @@ def download_receitas_excel():
             query = query.filter(or_(Membro.setores_supervisionados.any(), Membro.areas_supervisionadas.any()))
         else:
             query = query.filter(Membro.status == status_filtro)
+        filtros_texto.append(f"Perfil: {status_filtro}")
+        
     if data_inicial_str:
         try:
             data_inicial = datetime.strptime(data_inicial_str, '%Y-%m-%d').date()
             query = query.filter(Contribuicao.data_lanc >= data_inicial)
-        except ValueError:
-            flash("Formato de Data Inicial inválido.", 'danger')
-            return redirect(url_for('financeiro.lancamentos_receitas'))
+        except: pass
     if data_final_str:
         try:
             data_final = datetime.strptime(data_final_str, '%Y-%m-%d').date()
             query = query.filter(Contribuicao.data_lanc <= data_final)
-        except ValueError:
-            flash("Formato de Data Final inválido.", 'danger')
-            return redirect(url_for('financeiro.lancamentos_receitas'))
+        except: pass
 
-    contribuicoes = query.order_by(Contribuicao.data_lanc.desc(), Membro.nome_completo).all()
-
-    relatorio_dados = []
-    for contrib in contribuicoes:
-        relatorio_dados.append({
-            'Data': contrib.data_lanc.strftime('%d/%m/%Y'),
-            'Pessoa': contrib.membro.nome_completo,
-            'Valor': contrib.valor,
-            'Centro de Custo': contrib.centro_custo,
-            'Tipo': contrib.tipo,
-            'Forma': contrib.forma,
-            'Campus do Membro': contrib.membro.campus,
-            'Observações': contrib.observacoes if contrib.observacoes else ''
-        })
-
-    df_final = pd.DataFrame(relatorio_dados)
+    receitas = query.order_by(Contribuicao.data_lanc.asc(), Membro.nome_completo).all()
     
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df_final.to_excel(writer, index=False, sheet_name='Receitas')
-        workbook = writer.book
-        worksheet = writer.sheets['Receitas']
-        for i, col in enumerate(df_final.columns):
-            column_len = max(df_final[col].astype(str).map(len).max(), len(col)) + 2
-            worksheet.set_column(i, i, column_len)
-    output.seek(0)
+    total_valor = sum(r.valor for r in receitas)
     
-    filename_parts = ['receitas']
-    if centro_custo_filtro:
-        filename_parts.append(f"cc_{centro_custo_filtro}")
-    if data_inicial_str:
-        filename_parts.append(f"de_{data_inicial_str}")
-    if data_final_str:
-        filename_parts.append(f"ate_{data_final_str}")
+    periodo_str = "Todo o período"
+    if data_inicial_str and data_final_str:
+        periodo_str = f"{datetime.strptime(data_inicial_str, '%Y-%m-%d').strftime('%d/%m/%Y')} até {datetime.strptime(data_final_str, '%Y-%m-%d').strftime('%d/%m/%Y')}"
+    
+    filtros_str = ", ".join(filtros_texto) if filtros_texto else "Todos"
 
-    filename = "_".join(filename_parts) + ".xlsx"
+    html = render_template(
+        'financeiro/pdf/relatorio_receitas.html',
+        receitas=receitas,
+        total_valor=total_valor,
+        data_geracao=datetime.now().strftime('%d/%m/%Y às %H:%M'),
+        periodo_str=periodo_str,
+        filtros_str=filtros_str
+    )
+    
+    pdf = HTML(string=html).write_pdf()
+    
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'inline; filename=Relatorio_Receitas.pdf'
+    return response
 
-    return send_file(output,
-                     download_name=filename,
-                     as_attachment=True,
-                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-@financeiro_bp.route('download_despesas_excel')
+@financeiro_bp.route('download_despesas_pdf')
 @login_required
 @financeiro_required
-def download_despesas_excel():
+def download_despesas_pdf():
     categoria_filtro = request.args.get('categoria_filtro', '')
     centro_custo_filtro = request.args.get('centro_custo_filtro', '')
     recorrencia_filtro = request.args.get('recorrencia_filtro', '')
     data_inicial_str = request.args.get('data_inicial', '')
     data_final_str = request.args.get('data_final', '')
+    status_relatorio = request.args.get('status_relatorio', 'pagas') 
 
     query = Despesa.query.join(ItemDespesa).join(CategoriaDespesa)
+    filtros_texto = []
 
     if categoria_filtro:
         query = query.filter(ItemDespesa.categoria_id == int(categoria_filtro))
+        cat_nome = CategoriaDespesa.query.get(int(categoria_filtro)).nome
+        filtros_texto.append(f"Grupo: {cat_nome}")
     if centro_custo_filtro:
         query = query.filter(Despesa.centro_custo == centro_custo_filtro)
+        filtros_texto.append(f"Centro de Custo: {centro_custo_filtro}")
     if recorrencia_filtro:
         query = query.filter(Despesa.recorrencia == recorrencia_filtro)
+        filtros_texto.append(f"Recorrência: {recorrencia_filtro}")
+
+    data_inicial = None
+    data_final = None
+    
+    if status_relatorio == 'pagas':
+        query = query.filter(Despesa.pago == True)
+        campo_data = Despesa.data_pagamento
+        query = query.order_by(Despesa.data_pagamento.asc())
+        titulo_status = "pago"
+    else:
+        query = query.filter(Despesa.pago == False)
+        campo_data = Despesa.data_vencimento
+        query = query.order_by(Despesa.data_vencimento.asc())
+        titulo_status = "pendente"
+
     if data_inicial_str:
         try:
             data_inicial = datetime.strptime(data_inicial_str, '%Y-%m-%d').date()
-            query = query.filter(Despesa.data_lanc >= data_inicial)
-        except ValueError:
-            flash("Formato de Data Inicial inválido.", 'danger')
-            return redirect(url_for('financeiro.lancamentos_despesas'))
+            query = query.filter(campo_data >= data_inicial)
+        except: pass
     if data_final_str:
         try:
             data_final = datetime.strptime(data_final_str, '%Y-%m-%d').date()
-            query = query.filter(Despesa.data_lanc <= data_final)
-        except ValueError:
-            flash("Formato de Data Final inválido.", 'danger')
-            return redirect(url_for('financeiro.lancamentos_despesas'))
+            query = query.filter(campo_data <= data_final)
+        except: pass
 
-    despesas = query.order_by(Despesa.data_lanc.desc(), CategoriaDespesa.nome, ItemDespesa.nome).all()
+    despesas = query.all()
+    total_valor = sum(d.valor for d in despesas)
 
-    relatorio_dados = []
-    for despesa in despesas:
-        relatorio_dados.append({
-            'Data': despesa.data_lanc.strftime('%d/%m/%Y'),
-            'Categoria': despesa.item.categoria.nome,
-            'Item': despesa.item.nome,
-            'Centro de Custo': despesa.centro_custo,
-            'Recorrência': despesa.recorrencia,
-            'Valor': despesa.valor,
-            'Observações': despesa.observacoes if despesa.observacoes else ''
-        })
-
-    df_final = pd.DataFrame(relatorio_dados)
-
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df_final.to_excel(writer, index=False, sheet_name='Despesas')
-        workbook = writer.book
-        worksheet = writer.sheets['Despesas']
-        for i, col in enumerate(df_final.columns):
-            max_len = max(df_final[col].astype(str).map(len).max(), len(str(col))) + 2
-            worksheet.set_column(i, i, max_len)
-    output.seek(0)
+    periodo_str = "Todo o período"
+    if data_inicial and data_final:
+        periodo_str = f"{data_inicial.strftime('%d/%m/%Y')} até {data_final.strftime('%d/%m/%Y')}"
+    elif data_inicial:
+        periodo_str = f"A partir de {data_inicial.strftime('%d/%m/%Y')}"
     
-    filename_parts = ['despesas']
-    if categoria_filtro:
-        filename_parts.append(f"cat_{categoria_filtro}")
-    if centro_custo_filtro:
-        filename_parts.append(f"cc_{centro_custo_filtro}")
-    if data_inicial_str:
-        filename_parts.append(f"de_{data_inicial_str}")
-    if data_final_str:
-        filename_parts.append(f"ate_{data_final_str}")
+    filtros_str = ", ".join(filtros_texto) if filtros_texto else "Todos"
 
-    filename = "_".join(filename_parts) + ".xlsx"
-
-    return send_file(output,
-                     download_name=filename,
-                     as_attachment=True,
-                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    html = render_template(
+        'financeiro/pdf/relatorio_despesas.html',
+        despesas=despesas,
+        total_valor=total_valor,
+        tipo_relatorio=titulo_status,
+        data_geracao=datetime.now().strftime('%d/%m/%Y às %H:%M'),
+        periodo_str=periodo_str,
+        filtros_str=filtros_str,
+        hoje=datetime.now()
+    )
+    
+    pdf = HTML(string=html).write_pdf()
+    
+    filename = f"Relatorio_Despesas_{titulo_status.upper()}.pdf"
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'inline; filename={filename}'
+    return response
 
 @financeiro_bp.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required

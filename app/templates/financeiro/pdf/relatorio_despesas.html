@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    {% include 'financeiro/pdf/style_pdf.html' %}
+    <style>
+        .summary-box {
+            background-color: #f7fafc;
+            border: 1px solid #cbd5e0;
+            padding: 10px;
+            margin-bottom: 20px;
+            text-align: right;
+            font-size: 11pt;
+            border-radius: 4px;
+        }
+        .total-final {
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 2px solid #2d3748;
+            text-align: right;
+            font-size: 12pt;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Relatório de Despesas</h1>
+        <p>
+            {% if tipo_relatorio == 'pago' %}REALIZADAS (PAGAS){% else %}A PAGAR (PENDENTES){% endif %}
+        </p>
+    </div>
+
+    <div class="meta-info">
+        <table style="width: 100%; border: none; margin: 0;">
+            <tr style="border: none;">
+                <td style="border: none; padding: 0;">
+                    <strong>Gerado em:</strong> {{ data_geracao }}<br>
+                    <strong>Período:</strong> {{ periodo_str }}<br>
+                    <strong>Filtros:</strong> {{ filtros_str }}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="summary-box">
+        <strong>TOTAL DESTE RELATÓRIO:</strong> 
+        R$ {{ "{:,.2f}".format(total_valor).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 12%;">Data</th>
+                <th style="width: 25%;">Categoria / Item</th>
+                <th style="width: 15%;">Centro de Custo</th>
+                <th style="width: 33%;">Histórico</th>
+                <th style="width: 15%;" class="text-end">Valor</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for despesa in despesas %}
+            <tr>
+                <td>
+                    {% if tipo_relatorio == 'pago' %}
+                        {{ despesa.data_pagamento.strftime('%d/%m/%Y') }}
+                    {% else %}
+                        {{ despesa.data_vencimento.strftime('%d/%m/%Y') }}
+                    {% endif %}
+                </td>
+                <td>
+                    <strong>{{ despesa.item.nome }}</strong><br>
+                    <span style="color: #718096; font-size: 8pt;">{{ despesa.item.categoria.nome }}</span>
+                </td>
+                <td>{{ despesa.centro_custo }}</td>
+                <td>
+                    {{ despesa.observacoes if despesa.observacoes else '-' }}
+                    {% if not despesa.pago and despesa.data_vencimento < hoje.date() %}
+                        <br><span class="badge badge-danger">Atrasado</span>
+                    {% endif %}
+                </td>
+                <td class="text-end">
+                    R$ {{ "{:,.2f}".format(despesa.valor).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="text-center" style="padding: 20px;">Nenhum lançamento encontrado para este período.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        </table>
+
+    {% if despesas %}
+    <div class="total-final">
+        TOTAL FINAL: R$ {{ "{:,.2f}".format(total_valor).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+    </div>
+    {% endif %}
+</body>
+</html>
