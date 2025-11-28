@@ -14,7 +14,7 @@
             <a href="{{ url_for('financeiro.index') }}" class="btn btn-outline-secondary me-3" title="Voltar ao Painel">
                 <i class="bi bi-arrow-left"></i>
             </a>
-            <h2 class="mb-0"><strong>Livro de Despesas</strong></h2>
+            <h2 class="mb-0"><strong>Gestão de Despesas</strong></h2>
         </div>
         <div>
             <a href="{{ url_for('financeiro.download_despesas_excel', 
@@ -23,7 +23,7 @@
                                 data_inicial=request.args.get('data_inicial', ''),
                                 data_final=request.args.get('data_final', '')) }}"
             class="btn btn-success me-2">
-                <i class="bi bi-file-earmark-excel"></i> Exportar Razão (Excel)
+                <i class="bi bi-file-earmark-excel"></i> Excel
             </a>
             {{ primary('+ Novo Lançamento', url_for('financeiro.nova_despesa')) }}
         </div>
@@ -68,96 +68,187 @@
         </div>
 
         <div class="col-lg-2">
-            <div class="card border-0 shadow-sm bg-danger text-white h-100 d-flex justify-content-center align-items-center text-center p-2">
+            <div id="card-total" class="card border-0 shadow-sm bg-danger text-white h-100 d-flex justify-content-center align-items-center text-center p-2 transition-colors"
+                 data-total-pagas="{{ total_pagas | currency }}"
+                 data-total-pendentes="{{ total_pendentes | currency }}">
                 <div>
-                    <small class="text-uppercase opacity-75 fw-bold" style="font-size: 0.7rem;">Total no Período</small>
-                    <div class="h4 fw-bold mb-0 text-nowrap">{{ soma_valores | currency }}</div>
+                    <small id="label-total" class="text-uppercase opacity-75 fw-bold" style="font-size: 0.7rem;">Total Pago</small>
+                    <div id="valor-total" class="h4 fw-bold mb-0 text-nowrap">{{ total_pagas | currency }}</div>
                 </div>
             </div>
         </div>
     </div>
 
-    {% if despesas %}
-    <div class="table-responsive">
-        <table class="table table-hover align-middle" style="border-collapse: separate; border-spacing: 0;">
-            <thead class="table-light text-uppercase small text-muted">
-                <tr>
-                    <th class="border-bottom ps-3">Data</th>
-                    <th class="border-bottom">Classificação Contábil</th>
-                    <th class="border-bottom">Centro de Custo</th>
-                    <th class="border-bottom">Histórico</th>
-                    <th class="border-bottom text-end pe-3">Valor (R$)</th>
-                    <th class="border-bottom text-center">Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for despesa in despesas %}
-                <tr class="bg-white border-bottom">
-                    <td class="ps-3 text-nowrap font-monospace">{{ despesa.data_lanc.strftime('%d/%m/%Y') }}</td>
-                    <td>
-                        <div class="d-flex flex-column">
-                            <span class="fw-bold text-dark" style="font-size: 0.95rem;">
-                                <span class="text-muted font-monospace me-1" style="font-size: 0.85rem;">{{ despesa.item.codigo if despesa.item.codigo else 'S/C' }}</span>
-                                {{ despesa.item.nome }}
-                            </span>
-                            <small class="text-muted" style="font-size: 0.75rem;">
-                                <i class="bi bi-folder2-open me-1"></i>{{ despesa.item.categoria.nome }}
-                            </small>
-                        </div>
-                    </td>
-                    <td>
-                        {% set cor = cores_map.get(despesa.centro_custo, '#6c757d') %}
-                        <span class="badge rounded-pill fw-normal text-dark border" style="background-color: #f8f9fa; border-left: 4px solid {{ cor }} !important;">
-                            {{ despesa.centro_custo if despesa.centro_custo else 'Geral' }}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="text-muted small">{{ despesa.observacoes if despesa.observacoes else '-' }}</span>
-                        {% if despesa.recorrencia != 'Isolada' %}
-                            <br><span class="badge bg-light text-secondary border mt-1">{{ despesa.recorrencia }}</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-end pe-3 fw-bold text-danger font-monospace">
-                        {{ despesa.valor | currency }}
-                    </td>
-                    <td class="text-center">
-                        <div class="btn-group">
-                            <a href="{{ url_for('financeiro.editar_despesa', id=despesa.id) }}" class="btn btn-sm btn-link text-decoration-none text-secondary" title="Editar">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                            {% if current_user.has_permission('admin') %}
-                            <button type="button" class="btn btn-sm btn-link text-decoration-none text-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteDespesaModal{{ despesa.id }}" title="Excluir">
-                                <i class="bi bi-trash"></i>
-                            </button>
+    <ul class="nav nav-tabs mb-4" id="despesasTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="pagas-tab" data-bs-toggle="tab" data-bs-target="#pagas-content" type="button" role="tab">
+                <i class="bi bi-check-circle-fill text-success me-2"></i>Realizadas (Pagas)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="apagar-tab" data-bs-toggle="tab" data-bs-target="#apagar-content" type="button" role="tab">
+                <i class="bi bi-clock-history text-warning me-2"></i>A Pagar (Pendentes)
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="despesasTabsContent">
+        
+        <div class="tab-pane fade show active" id="pagas-content" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light text-uppercase small text-muted">
+                        <tr>
+                            <th class="ps-3">Data Pagto</th>
+                            <th>Classificação</th>
+                            <th>Centro de Custo</th>
+                            <th>Histórico</th>
+                            <th class="text-end pe-3">Valor</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for despesa in despesas_pagas %}
+                        <tr class="bg-white border-bottom">
+                            <td class="ps-3 font-monospace">{{ despesa.data_pagamento.strftime('%d/%m/%Y') if despesa.data_pagamento else despesa.data_lanc.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold text-dark">{{ despesa.item.nome }}</span>
+                                    <small class="text-muted">{{ despesa.item.categoria.nome }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                {% set cor = cores_map.get(despesa.centro_custo, '#6c757d') %}
+                                <span class="badge rounded-pill fw-normal text-dark border" style="background-color: #f8f9fa; border-left: 4px solid {{ cor }} !important;">
+                                    {{ despesa.centro_custo if despesa.centro_custo else 'Geral' }}
+                                </span>
+                            </td>
+                            <td class="small text-muted text-wrap">{{ despesa.observacoes if despesa.observacoes else '-' }}</td>
+                            <td class="text-end pe-3 fw-bold text-danger font-monospace">{{ despesa.valor | currency }}</td>
+                            <td class="text-center">
+                                <a href="{{ url_for('financeiro.editar_despesa', id=despesa.id) }}" class="btn btn-sm btn-link text-secondary" title="Editar"><i class="bi bi-pencil"></i></a>
+                                {% if current_user.has_permission('admin') %}
+                                <button type="button" class="btn btn-sm btn-link text-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteDespesaModal{{ despesa.id }}" title="Excluir">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center py-5 text-muted">Nenhuma despesa paga encontrada.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {{ render_pagination(pagination, 'financeiro.lancamentos_despesas', 
+                categoria_filtro=categoria_filtro, 
+                item_filtro=item_filtro,
+                recorrencia_filtro=recorrencia_filtro,
+                centro_custo_filtro=centro_custo_filtro,
+                data_inicial=data_inicial,
+                data_final=data_final
+            ) }}
+        </div>
+
+        <div class="tab-pane fade" id="apagar-content" role="tabpanel">
+            <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center mb-3">
+                <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+                <div>
+                    <strong>Atenção:</strong> Estes lançamentos são previsões e não afetam o saldo de caixa até serem baixados.
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light text-uppercase small text-muted">
+                        <tr>
+                            <th class="ps-3">Vencimento</th>
+                            <th>Classificação</th>
+                            <th>Centro de Custo</th>
+                            <th>Histórico</th>
+                            <th class="text-end pe-3">Valor Previsto</th>
+                            <th class="text-center" style="min-width: 120px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for despesa in despesas_pendentes %}
+                            {# Cálculos de Datas #}
+                            {% set dias_restantes = (despesa.data_vencimento - now.date()).days if despesa.data_vencimento else 999 %}
+                            
+                            {# Lógica de Estilização #}
+                            {% set row_class = "bg-white" %}
+                            {% set badge_class = "bg-light text-dark border" %}
+                            
+                            {% if dias_restantes < 0 %}
+                                {# ATRASADO: Mantém branco mas com borda grossa vermelha #}
+                                {% set row_class = "bg-white border-start border-4 border-danger" %}
+                            {% elif dias_restantes <= 1 %}
+                                {# HOJE ou AMANHÃ: Fundo Vermelho Suave #}
+                                {% set row_class = "table-danger" %}
+                                {% set badge_class = "bg-white text-danger border border-danger" %}
+                            {% elif dias_restantes <= 7 %}
+                                {# PRÓXIMOS 7 DIAS: Fundo Amarelo Suave #}
+                                {% set row_class = "table-warning" %}
+                                {% set badge_class = "bg-white text-warning border border-warning" %}
                             {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="alert alert-light text-center border py-5">
-        <i class="bi bi-journals fs-1 text-muted"></i>
-        <p class="mt-3 text-muted">Nenhum lançamento encontrado neste período.</p>
-    </div>
-    {% endif %}
 
-    {{ render_pagination(pagination, 'financeiro.lancamentos_despesas', 
-        categoria_filtro=categoria_filtro, 
-        item_filtro=item_filtro,
-        recorrencia_filtro=recorrencia_filtro,
-        centro_custo_filtro=centro_custo_filtro,
-        data_inicial=data_inicial,
-        data_final=data_final
-    ) }}
+                        <tr class="{{ row_class }} border-bottom">
+                            <td class="ps-3 font-monospace">
+                                {{ despesa.data_vencimento.strftime('%d/%m/%Y') if despesa.data_vencimento else 'S/D' }}
+                                
+                                {# Badges informativas #}
+                                {% if dias_restantes < 0 %}
+                                    <br><span class="badge bg-danger">Atrasado {{ dias_restantes|abs }} dias</span>
+                                {% elif dias_restantes == 0 %}
+                                    <br><span class="badge bg-danger">Vence Hoje!</span>
+                                {% elif dias_restantes == 1 %}
+                                    <br><span class="badge bg-danger">Vence Amanhã</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold text-dark">{{ despesa.item.nome }}</span>
+                                    <small class="text-muted">{{ despesa.item.categoria.nome }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                {% set cor = cores_map.get(despesa.centro_custo, '#6c757d') %}
+                                {# Ajustamos o background do badge se a linha tiver cor, para manter contraste #}
+                                <span class="badge rounded-pill fw-normal text-dark border" style="background-color: #f8f9fa; border-left: 4px solid {{ cor }} !important;">
+                                    {{ despesa.centro_custo if despesa.centro_custo else 'Geral' }}
+                                </span>
+                            </td>
+                            <td class="small text-muted text-wrap">{{ despesa.observacoes if despesa.observacoes else '-' }}</td>
+                            <td class="text-end pe-3 fw-bold text-secondary font-monospace">{{ despesa.valor | currency }}</td>
+                            <td class="text-center">
+                                <form action="{{ url_for('financeiro.dar_baixa_despesa', id=despesa.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Confirmar pagamento desta conta?');">
+                                    <button type="submit" class="btn btn-sm btn-success" title="Dar Baixa (Pagar)">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                </form>
+                                <a href="{{ url_for('financeiro.editar_despesa', id=despesa.id) }}" class="btn btn-sm btn-link text-secondary ms-1" title="Editar"><i class="bi bi-pencil"></i></a>
+                                {% if current_user.has_permission('admin') %}
+                                <button type="button" class="btn btn-sm btn-link text-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteDespesaModal{{ despesa.id }}" title="Excluir">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center py-5 text-muted">Nenhuma conta pendente encontrada.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-    {% for despesa in despesas %}
+    {% for despesa in despesas_pagas + despesas_pendentes %}
     {{ confirm_modal(
         id='confirmDeleteDespesaModal' ~ despesa.id,
-        title='Estornar Lançamento',
-        body='Confirma a exclusão do lançamento contábil referente a ' ~ despesa.item.nome ~ ' no valor de ' ~ (despesa.valor | currency) ~ '?',
+        title='Excluir Lançamento',
+        body='Tem certeza que deseja excluir este lançamento? Esta ação é irreversível.',
         action_url=url_for('financeiro.delete_despesa', id=despesa.id)
     ) }}
     {% endfor %}
@@ -174,16 +265,33 @@ $(document).ready(function() {
         width: '100%',
         allowClear: true
     };
+    if ($('#categoria_filtro_select2').length) $('#categoria_filtro_select2').select2({ ...select2Config, placeholder: "Grupo" });
+    if ($('#recorrencia_filtro_select2').length) $('#recorrencia_filtro_select2').select2({ ...select2Config, placeholder: "Tipo", minimumResultsForSearch: Infinity });
+    if ($('#centro_custo_filtro_select2').length) $('#centro_custo_filtro_select2').select2({ ...select2Config, placeholder: "Centro de Custo" });
 
-    if ($('#categoria_filtro_select2').length) {
-        $('#categoria_filtro_select2').select2({ ...select2Config, placeholder: "Grupo" });
-    }
-    if ($('#recorrencia_filtro_select2').length) {
-        $('#recorrencia_filtro_select2').select2({ ...select2Config, placeholder: "Tipo", minimumResultsForSearch: Infinity });
-    }
-    if ($('#centro_custo_filtro_select2').length) {
-        $('#centro_custo_filtro_select2').select2({ ...select2Config, placeholder: "Centro de Custo" });
-    }
+    var triggerTabList = [].slice.call(document.querySelectorAll('#despesasTabs button'))
+    triggerTabList.forEach(function (triggerEl) {
+        triggerEl.addEventListener('shown.bs.tab', function (event) {
+            var cardTotal = $('#card-total');
+            var valorTotal = $('#valor-total');
+            var labelTotal = $('#label-total');
+
+            if (event.target.id === 'pagas-tab') {
+                cardTotal.removeClass('bg-warning text-dark').addClass('bg-danger text-white');
+                valorTotal.text(cardTotal.data('total-pagas'));
+                labelTotal.text('TOTAL PAGO');
+            } else if (event.target.id === 'apagar-tab') {
+                cardTotal.removeClass('bg-danger text-white').addClass('bg-warning text-dark');
+                valorTotal.text(cardTotal.data('total-pendentes'));
+                labelTotal.text('TOTAL A PAGAR');
+            }
+        })
+    });
 });
 </script>
+<style>
+    .transition-colors {
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+</style>
 {% endblock %}

@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_file
 from flask_login import login_required, current_user
 from app.extensions import db
-from datetime import datetime
+from datetime import datetime, date
 from app.membresia.models import Membro
 from app.grupos.models import PequenoGrupo, Setor, Area
 from .models import Contribuicao, CategoriaDespesa, ItemDespesa, Despesa
@@ -29,9 +29,6 @@ def index():
     mes_atual = datetime.now().month
     ano_atual = datetime.now().year
 
-    # --- 1. CÁLCULO DOS CARDS (Valores do Mês Atual) ---
-    
-    # Receitas
     total_receitas_mes_query = db.session.query(func.sum(Contribuicao.valor)).filter(
         and_(
             extract('month', Contribuicao.data_lanc) == mes_atual,
@@ -47,37 +44,53 @@ def index():
         )
     ).count()
 
-    # Despesas
     total_despesas_mes_query = db.session.query(func.sum(Despesa.valor)).filter(
         and_(
-            extract('month', Despesa.data_lanc) == mes_atual,
-            extract('year', Despesa.data_lanc) == ano_atual
+            extract('month', Despesa.data_pagamento) == mes_atual,
+            extract('year', Despesa.data_pagamento) == ano_atual,
+            Despesa.pago == True
         )
     ).scalar()
     total_despesas_mes = round(float(total_despesas_mes_query), 2) if total_despesas_mes_query else 0.0
 
     num_despesas_mes = db.session.query(Despesa).filter(
         and_(
-            extract('month', Despesa.data_lanc) == mes_atual,
-            extract('year', Despesa.data_lanc) == ano_atual
+            extract('month', Despesa.data_pagamento) == mes_atual,
+            extract('year', Despesa.data_pagamento) == ano_atual,
+            Despesa.pago == True
         )
     ).count()
     
-    # Saldo
-    saldo_mes_atual = total_receitas_mes - total_despesas_mes
-
-    # --- 2. PREPARAÇÃO DOS DADOS DOS GRÁFICOS (Ano Atual) ---
+    total_apagar_mes_query = db.session.query(func.sum(Despesa.valor)).filter(
+        and_(
+            extract('month', Despesa.data_vencimento) == mes_atual,
+            extract('year', Despesa.data_vencimento) == ano_atual,
+            Despesa.pago == False
+        )
+    ).scalar()
+    total_apagar_mes = round(float(total_apagar_mes_query), 2) if total_apagar_mes_query else 0.0
     
+    num_apagar_mes = db.session.query(Despesa).filter(
+        and_(
+            extract('month', Despesa.data_vencimento) == mes_atual,
+            extract('year', Despesa.data_vencimento) == ano_atual,
+            Despesa.pago == False
+        )
+    ).count()
+
+    saldo_executado = total_receitas_mes - total_despesas_mes
+    
+    saldo_projetado = total_receitas_mes - (total_despesas_mes + total_apagar_mes)
+
     meses_presentes = set()
     
-    # Query 1: Receitas (Entradas) por Centro de Custo
     receitas_cc_query = db.session.query(
         Contribuicao.centro_custo,
         extract('month', Contribuicao.data_lanc).label('mes'),
         func.sum(Contribuicao.valor).label('total_valor')
     ).filter(
         extract('year', Contribuicao.data_lanc) == ano_atual,
-        Contribuicao.centro_custo.isnot(None) # Ignora lançamentos antigos sem C.C.
+        Contribuicao.centro_custo.isnot(None)
     ).group_by(Contribuicao.centro_custo, 'mes').all()
     
     dados_receitas_cc = {}
@@ -86,14 +99,14 @@ def index():
         if cc not in dados_receitas_cc: dados_receitas_cc[cc] = {}
         dados_receitas_cc[cc][int(mes)] = round(float(total), 2)
 
-    # Query 2: Despesas (Saídas) por Centro de Custo
     despesas_cc_query = db.session.query(
         Despesa.centro_custo,
-        extract('month', Despesa.data_lanc).label('mes'),
+        extract('month', Despesa.data_pagamento).label('mes'),
         func.sum(Despesa.valor).label('total_valor')
     ).filter(
-        extract('year', Despesa.data_lanc) == ano_atual,
-        Despesa.centro_custo.isnot(None) # Ignora lançamentos antigos sem C.C.
+        extract('year', Despesa.data_pagamento) == ano_atual,
+        Despesa.centro_custo.isnot(None),
+        Despesa.pago == True
     ).group_by(Despesa.centro_custo, 'mes').all()
 
     dados_despesas_cc = {}
@@ -102,15 +115,15 @@ def index():
         if cc not in dados_despesas_cc: dados_despesas_cc[cc] = {}
         dados_despesas_cc[cc][int(mes)] = round(float(total), 2)
 
-    # Query 3: Despesas (Saídas) por Categoria
     despesas_cat_query = db.session.query(
         CategoriaDespesa.nome,
-        extract('month', Despesa.data_lanc).label('mes'),
+        extract('month', Despesa.data_pagamento).label('mes'),
         func.sum(Despesa.valor).label('total_valor')
     ).join(ItemDespesa, Despesa.item_id == ItemDespesa.id)\
      .join(CategoriaDespesa, ItemDespesa.categoria_id == CategoriaDespesa.id)\
      .filter(
-        extract('year', Despesa.data_lanc) == ano_atual
+        extract('year', Despesa.data_pagamento) == ano_atual,
+        Despesa.pago == True
     ).group_by(CategoriaDespesa.nome, 'mes').all()
     
     dados_despesas_cat = {}
@@ -119,69 +132,46 @@ def index():
         if cat not in dados_despesas_cat: dados_despesas_cat[cat] = {}
         dados_despesas_cat[cat][int(mes)] = round(float(total), 2)
 
-
-    # --- 3. GERAÇÃO DOS LABELS E DATASETS (para o Chart.js) ---
-    
     meses_ordenados_nomes_map = {
         1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr', 5: 'Mai', 6: 'Jun',
         7: 'Jul', 8: 'Ago', 9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
     }
-    
-    # Garante que mesmo meses sem dados apareçam se houver dados em outros gráficos
     meses_com_dados = sorted(list(meses_presentes))
-    chart_labels_meses_nomes = [meses_ordenados_nomes_map.get(m, m) for m in meses_com_dados]
+    chart_labels_meses = [meses_ordenados_nomes_map.get(m, m) for m in meses_com_dados]
 
-    # Cores
     cores_centro_custo_map = Config.CORES_CAMPUS.copy()
-    cores_centro_custo_map.setdefault('Geral', '#6c757d') # Adiciona 'Geral' se não existir
+    cores_centro_custo_map.setdefault('Geral', '#6c757d')
 
-    # Datasets 1: Receitas por Centro de Custo
     chart_datasets_receitas_cc = []
     for cc_nome in sorted(dados_receitas_cc.keys()):
         data = [dados_receitas_cc[cc_nome].get(mes_num, 0) for mes_num in meses_com_dados]
         cor = cores_centro_custo_map.get(cc_nome, '#6c757d')
-        chart_datasets_receitas_cc.append({
-            'label': cc_nome, 'data': data,
-            'backgroundColor': cor, 'borderColor': cor, 'borderWidth': 1
-        })
+        chart_datasets_receitas_cc.append({'label': cc_nome, 'data': data, 'backgroundColor': cor, 'borderColor': cor, 'borderWidth': 1})
 
-    # Datasets 2: Despesas por Centro de Custo
     chart_datasets_despesas_cc = []
     for cc_nome in sorted(dados_despesas_cc.keys()):
         data = [dados_despesas_cc[cc_nome].get(mes_num, 0) for mes_num in meses_com_dados]
         cor = cores_centro_custo_map.get(cc_nome, '#6c757d')
-        chart_datasets_despesas_cc.append({
-            'label': cc_nome, 'data': data,
-            'backgroundColor': cor, 'borderColor': cor, 'borderWidth': 1
-        })
+        chart_datasets_despesas_cc.append({'label': cc_nome, 'data': data, 'backgroundColor': cor, 'borderColor': cor, 'borderWidth': 1})
     
-    # Datasets 3: Despesas por Categoria
     chart_datasets_despesas_cat = []
     cores_basicas = ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40', '#c9cbcf']
-    
     for i, cat_nome in enumerate(sorted(dados_despesas_cat.keys())):
         data = [dados_despesas_cat[cat_nome].get(mes_num, 0) for mes_num in meses_com_dados]
-        # Usa cores básicas ou gera uma aleatória
         cor = cores_basicas[i % len(cores_basicas)] if i < len(cores_basicas) else f'#{random.randint(0, 0xFFFFFF):06x}'
-        chart_datasets_despesas_cat.append({
-            'label': cat_nome, 'data': data,
-            'backgroundColor': cor, 'borderColor': cor, 'borderWidth': 1
-        })
+        chart_datasets_despesas_cat.append({'label': cat_nome, 'data': data, 'backgroundColor': cor, 'borderColor': cor, 'borderWidth': 1})
 
-    # --- 4. RENDER TEMPLATE ---
     return render_template(
         'financeiro/index.html',
-        ano=ano,
-        versao=versao,
-        now=datetime.now(),
+        ano=ano, versao=versao, now=datetime.now(),
         # Cards
-        total_receitas_mes=total_receitas_mes,
-        num_contribuicoes_mes=num_contribuicoes_mes,
-        total_despesas_mes=total_despesas_mes,
-        num_despesas_mes=num_despesas_mes,
-        saldo_mes_atual=saldo_mes_atual,
+        total_receitas_mes=total_receitas_mes, num_contribuicoes_mes=num_contribuicoes_mes,
+        total_despesas_mes=total_despesas_mes, num_despesas_mes=num_despesas_mes,
+        total_apagar_mes=total_apagar_mes, num_apagar_mes=num_apagar_mes,
+        saldo_executado=saldo_executado,
+        saldo_projetado=saldo_projetado,
         # Gráficos
-        chart_labels_meses=chart_labels_meses_nomes,
+        chart_labels_meses=chart_labels_meses,
         chart_datasets_receitas_cc=chart_datasets_receitas_cc,
         chart_datasets_despesas_cc=chart_datasets_despesas_cc,
         chart_datasets_despesas_cat=chart_datasets_despesas_cat
@@ -649,11 +639,25 @@ def configuracao_financeira():
 def nova_despesa():
     form = DespesaForm()
 
+    if request.method == 'GET':
+        if not form.situacao.data:
+            form.situacao.data = 'pendente'
+        if not form.data_lanc.data:
+            form.data_lanc.data = date.today()
+
     if form.validate_on_submit():
+        is_pago = (form.situacao.data == 'pago')
+        
+        data_doc = form.data_lanc.data
+        data_venc = form.data_vencimento.data if form.data_vencimento.data else data_doc
+        
         desp = Despesa(
             item_id=form.item_id.data,
             valor=form.valor.data,
-            data_lanc=form.data_lanc.data,
+            data_lanc=data_doc,
+            data_vencimento=data_venc,
+            data_pagamento=data_doc if is_pago else None,
+            pago=is_pago,
             observacoes=form.observacoes.data,
             centro_custo=form.centro_custo.data,
             recorrencia=form.recorrencia.data
@@ -661,11 +665,12 @@ def nova_despesa():
         try:
             db.session.add(desp)
             db.session.commit()
-            flash('Despesa lançada com sucesso!', 'success')
+            msg = 'Despesa paga lançada com sucesso!' if is_pago else 'Conta a pagar agendada com sucesso!'
+            flash(msg, 'success')
             return redirect(url_for('financeiro.lancamentos_despesas'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Erro ao lançar despesa: {str(e)}', 'error')
+            flash(f'Erro ao lançar despesa: {str(e)}', 'danger')
 
     return render_template('financeiro/registro_despesa.html',
                             form=form, ano=ano, versao=versao,
@@ -678,8 +683,31 @@ def editar_despesa(id):
     despesa = Despesa.query.get_or_404(id)
     form = DespesaForm(obj=despesa)
 
+    if request.method == 'GET':
+        form.situacao.data = 'pago' if despesa.pago else 'pendente'
+        if not despesa.pago and despesa.data_vencimento:
+            form.data_vencimento.data = despesa.data_vencimento
+
     if form.validate_on_submit():
         form.populate_obj(despesa)
+        
+        is_pago = (form.situacao.data == 'pago')
+        
+        mudou_status = (despesa.pago != is_pago)
+        despesa.pago = is_pago
+
+        if is_pago:
+            if not despesa.data_pagamento:
+                despesa.data_pagamento = despesa.data_lanc
+            
+        else:
+            despesa.data_pagamento = None
+            
+            if form.data_vencimento.data:
+                despesa.data_vencimento = form.data_vencimento.data
+            elif not despesa.data_vencimento:
+                despesa.data_vencimento = despesa.data_lanc
+
         try:
             db.session.commit()
             flash(f'Despesa atualizada com sucesso!', 'success')
@@ -737,13 +765,18 @@ def lancamentos_despesas():
                     field_label = field_obj.label.text if field_obj and hasattr(field_obj, 'label') else field_name
                     flash(f"Erro no filtro '{field_label}': {error}", 'danger')
 
-    soma_valores_query = query.with_entities(func.sum(Despesa.valor)).scalar()
-    soma_valores = round(float(soma_valores_query), 2) if soma_valores_query else 0.0
+    pendentes_query = query.filter(Despesa.pago == False).order_by(Despesa.data_vencimento.asc())
+    despesas_pendentes = pendentes_query.all()
+    
+    total_pendentes = sum([d.valor for d in despesas_pendentes])
 
-    pagination = query.order_by(Despesa.data_lanc.desc(), CategoriaDespesa.nome, ItemDespesa.nome).paginate(
-        page=page, per_page=PER_PAGE, error_out=False
-    )
-    despesas = pagination.items
+    pagas_query = query.filter(Despesa.pago == True).order_by(Despesa.data_pagamento.desc())
+    
+    total_pagas = pagas_query.with_entities(func.sum(Despesa.valor)).scalar()
+    total_pagas = round(float(total_pagas), 2) if total_pagas else 0.0
+
+    pagination = pagas_query.paginate(page=page, per_page=PER_PAGE, error_out=False)
+    despesas_pagas = pagination.items
 
     cores_map = Config.CORES_CAMPUS.copy()
     if 'Geral' not in cores_map:
@@ -751,9 +784,11 @@ def lancamentos_despesas():
 
     return render_template(
         'financeiro/lancamentos_despesas.html',
-        despesas=despesas,
+        despesas_pagas=despesas_pagas,
+        despesas_pendentes=despesas_pendentes,
         pagination=pagination,
-        soma_valores=soma_valores,
+        total_pagas=total_pagas,
+        total_pendentes=total_pendentes,
         filter_form=filter_form,
         versao=versao,
         ano=ano,
@@ -763,7 +798,8 @@ def lancamentos_despesas():
         recorrencia_filtro=recorrencia_filtro,
         centro_custo_filtro=centro_custo_filtro,
         data_inicial=data_inicial,
-        data_final=data_final
+        data_final=data_final,
+        now=datetime.now()
     )
 
 @financeiro_bp.route('/delete_contribuicao/<int:id>', methods=['POST'])
@@ -818,4 +854,31 @@ def delete_despesa(id):
         db.session.rollback()
         flash(f'Erro ao excluir a despesa: {str(e)}', 'danger')
 
+    return redirect(url_for('financeiro.lancamentos_despesas'))
+
+@financeiro_bp.route('/dar_baixa/<int:id>', methods=['POST'])
+@login_required
+@financeiro_required
+def dar_baixa_despesa(id):
+    despesa = Despesa.query.get_or_404(id)
+    if despesa.pago:
+        flash('Esta despesa já foi paga.', 'warning')
+        return redirect(url_for('financeiro.lancamentos_despesas'))
+    
+    despesa.pago = True
+    despesa.data_pagamento = date.today()
+    
+    try:
+        db.session.commit()
+        flash(f'Pagamento de {despesa.item.nome} confirmado com sucesso!', 'success')
+        
+        registrar_evento_jornada(
+            tipo_acao='PAGAMENTO_EFETUADO',
+            descricao_detalhada=f'Baixa efetuada na conta {despesa.item.nome} (R$ {despesa.valor}).',
+            usuario_executor=current_user
+        )
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao dar baixa: {e}', 'danger')
+        
     return redirect(url_for('financeiro.lancamentos_despesas'))

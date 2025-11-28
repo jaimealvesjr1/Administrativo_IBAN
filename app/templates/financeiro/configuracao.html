@@ -2,101 +2,211 @@
 {% extends 'base/layout.html' %}
 {% from 'base/components/forms.html' import field %}
 {% from 'base/components/buttons.html' import submit, primary %}
-{% block title %}Configuração Financeira · IBAN{% endblock %}
+
+{% block title %}Plano de Contas · IBAN{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><strong>Configuração do Plano de Contas</strong></h2>
-        <a href="{{ url_for('financeiro.index') }}" class="btn btn-outline-secondary">⬅ Voltar ao Painel</a>
+        <div class="d-flex align-items-center">
+            <a href="{{ url_for('financeiro.index') }}" class="btn btn-outline-secondary me-3" title="Voltar ao Painel">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h2 class="mb-0"><strong>Plano de Contas</strong></h2>
+                <p class="text-muted mb-0 small">Gerenciamento de Categorias e Contas de Despesa</p>
+            </div>
+        </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-5">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Grupos</h5>
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white py-3">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-folder-fill fs-4 me-2"></i>
+                        <h5 class="mb-0 fw-bold">Grupos de Contas</h5>
+                    </div>
+                    <small class="opacity-75">Ex: 3.01 - Recursos Humanos</small>
                 </div>
-                <div class="card-body">
+                
+                <div class="card-body bg-light border-bottom">
                     <form method="POST">
                         {{ form_categoria.hidden_tag() }}
-                        <div class="row">
+                        <div class="row g-2">
                             <div class="col-4">
-                                {{ field(form_categoria.codigo, placeholder="3.01") }}
+                                <div class="form-floating">
+                                    {{ form_categoria.codigo(class="form-control", placeholder="3.01") }}
+                                    {{ form_categoria.codigo.label }}
+                                </div>
                             </div>
                             <div class="col-8">
-                                {{ field(form_categoria.nome, placeholder="Recursos Humanos") }}
+                                <div class="form-floating">
+                                    {{ form_categoria.nome(class="form-control", placeholder="Nome") }}
+                                    {{ form_categoria.nome.label }}
+                                </div>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <button type="submit" name="submit_categoria" class="btn btn-primary w-100">
+                                    <i class="bi bi-plus-lg me-1"></i> Adicionar Grupo
+                                </button>
                             </div>
                         </div>
-                        <button type="submit" name="submit_categoria" class="btn btn-primary w-100">Adicionar Grupo</button>
                     </form>
-                    <hr>
-                    <ul class="list-group list-group-flush">
+                </div>
+
+                <div class="card-body p-0" style="max-height: 600px; overflow-y: auto;">
+                    <div class="list-group list-group-flush">
                         {% for cat in categorias %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                                 <div>
-                                    <strong class="text-primary me-2">{{ cat.codigo if cat.codigo else '' }}</strong>
-                                    {{ cat.nome }}
+                                    {% if cat.codigo %}
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 font-monospace me-2">{{ cat.codigo }}</span>
+                                    {% endif %}
+                                    <span class="fw-bold text-dark">{{ cat.nome }}</span>
                                 </div>
-                            </li>
+                                <span class="badge bg-light text-secondary rounded-pill border">{{ cat.itens.count() }} contas</span>
+                            </div>
                         {% else %}
-                            <li class="list-group-item text-muted">Nenhum grupo cadastrado.</li>
+                            <div class="text-center py-4 text-muted">
+                                <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
+                                Nenhum grupo cadastrado.
+                            </div>
                         {% endfor %}
-                    </ul>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-7">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">Contas</h5>
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-secondary text-white py-3">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-tags-fill fs-4 me-2"></i>
+                        <h5 class="mb-0 fw-bold">Contas Analíticas</h5>
+                    </div>
+                    <small class="opacity-75">Ex: 3.01.01.0001 - Salários</small>
                 </div>
-                <div class="card-body">
+
+                <div class="card-body bg-light border-bottom">
                     <form method="POST">
                         {{ form_item.hidden_tag() }}
-                        {{ field(form_item.categoria_id) }}
-                        <div class="row">
-                            <div class="col-4">
-                                {{ field(form_item.codigo, placeholder="3.xx.xx.xxxx") }}
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-4">
+                                {{ form_item.categoria_id(class="form-select", id="select_categoria_item") }}
                             </div>
-                            <div class="col-8">
-                                {{ field(form_item.nome, placeholder="Nome da conta") }}
+                            <div class="col-md-2">
+                                <div class="form-floating">
+                                    {{ form_item.codigo(class="form-control", placeholder="Cód") }}
+                                    {{ form_item.codigo.label }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    {{ form_item.nome(class="form-control", placeholder="Nome") }}
+                                    {{ form_item.nome.label }}
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                {{ form_item.tipo_fixa_variavel(class="form-select") }}
+                            </div>
+                            <div class="col-12 mt-2 text-end">
+                                <button type="submit" name="submit_item" class="btn btn-secondary px-4">
+                                    <i class="bi bi-plus-lg me-1"></i> Criar Conta
+                                </button>
                             </div>
                         </div>
-                        {{ field(form_item.tipo_fixa_variavel) }}
-                        <button type="submit" name="submit_item" class="btn btn-secondary w-100">Adicionar Conta</button>
                     </form>
-                    <hr>
-                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                        <table class="table table-sm table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Código</th>
-                                    <th>Item / Conta</th>
-                                    <th>Grupo Pai</th>
-                                    <th>Tipo</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in itens %}
-                                <tr>
-                                    <td><span class="badge bg-light text-dark border">{{ item.codigo if item.codigo else 'S/C' }}</span></td>
-                                    <td>{{ item.nome }}</td>
-                                    <td><small class="text-muted">{{ item.categoria.nome }}</small></td>
-                                    <td><span class="badge bg-info">{{ item.tipo_fixa_variavel }}</span></td>
-                                </tr>
-                                {% else %}
-                                <tr>
-                                    <td colspan="4" class="text-center">Nenhum item cadastrado.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                </div>
+
+                <div class="card-body border-bottom p-2 bg-white">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" id="filtroTabela" class="form-control border-0" placeholder="Pesquisar contas (digite nome ou código)...">
                     </div>
+                </div>
+
+                <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0" id="tabelaItens">
+                        <thead class="table-light text-uppercase small text-muted sticky-top">
+                            <tr>
+                                <th class="ps-4">Código</th>
+                                <th>Conta / Item</th>
+                                <th>Grupo Pai</th>
+                                <th class="text-center">Tipo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in itens %}
+                            <tr>
+                                <td class="ps-4 font-monospace fw-bold text-secondary">{{ item.codigo if item.codigo else '-' }}</td>
+                                <td>
+                                    <span class="fw-bold text-dark">{{ item.nome }}</span>
+                                </td>
+                                <td>
+                                    <small class="text-muted"><i class="bi bi-folder2-open me-1"></i>{{ item.categoria.nome }}</small>
+                                </td>
+                                <td class="text-center">
+                                    {% if item.tipo_fixa_variavel == 'Fixa' %}
+                                        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">Fixa</span>
+                                    {% else %}
+                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">Variável</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr id="sem-resultados">
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    Nenhuma conta cadastrada.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            <tr id="msg-nenhum-resultado" style="display: none;">
+                                <td colspan="4" class="text-center py-4 text-muted">
+                                    Nenhuma conta encontrada para sua busca.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    $(document).ready(function() {
+        // Inicializa Select2 para o dropdown de Categorias
+        $('#select_categoria_item').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            dropdownParent: $('body'),
+            placeholder: "Selecione o Grupo Pai"
+        });
+
+        // Script de Busca em Tempo Real (Client-Side)
+        $("#filtroTabela").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+            var hasVisible = false;
+            
+            $("#tabelaItens tbody tr").not('#sem-resultados, #msg-nenhum-resultado').filter(function() {
+                var text = $(this).text().toLowerCase();
+                var toggle = text.indexOf(value) > -1;
+                $(this).toggle(toggle);
+                if (toggle) hasVisible = true;
+            });
+
+            // Mostra mensagem se nada for encontrado
+            if (!hasVisible && value.length > 0) {
+                $('#msg-nenhum-resultado').show();
+            } else {
+                $('#msg-nenhum-resultado').hide();
+            }
+        });
+    });
+</script>
 {% endblock %}

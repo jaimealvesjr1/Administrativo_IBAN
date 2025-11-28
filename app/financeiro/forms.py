@@ -91,6 +91,8 @@ class DespesaForm(FlaskForm):
     data_lanc = DateField('Data de Competência', validators=[DataRequired(), lambda form, field: (
         True if field.data <= date.today() else ValidationError('A data de lançamento não pode ser futura.')
     )])
+    situacao = SelectField('Situação', choices=[('pago', 'Pago (Realizado)'), ('pendente', 'A Pagar (Agendado)')], validators=[DataRequired()])
+    data_vencimento = DateField('Data de Vencimento', validators=[Optional()])
     recorrencia = SelectField('Recorrência', validators=[DataRequired()], choices=[(r, r) for r in Config.RECORRENCIAS])
     observacoes = TextAreaField('Histórico / Observações', render_kw={'rows': 3})
     submit = SubmitField('Confirmar Lançamento')

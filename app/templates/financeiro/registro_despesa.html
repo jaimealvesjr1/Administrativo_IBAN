@@ -18,44 +18,52 @@
                     <form method="POST" id="form-registro-despesa">
                         {{ form.hidden_tag() }}
                         
-                        <div class="row mb-4">
-                            <div class="col-md-12">
-                                <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Dados da Transação</h6>
-                            </div>
-                            <div class="col-md-6">
-                                {{ form.data_lanc.label(class="form-label fw-bold") }}
-                                {{ form.data_lanc(class="form-control form-control-lg", type="date") }}
-                                {% if form.data_lanc.errors %}
-                                    <div class="text-danger small">{{ form.data_lanc.errors[0] }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-6">
-                                {{ form.valor.label(class="form-label fw-bold") }}
-                                <div class="input-group input-group-lg">
-                                    <span class="input-group-text">R$</span>
-                                    
-                                    {# CORREÇÃO DO BUG: Formata o valor pré-existente para ter 2 casas e vírgula #}
-                                    {% set valor_formatado = "" %}
-                                    {% if form.valor.data %}
-                                        {% set valor_formatado = "%.2f"|format(form.valor.data)|replace(".", ",") %}
-                                    {% endif %}
-
-                                    {{ form.valor(class="form-control text-end fw-bold text-danger", type="text", id="valor_despesa", placeholder="0,00", value=valor_formatado) }}
+                        <div class="bg-light p-3 rounded mb-4 border">
+                            <h6 class="text-primary text-uppercase small fw-bold border-bottom pb-2 mb-3">
+                                <i class="bi bi-cash-stack me-1"></i> Dados Financeiros
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    {{ form.situacao.label(class="form-label fw-bold") }}
+                                    {{ form.situacao(class="form-select form-select-lg", id="situacao_select") }}
                                 </div>
-                                {% if form.valor.errors %}
-                                    <div class="text-danger small">{{ form.valor.errors[0] }}</div>
-                                {% endif %}
+                                <div class="col-md-6">
+                                    {{ form.valor.label(class="form-label fw-bold") }}
+                                    <div class="input-group input-group-lg">
+                                        <span class="input-group-text bg-white text-muted">R$</span>
+                                        {# Formatação do valor para edição #}
+                                        {% set valor_formatado = "" %}
+                                        {% if form.valor.data %}
+                                            {% set valor_formatado = "%.2f"|format(form.valor.data)|replace(".", ",") %}
+                                        {% endif %}
+                                        {{ form.valor(class="form-control text-end fw-bold text-danger", type="text", id="valor_despesa", placeholder="0,00", value=valor_formatado) }}
+                                    </div>
+                                    {% if form.valor.errors %}
+                                        <div class="text-danger small">{{ form.valor.errors[0] }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6">
+                                    {{ form.data_lanc.label(class="form-label fw-bold", id="label_data_lanc") }}
+                                    {{ form.data_lanc(class="form-control", type="date") }}
+                                    {% if form.data_lanc.errors %}
+                                        <div class="text-danger small">{{ form.data_lanc.errors[0] }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6" id="div_vencimento" style="display:none;">
+                                    {{ form.data_vencimento.label(class="form-label fw-bold text-danger") }}
+                                    {{ form.data_vencimento(class="form-control border-danger", type="date") }}
+                                </div>
                             </div>
                         </div>
 
                         <div class="row mb-4">
                             <div class="col-md-12">
-                                <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Classificação Contábil</h6>
+                                <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Classificação</h6>
                             </div>
                             <div class="col-md-12 mb-3">
                                 {{ form.item_id.label(class="form-label fw-bold") }}
                                 {{ form.item_id(class="form-select", id="item_despesa_select2") }}
-                                <div class="form-text">Selecione a conta analítica correspondente (ex: 3.01... Salários).</div>
                                 {% if form.item_id.errors %}
                                     <div class="text-danger small">{{ form.item_id.errors[0] }}</div>
                                 {% endif %}
@@ -79,7 +87,7 @@
                         <div class="mb-4">
                             <h6 class="text-muted text-uppercase small fw-bold border-bottom pb-2 mb-3">Detalhes</h6>
                             {{ form.observacoes.label(class="form-label fw-bold") }}
-                            {{ form.observacoes(class="form-control", rows="3", placeholder="Descreva os detalhes do lançamento (fornecedor, nf, motivo...)") }}
+                            {{ form.observacoes(class="form-control", rows="2", placeholder="Fornecedor, Nota Fiscal, Motivo...") }}
                             {% if form.observacoes.errors %}
                                 <div class="text-danger small">{{ form.observacoes.errors[0] }}</div>
                             {% endif %}
@@ -100,34 +108,36 @@
 <script>
 $(document).ready(function() {
     const $formDespesa = $('#form-registro-despesa');
-    if ($formDespesa.length) {
-        $('#item_despesa_select2').select2({
-            allowClear: true,
-            width: '100%',
-            theme: 'bootstrap-5',
-            placeholder: "Pesquise pelo código ou nome da conta"
-        });
-        
-        $('#centro_custo_despesa_select2').select2({
-            theme: 'bootstrap-5',
-            minimumResultsForSearch: Infinity,
-            placeholder: "Selecione o Centro de Custo",
-            allowClear: true
-        });
-        
-        $('#recorrencia_select2').select2({
-            theme: 'bootstrap-5',
-            minimumResultsForSearch: Infinity
-        });
+    
+    $('#item_despesa_select2').select2({
+        allowClear: true, width: '100%', theme: 'bootstrap-5',
+        placeholder: "Pesquise pelo código ou nome da conta"
+    });
+    $('#centro_custo_despesa_select2').select2({
+        theme: 'bootstrap-5', minimumResultsForSearch: Infinity, placeholder: "Selecione", allowClear: true
+    });
+    $('#recorrencia_select2').select2({ theme: 'bootstrap-5', minimumResultsForSearch: Infinity });
 
-        $('#valor_despesa').mask('000.000.000.000.000,00', {reverse: true});
+    $('#valor_despesa').mask('000.000.000.000.000,00', {reverse: true});
 
-        $formDespesa.on('submit', function() {
-            var valorFormatado = $('#valor_despesa').val();
-            var valorNumerico = valorFormatado.replace(/\./g, '').replace(',', '.');
-            $('#valor_despesa').val(valorNumerico);
-        });
+    function toggleVencimento() {
+        if ($('#situacao_select').val() === 'pendente') {
+            $('#div_vencimento').show();
+            $('#label_data_lanc').text('Data do Documento (Competência)');
+        } else {
+            $('#div_vencimento').hide();
+            $('#label_data_lanc').text('Data do Pagamento');
+        }
     }
+
+    $('#situacao_select').change(toggleVencimento);
+    toggleVencimento();
+
+    $formDespesa.on('submit', function() {
+        var valorFormatado = $('#valor_despesa').val();
+        var valorNumerico = valorFormatado.replace(/\./g, '').replace(',', '.');
+        $('#valor_despesa').val(valorNumerico);
+    });
 });
 </script>
 {% endblock %}

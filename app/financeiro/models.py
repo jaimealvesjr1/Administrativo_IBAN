@@ -52,7 +52,12 @@ class Despesa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     item_id = db.Column(db.Integer, db.ForeignKey('item_despesa.id'), nullable=False, index=True)
     valor = db.Column(db.Float, nullable=False)
+
     data_lanc = db.Column(db.Date, nullable=False, default=date.today, index=True)
+    data_vencimento = db.Column(db.Date, nullable=True, index=True)
+    data_pagamento = db.Column(db.Date, nullable=True, index=True)
+    
+    pago = db.Column(db.Boolean, default=True, nullable=False, index=True)
     observacoes = db.Column(db.Text)
     centro_custo = db.Column(db.String(50), nullable=True, index=True)
     recorrencia = db.Column(db.String(20), nullable=False, default='Isolada', index=True)
