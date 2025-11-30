@@ -1,9 +1,14 @@
 {% extends "base/base.html" %}
 
 {% block body %}
-    {% include 'base/components/alerts.html' %} 
-    <main class="container text-center py-5">
-        {% block content %}{% endblock %}
-    </main>
-    {% include 'base/components/footer.html' %}
+    <div class="d-flex flex-column min-vh-100">
+        {% include 'base/components/alerts.html' %} 
+        <main class="container text-center py-5">
+            {% block content %}{% endblock %}
+        </main>
+        
+        <footer class="mt-auto"> 
+            {% include 'base/components/footer.html' %}
+        </footer>
+    </div>
 {% endblock %}

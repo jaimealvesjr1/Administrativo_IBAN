@@ -16,7 +16,9 @@ admin_users_bp = Blueprint('admin_users', __name__, url_prefix='/admin_users')
 @login_required
 @secretaria_or_admin_required
 def list_users():
+    page = request.args.get('page', 1, type=int)
     busca = request.args.get('busca', '')
+    PER_PAGE = 15
 
     query = User.query
 
@@ -28,7 +30,7 @@ def list_users():
             )
         )
 
-    users = query.order_by(User.id).all()
+    users = query.order_by(User.id).paginate(page=page, per_page=PER_PAGE, error_out=False)
     
     return render_template('admin_users/list_users.html', users=users, busca=busca, ano=Config.ANO_ATUAL, versao=Config.VERSAO_APP)
 

@@ -61,23 +61,46 @@ def dashboard():
         Membro.ativo == True,
         PequenoGrupo.ativo == True
     ).distinct().count()
+
+    palette = ['#0d6efd', '#20c997', '#198754', '#dc3545', '#ffc107', '#0dcaf0', '#6610f2', '#fd7e14']
     
     pgs_por_area_query = db.session.query(Area.nome, func.count(PequenoGrupo.id))\
         .join(Setor, Setor.area_id == Area.id)\
         .join(PequenoGrupo, PequenoGrupo.setor_id == Setor.id)\
         .filter(PequenoGrupo.ativo == True)\
-        .group_by(Area.nome).all()
+        .group_by(Area.nome)\
+        .order_by(func.count(PequenoGrupo.id).desc()).all()
     
-    labels_pgs_area = [r[0] for r in pgs_por_area_query]
-    data_pgs_area = [r[1] for r in pgs_por_area_query]
+    labels_pgs_area = []
+    data_pgs_area = []
+    colors_pgs_area = []
+    
+    area_color_map = {}
 
-    pgs_por_setor_query = db.session.query(Setor.nome, func.count(PequenoGrupo.id))\
-        .join(PequenoGrupo, PequenoGrupo.setor_id == Setor.id)\
-        .filter(PequenoGrupo.ativo == True)\
-        .group_by(Setor.nome).all()
+    for i, (area_nome, count) in enumerate(pgs_por_area_query):
+        labels_pgs_area.append(area_nome)
+        data_pgs_area.append(count)
         
-    labels_pgs_setor = [r[0] for r in pgs_por_setor_query]
-    data_pgs_setor = [r[1] for r in pgs_por_setor_query]
+        cor = palette[i % len(palette)]
+        colors_pgs_area.append(cor)
+        area_color_map[area_nome] = cor
+
+    pgs_por_setor_query = db.session.query(Setor.nome, func.count(PequenoGrupo.id), Area.nome)\
+        .join(PequenoGrupo, PequenoGrupo.setor_id == Setor.id)\
+        .join(Area, Setor.area_id == Area.id)\
+        .filter(PequenoGrupo.ativo == True)\
+        .group_by(Setor.nome, Area.nome)\
+        .order_by(func.count(PequenoGrupo.id).desc()).all()
+        
+    labels_pgs_setor = []
+    data_pgs_setor = []
+    colors_pgs_setor = []
+
+    for setor_nome, count, area_nome in pgs_por_setor_query:
+        labels_pgs_setor.append(setor_nome)
+        data_pgs_setor.append(count)
+        
+        colors_pgs_setor.append(area_color_map.get(area_nome, '#6c757d'))
 
     return render_template(
         'grupos/index.html',
@@ -88,8 +111,11 @@ def dashboard():
         total_membros_em_pg=total_membros_em_pg,
         labels_pgs_area=labels_pgs_area,
         data_pgs_area=data_pgs_area,
+        colors_pgs_area=colors_pgs_area,
         labels_pgs_setor=labels_pgs_setor,
         data_pgs_setor=data_pgs_setor,
+        colors_pgs_setor=colors_pgs_setor,
+        
         ano=ano,
         versao=versao
     )
@@ -110,18 +136,13 @@ def listar_grupos_unificada():
         areas_query = Area.query
         setores_query = Setor.query
         pgs_query = PequenoGrupo.query
-
     elif current_user.membro:
         membro_logado = current_user.membro
-
         areas_do_lider = Area.query.filter(Area.supervisores.any(id=membro_logado.id)).all()
         area_ids_lider = [a.id for a in areas_do_lider]
         
         setores_do_lider = Setor.query.filter(
-            db.or_(
-                Setor.supervisores.any(id=membro_logado.id),
-                Setor.area_id.in_(area_ids_lider)
-            )
+            db.or_(Setor.supervisores.any(id=membro_logado.id), Setor.area_id.in_(area_ids_lider))
         ).all()
         setor_ids_lider = [s.id for s in setores_do_lider]
 
@@ -142,19 +163,9 @@ def listar_grupos_unificada():
         if status_pg == 'ativos':
             pgs_query = pgs_query.filter_by(ativo=True)
         elif status_pg == 'multiplicados':
-            pgs_query = pgs_query.filter(
-                db.and_(
-                    PequenoGrupo.ativo == False,
-                    PequenoGrupo.data_multiplicacao.isnot(None)
-                )
-            )
+            pgs_query = pgs_query.filter(db.and_(PequenoGrupo.ativo == False, PequenoGrupo.data_multiplicacao.isnot(None)))
         elif status_pg == 'inativos':
-            pgs_query = pgs_query.filter(
-                db.and_(
-                    PequenoGrupo.ativo == False,
-                    PequenoGrupo.data_multiplicacao.is_(None)
-                )
-            )
+            pgs_query = pgs_query.filter(db.and_(PequenoGrupo.ativo == False, PequenoGrupo.data_multiplicacao.is_(None)))
     
     if busca:
         if tipo_selecionado == 'areas':
@@ -181,6 +192,12 @@ def listar_grupos_unificada():
     todas_areas = Area.query.order_by(Area.nome).all()
     todos_setores = Setor.query.order_by(Setor.nome).all()
     
+    palette = ['#0d6efd', '#20c997', '#198754', '#dc3545', '#ffc107', '#0dcaf0', '#6610f2', '#fd7e14']
+    
+    area_colors = {}
+    for i, area in enumerate(todas_areas):
+        area_colors[area.id] = palette[i % len(palette)]
+
     return render_template('grupos/listagem_unificada.html',
                            areas=areas,
                            setores=setores,
@@ -192,6 +209,7 @@ def listar_grupos_unificada():
                            area_filtro=area_filtro,
                            todas_areas=todas_areas,
                            todos_setores=todos_setores,
+                           area_colors=area_colors,
                            ano=ano, versao=versao,
                            config=Config)
 

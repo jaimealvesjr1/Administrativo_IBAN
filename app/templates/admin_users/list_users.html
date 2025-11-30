@@ -1,127 +1,172 @@
 {% set show_navbar = true %}
 {% extends 'base/layout.html' %}
-{% from 'base/components/forms.html' import field %}
 {% from 'base/components/buttons.html' import primary %}
-{% block title %}Gerenciar Usuários · IBAN{% endblock %}
+{% from 'macros/pagination.html' import render_pagination %}
+{% from 'base/components/modals.html' import confirm_modal %}
+
+{% block title %}Gestão de Acessos · IBAN{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-4"><strong>Gerenciamento de Usuários</strong></h2>
-        {{ primary('+ Novo Acesso', url_for('auth.registrar_membro')) }}
+        <div class="d-flex align-items-center">
+            <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary me-3" title="Voltar ao Painel">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h2 class="mb-0"><strong>Gestão de Acessos</strong></h2>
+                <p class="text-muted mb-0 small">Controle de usuários e atribuições de liderança.</p>
+            </div>
+        </div>
+        <div>
+            {{ primary('+ Novo Usuário', url_for('auth.registrar_membro'), icon='bi-person-plus-fill') }}
+        </div>
     </div>
 
-    <form method="get" class="row g-3 mb-4">
-        <div class="col-md-8">
-            <input type="text" name="busca" placeholder="Buscar por nome ou email" class="form-control" value="{{ busca if busca is defined else '' }}">
+    <div class="card border-0 shadow-sm mb-4 bg-light">
+        <div class="card-body py-3">
+            <form method="GET" action="{{ url_for('admin_users.list_users') }}" class="row g-2 align-items-center">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" name="busca" class="form-control border-start-0 ps-0" placeholder="Buscar por nome ou e-mail..." value="{{ busca }}">
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                </div>
+                {% if busca %}
+                <div class="col-auto">
+                    <a href="{{ url_for('admin_users.list_users') }}" class="btn btn-outline-secondary">Limpar</a>
+                </div>
+                {% endif %}
+            </form>
         </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100">Filtrar</button>
-        </div>
-        <div class="col-md-2 d-flex align-items-end">
-            <a href="{{ url_for('admin_users.list_users') }}" class="btn btn-outline-secondary w-100">Limpar</a>
-        </div>
-    </form>
-
-    {% if users %}
-    <div class="table-responsive">
-        <table class="table table-bordered table-striped">
-            <thead class="table-light">
-                <tr>
-                    <th>ID</th>
-                    <th>Nome</th>
-                    <th>Email</th>
-                    <th>Permissões</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in users %}
-                <tr>
-                    <td>{{ user.id }}</td>
-                    <td>{{ user.membro.nome_completo if user.membro else 'N/A' }}</td>
-                    <td>{{ user.email }}</td>
-                    <td>
-                        {% if user.has_permission('admin') %}
-                            <span class="badge bg-danger me-1">Administrador</span>
-                        {% elif user.has_permission('financeiro') %}
-                            <span class="badge bg-info me-1">Tesoureiro</span>
-                        {% elif user.has_permission('secretaria') %}
-                            <span class="badge bg-primary me-1">Secretário</span>
-                        {% endif %}
-                        
-                        {% if user.membro and user.membro.get_cargo_lideranca() != 'Nenhum' %}
-                            {% set cargos_lideranca = user.membro.get_cargo_lideranca().split(', ') %}
-                            {% for cargo in cargos_lideranca %}
-                                <span class="badge bg-success me-1">{{ cargo }}</span>
-                            {% endfor %}
-                        {% endif %}
-
-                        {% if not user.has_permission('admin') and not user.has_permission('financeiro') and not user.has_permission('secretaria') and (not user.membro or user.membro.get_cargo_lideranca() == 'Nenhum') %}
-                            <span class="badge bg-secondary">Membro</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{{ url_for('admin_users.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-primary me-2">Editar</a>
-                        {% if user.id != current_user.id %}
-                        <button type="button" type="button" class="btn btn-sm btn-outline-danger"
-                        data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" 
-                        data-user-id="{{ user.id }}" 
-                        data-user-email="{{ user.email }}"
-                        data-delete-url="{{ url_for('admin_users.delete_user', user_id=user.id) }}">
-                            Excluir
-                        </button>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
-    {% else %}
-    <p>Nenhum usuário cadastrado ainda.</p>
-    {% endif %}
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="border-collapse: separate; border-spacing: 0;">
+                    <thead class="table-light text-uppercase small text-muted">
+                        <tr>
+                            <th class="ps-4 border-bottom" style="width: 35%;">Usuário</th>
+                            <th class="border-bottom" style="width: 45%;">Permissões & Liderança</th>
+                            <th class="border-bottom text-center" style="width: 20%;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users.items %}
+                        <tr class="bg-white border-bottom">
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center border me-3" style="width: 40px; height: 40px;">
+                                        {% if user.active %}
+                                            <i class="bi bi-person-fill text-primary fs-5"></i>
+                                        {% else %}
+                                            <i class="bi bi-person-slash text-muted fs-5"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        {% if user.membro %}
+                                            <a href="{{ url_for('membresia.perfil', id=user.membro.id) }}" class="fw-bold text-dark d-block text-decoration-none hover-link">
+                                                {{ user.username }}
+                                            </a>
+                                            <small class="text-muted">{{ user.email }}</small>
+                                            <br>
+                                            <small class="text-primary">
+                                                <i class="bi bi-link-45deg"></i> {{ user.membro.nome_completo }}
+                                            </small>
+                                        {% else %}
+                                            <span class="fw-bold text-dark d-block">{{ user.username }}</span>
+                                            <small class="text-muted">{{ user.email }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column gap-2 align-items-start">
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% if user.has_permission('admin') %}
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Administrador</span>
+                                        {% endif %}
+                                        
+                                        {% if user.has_permission('financeiro') %}
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Tesoureiro</span>
+                                        {% endif %}
+                                        
+                                        {% if user.has_permission('secretaria') %}
+                                            <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">Secretário</span>
+                                        {% endif %}
+
+                                        {% if not user.has_permission('admin') and not user.has_permission('financeiro') and not user.has_permission('secretaria') %}
+                                            <span class="badge bg-light text-secondary border">Membro</span>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if user.membro %}
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% for area in user.membro.areas_supervisionadas %}
+                                                <span class="badge bg-light text-dark border"><i class="bi bi-diagram-3-fill me-1 text-primary"></i>Área {{ area.nome }}</span>
+                                            {% endfor %}
+
+                                            {% for setor in user.membro.setores_supervisionados %}
+                                                <span class="badge bg-light text-dark border"><i class="bi bi-diagram-2-fill me-1 text-primary"></i>Setor {{ setor.nome }}</span>
+                                            {% endfor %}
+
+                                            {% for pg in user.membro.pgs_facilitados if pg.ativo %}
+                                                <span class="badge bg-light text-dark border"><i class="bi bi-house-heart-fill me-1 text-success"></i>PG {{ pg.nome }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group">
+                                    <a href="{{ url_for('admin_users.edit_user', user_id=user.id) }}" class="btn btn-sm btn-link text-decoration-none text-secondary" title="Editar Permissões/Senha">
+                                        <i class="bi bi-pencil-square fs-5"></i>
+                                    </a>
+                                    
+                                    {% if user.id != current_user.id %}
+                                        <button type="button" class="btn btn-sm btn-link text-decoration-none text-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteUserModal{{ user.id }}" title="Excluir Usuário">
+                                            <i class="bi bi-trash fs-5"></i>
+                                        </button>
+                                    {% else %}
+                                        <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="Você não pode excluir a si mesmo">
+                                            <button class="btn btn-sm btn-link text-muted disabled"><i class="bi bi-trash fs-5"></i></button>
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center py-5 text-muted">
+                                <i class="bi bi-search fs-1 d-block mb-2"></i>
+                                <p>Nenhum usuário encontrado com os critérios atuais.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        {{ render_pagination(users, 'admin_users.list_users', busca=busca) }}
+    </div>
+
+    {% for user in users.items %}
+        {% if user.id != current_user.id %}
+            {{ confirm_modal(
+                id='confirmDeleteUserModal' ~ user.id,
+                title='Excluir Usuário',
+                body='Tem certeza que deseja excluir o usuário <strong>' ~ user.username ~ '</strong>? <br><br><small class="text-danger">Atenção: Essa ação é irreversível e removerá o acesso ao sistema.</small>',
+                action_url=url_for('admin_users.delete_user', user_id=user.id)
+            ) }}
+        {% endif %}
+    {% endfor %}
+
 </div>
-
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Exclusão</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body align-middle">
-                Tem certeza que deseja excluir o usuário <strong id="modalUserEmail"></strong>?<br>Os dados de membresia não serão excluídos.
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <form id="deleteUserForm" method="POST" action="">
-                    <button type="submit" class="btn btn-danger">Excluir</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-{% block scripts %}
-{{ super() }}
-<script>
-$(document).ready(function() {
-    var confirmDeleteModal = document.getElementById('confirmDeleteModal');
-    if (confirmDeleteModal) {
-        confirmDeleteModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            var userId = button.getAttribute('data-user-id');
-            var userEmail = button.getAttribute('data-user-email');
-            var deleteActionUrl = button.getAttribute('data-delete-url');
-
-            var modalUserEmail = confirmDeleteModal.querySelector('#modalUserEmail');
-            var deleteUserForm = confirmDeleteModal.querySelector('#deleteUserForm');
-
-            modalUserEmail.textContent = userEmail;
-            deleteUserForm.action = deleteActionUrl;
-        });
-    }
-});
-</script>
 {% endblock %}

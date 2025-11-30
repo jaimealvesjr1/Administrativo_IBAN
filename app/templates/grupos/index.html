@@ -88,7 +88,7 @@
         <div class="col-lg-6">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
-                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-pie-chart-fill me-2"></i>PGs Ativos por Área</h5>
+                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-pie-chart-fill me-2"></i>PGs por Área</h5>
                 </div>
                 <div class="card-body px-4 pb-4">
                     <div style="height: 300px;"><canvas id="chartPGsArea"></canvas></div>
@@ -98,7 +98,7 @@
         <div class="col-lg-6">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
-                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-bar-chart-fill me-2"></i>PGs Ativos por Setor</h5>
+                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-bar-chart-fill me-2"></i>PGs por Setor</h5>
                 </div>
                 <div class="card-body px-4 pb-4">
                     <div style="height: 300px;"><canvas id="chartPGsSetor"></canvas></div>
@@ -111,14 +111,14 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
+        // Dados vindos do Backend
         const labelsPGsArea = {{ labels_pgs_area | tojson | safe }};
         const dataPGsArea = {{ data_pgs_area | tojson | safe }};
+        const colorsPGsArea = {{ colors_pgs_area | tojson | safe }};
         
         const labelsPGsSetor = {{ labels_pgs_setor | tojson | safe }};
         const dataPGsSetor = {{ data_pgs_setor | tojson | safe }};
-
-        // Cores consistentes
-        const colors = ['#0d6efd', '#20c997', '#198754', '#dc3545', '#ffc107', '#0dcaf0', '#6610f2', '#fd7e14'];
+        const colorsPGsSetor = {{ colors_pgs_setor | tojson | safe }};
 
         // Gráfico 1: PGs por Área (Doughnut)
         new Chart(document.getElementById('chartPGsArea'), {
@@ -127,7 +127,7 @@
                 labels: labelsPGsArea,
                 datasets: [{
                     data: dataPGsArea,
-                    backgroundColor: colors,
+                    backgroundColor: colorsPGsArea, // Usa as cores geradas no backend
                     borderWidth: 0,
                     hoverOffset: 4
                 }]
@@ -150,7 +150,7 @@
                 datasets: [{
                     label: 'Quantidade de PGs',
                     data: dataPGsSetor,
-                    backgroundColor: '#20c997',
+                    backgroundColor: colorsPGsSetor, // Cada barra terá a cor da sua Área
                     borderRadius: 4
                 }]
             },
@@ -158,13 +158,22 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: false }
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            // Opcional: Adicionar o nome da Área no tooltip para facilitar
+                            label: function(context) {
+                                let value = context.raw;
+                                return value + ' PGs';
+                            }
+                        }
+                    }
                 },
                 scales: {
                     y: { 
                         beginAtZero: true, 
                         grid: { borderDash: [2, 4] },
-                        ticks: { stepSize: 1 }
+                        ticks: { stepSize: 1 } 
                     },
                     x: { grid: { display: false } }
                 }
