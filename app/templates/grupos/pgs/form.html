@@ -82,7 +82,7 @@
                         <div class="d-grid gap-2 pt-2">
                             {{ submit('Salvar Dados do PG', class="btn btn-primary btn-lg") }}
                             
-                            {% set can_close = current_user.has_permission('admin') or is_area_supervisor or is_sector_supervisor %}
+                            {% set can_close = current_user.has_permission('admin') or current_user.has_permission('secretaria') or is_area_supervisor or is_sector_supervisor %}
                             {% if pg and pg.ativo and can_close %}
                                 <button type="button" class="btn btn-outline-danger mt-2" data-bs-toggle="modal" data-bs-target="#modalFecharPG">
                                     <i class="bi bi-archive-fill me-2"></i>Fechar este PG

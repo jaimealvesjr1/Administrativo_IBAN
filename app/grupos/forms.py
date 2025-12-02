@@ -76,6 +76,7 @@ class PequenoGrupoForm(FlaskForm):
         self.is_area_supervisor = kwargs.pop('is_area_supervisor', False)
         self.is_sector_supervisor = kwargs.pop('is_sector_supervisor', False)
         self.is_facilitator = kwargs.pop('is_facilitator', False)
+        self.is_secretaria = self.current_user.has_permission('secretaria')
         self.pg_antigo_id = kwargs.pop('pg_antigo_id', None) 
 
         super(PequenoGrupoForm, self).__init__(*args, **kwargs)
@@ -103,16 +104,16 @@ class PequenoGrupoForm(FlaskForm):
                 self.setor.data = obj.setor_id
 
         if self.pg: 
-            can_edit_lideranca = self.is_admin or self.is_area_supervisor or self.is_sector_supervisor
+            can_edit_lideranca = self.is_admin or self.is_secretaria or self.is_area_supervisor or self.is_sector_supervisor
             if not can_edit_lideranca:
                 self.facilitador.render_kw = {'disabled': True}
                 self.anfitriao.render_kw = {'disabled': True}
 
-            can_edit_setor = self.is_admin or self.is_area_supervisor
+            can_edit_setor = self.is_admin or self.is_secretaria or self.is_area_supervisor
             if not can_edit_setor:
                 self.setor.render_kw = {'disabled': True}
 
-            can_edit_dia_horario = self.is_admin or self.is_area_supervisor or self.is_sector_supervisor or self.is_facilitator
+            can_edit_dia_horario = self.is_admin or self.is_secretaria or self.is_area_supervisor or self.is_sector_supervisor or self.is_facilitator
             if not can_edit_dia_horario:
                 self.dia_reuniao.render_kw = {'disabled': True}
                 self.horario_reuniao.render_kw = {'disabled': True}

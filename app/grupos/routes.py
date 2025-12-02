@@ -1268,9 +1268,10 @@ def editar_pg(pg_id):
     is_admin = current_user.has_permission('admin')
     is_area_supervisor = is_supervisor_da_area(membro_atual_id, pg)
     is_sector_supervisor = is_supervisor_do_setor(membro_atual_id, pg)
+    is_secretaria = current_user.has_permission('secretaria')
     is_facilitator = is_pg_facilitator(membro_atual_id, pg)
 
-    can_access_inactive = is_admin or is_area_supervisor or is_sector_supervisor
+    can_access_inactive = is_admin or is_secretaria or is_area_supervisor or is_sector_supervisor
     if not pg.ativo and not can_access_inactive:
         flash('Não é possível editar um Pequeno Grupo inativo.', 'danger')
         return redirect(url_for('grupos.detalhes_pg', pg_id=pg.id))
@@ -1348,13 +1349,12 @@ def fechar_pg(pg_id):
     pg = PequenoGrupo.query.get_or_404(pg_id)
     membro_atual_id = current_user.membro.id if current_user.membro else None
     
-    form = PequenoGrupoForm(pg=pg) 
-
     is_admin = current_user.has_permission('admin')
+    is_secretaria = current_user.has_permission('secretaria')
     is_area_supervisor = is_supervisor_da_area(membro_atual_id, pg)
     is_sector_supervisor = is_supervisor_do_setor(membro_atual_id, pg)
 
-    can_close = is_admin or is_area_supervisor or is_sector_supervisor
+    can_close = is_admin or is_secretaria or is_area_supervisor or is_sector_supervisor
     
     if not can_close:
         flash('Você não tem permissão para fechar este Pequeno Grupo.', 'danger')
