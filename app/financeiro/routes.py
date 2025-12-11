@@ -15,6 +15,7 @@ from app.jornada.models import registrar_evento_jornada, JornadaEvento
 from app.filters import format_currency
 import pandas as pd
 import io, random
+from unidecode import unidecode
 from weasyprint import HTML
 from app.decorators import admin_required, financeiro_required, group_permission_required
 
@@ -266,7 +267,9 @@ def lancamentos_receitas():
         data_final = filter_form.data_final.data
 
         if busca_nome:
-            query = query.filter(Membro.nome_completo.ilike(f'%{busca_nome}%'))
+            busca_normalizada = unidecode(busca_nome).lower()
+            busca_db = f'%{busca_normalizada}%'
+            query = query.filter(func.lower(func.unidecode(Membro.nome_completo)).like(busca_db))
         if tipo_filtro:
             query = query.filter(Contribuicao.tipo == tipo_filtro)
         if centro_custo_filtro:
@@ -334,7 +337,9 @@ def download_receitas_pdf():
     filtros_texto = []
 
     if busca_nome:
-        query = query.filter(Membro.nome_completo.ilike(f'%{busca_nome}%'))
+        busca_normalizada = unidecode(busca_nome).lower()
+        busca_db = f'%{busca_normalizada}%'
+        query = query.filter(func.lower(func.unidecode(Membro.nome_completo)).like(busca_db))
         filtros_texto.append(f"Nome: {busca_nome}")
     if tipo_filtro:
         query = query.filter(Contribuicao.tipo == tipo_filtro)
@@ -546,8 +551,11 @@ def editar_contribuicao(id):
 def buscar_membros_financeiro():
     search_term = request.args.get('term', '')
     results = []
+    busca_normalizada = unidecode(search_term).lower()
+    busca_db = f'%{busca_normalizada}%'
+
     membros_ativos_query = Membro.query.filter(
-        Membro.nome_completo.ilike(f'%{search_term}%'), 
+        func.lower(func.unidecode(Membro.nome_completo)).like(busca_db),
         Membro.ativo==True,
         Membro.id != Config.ID_OFERTA_ANONIMA 
     )
@@ -563,8 +571,8 @@ def buscar_membros_financeiro():
 
     membro_anonimo = Membro.query.get(Config.ID_OFERTA_ANONIMA)
     if membro_anonimo:
-        anonimo_full_name = membro_anonimo.nome_completo.lower()
-        if not search_term or search_term.lower() in anonimo_full_name:
+        anonimo_full_name = unidecode(membro_anonimo.nome_completo).lower()
+        if not search_term or busca_normalizada in anonimo_full_name:
             results.insert(0, {
                 'id': membro_anonimo.id,
                 'text': membro_anonimo.nome_completo,

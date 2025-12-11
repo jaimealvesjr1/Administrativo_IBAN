@@ -395,9 +395,11 @@ def editar_membro(id):
 def buscar_membros_ctm():
     search_term = request.args.get('term', '')
     turma_id = request.args.get('turma_id', '')
+    busca_normalizada = unidecode(search_term).lower()
+    busca_db = f'%{busca_normalizada}%'
     
     query = Membro.query.filter(
-        Membro.nome_completo.ilike(f'%{search_term}%'),
+        func.lower(func.unidecode(Membro.nome_completo)).like(busca_db),
         Membro.ativo == True
     )
 

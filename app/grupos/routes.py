@@ -14,6 +14,7 @@ from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import joinedload
 from app.ctm.models import TurmaCTM, AulaRealizada, Presenca, ConclusaoCTM
 from datetime import date, datetime, timedelta
+from unidecode import unidecode
 
 grupos_bp = Blueprint('grupos', __name__, template_folder='templates')
 ano=Config.ANO_ATUAL
@@ -896,6 +897,10 @@ def processar_multiplicacao(pg_id):
 
         db.session.add_all([novo_pg1, novo_pg2])
         db.session.add(pg_antigo)
+
+        for membro in pg_antigo.participantes.all():
+            membro.pg_id = None
+            db.session.add(membro)
         
         try:
             db.session.commit()
@@ -1425,10 +1430,12 @@ def adicionar_participante(pg_id):
 @login_required
 def buscar_membros_pgs():
     term = request.args.get('term', '')
+    busca_normalizada = unidecode(term).lower()
+    busca_db = f'%{busca_normalizada}%'
     
     membros = Membro.query.filter(
         or_(
-            Membro.nome_completo.ilike(f'%{term}%'),
+            func.lower(func.unidecode(Membro.nome_completo)).like(busca_db),
         ),
         Membro.ativo == True,
         Membro.pg_id == None,
@@ -1633,9 +1640,11 @@ def admin_gerenciar_metas_da_area(area_id):
 @login_required
 def buscar_membros_ativos():
     search_term = request.args.get('q', '')
+    busca_normalizada = unidecode(search_term).lower()
+    busca_db = f'%{busca_normalizada}%'
     
     query = Membro.query.filter(
-        Membro.nome_completo.ilike(f'%{search_term}%'),
+        func.lower(func.unidecode(Membro.nome_completo)).like(busca_db),
         Membro.ativo == True
     )
     
