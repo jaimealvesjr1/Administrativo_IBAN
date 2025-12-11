@@ -169,12 +169,14 @@ def listar_grupos_unificada():
             pgs_query = pgs_query.filter(db.and_(PequenoGrupo.ativo == False, PequenoGrupo.data_multiplicacao.is_(None)))
     
     if busca:
+        busca_normalizada = unidecode(busca).lower()
+        busca_db = f'%{busca_normalizada}%' 
         if tipo_selecionado == 'areas':
-            areas_query = areas_query.filter(Area.nome.ilike(f'%{busca}%'))
+            areas_query = areas_query.filter(func.lower(func.unidecode(Area.nome)).ilike(busca_db))
         elif tipo_selecionado == 'setores':
-            setores_query = setores_query.filter(Setor.nome.ilike(f'%{busca}%'))
+            setores_query = setores_query.filter(func.lower(func.unidecode(Setor.nome)).ilike(busca_db))
         elif tipo_selecionado == 'pgs':
-            pgs_query = pgs_query.filter(PequenoGrupo.nome.ilike(f'%{busca}%'))
+            pgs_query = pgs_query.filter(func.lower(func.unidecode(PequenoGrupo.nome)).ilike(busca_db))
 
     if area_filtro:
         if tipo_selecionado == 'setores':
@@ -1655,3 +1657,61 @@ def buscar_membros_ativos():
         results.append({'id': membro.id, 'text': membro.nome_completo})
         
     return jsonify(results=results)
+
+@grupos_bp.route('/pgs/limpeza_membros_presos', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def cleanup_old_members():
+    # 1. Identificar PGs inativos (multiplicados ou simplesmente fechados)
+    pgs_inativos = PequenoGrupo.query.filter_by(ativo=False).all()
+    pgs_inativos_ids = [pg.id for pg in pgs_inativos]
+
+    membros_presos = []
+    if pgs_inativos_ids:
+        # 2. Encontrar membros vinculados a esses PGs
+        membros_presos = Membro.query.filter(Membro.pg_id.in_(pgs_inativos_ids)).all()
+    
+    if request.method == 'POST':
+        # Processar a limpeza
+        membros_liberados_count = 0
+        for membro in membros_presos:
+            membro.pg_id = None
+            # Opcional: Reseta os indicadores para o padrão de participante (como feito na multiplicação/fechamento)
+            membro.status_treinamento_pg = 'Participante' 
+            membro.participou_ctm = False
+            membro.participou_encontro_deus = False
+            membro.batizado_aclamado = False
+            db.session.add(membro)
+            membros_liberados_count += 1
+        
+        try:
+            db.session.commit()
+            flash(f'Sucesso! {membros_liberados_count} membros foram desvinculados de PGs inativos e agora estão disponíveis.', 'success')
+            return redirect(url_for('grupos.listar_grupos_unificada', tipo='pgs', status_pg='inativos'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao processar a limpeza: {e}', 'danger')
+            return redirect(url_for('grupos.cleanup_old_members'))
+
+    # Para requisição GET: prepara os dados para exibição
+    
+    # Mapear IDs de PGs inativos para seus nomes para exibir na lista
+    pgs_afetados_nomes = {pg.id: pg.nome for pg in pgs_inativos}
+    
+    membros_info = []
+    for membro in membros_presos:
+        pg_nome = pgs_afetados_nomes.get(membro.pg_id, 'PG Inativo Desconhecido')
+        membros_info.append({
+            'id': membro.id,
+            'nome': membro.nome_completo,
+            'pg_antigo': pg_nome
+        })
+
+    return render_template(
+        'grupos/pgs/cleanup.html', 
+        membros_info=membros_info,
+        num_membros_presos=len(membros_presos),
+        ano=ano,
+        versao=versao,
+        title="Limpeza de Membros Presos a PGs Inativos"
+    )

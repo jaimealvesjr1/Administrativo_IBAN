@@ -1,0 +1,38 @@
+{% extends "base/layout.html" %}
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">{{ title }}</h1>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Status da Limpeza de Vínculos de PG</h6>
+        </div>
+        <div class="card-body">
+            {% if num_membros_presos > 0 %}
+                <p>O sistema identificou <strong class="text-danger">{{ num_membros_presos }}</strong> membros que ainda estão tecnicamente vinculados a Pequenos Grupos (PGs) inativos (fechados ou multiplicados).</p>
+                <p>A confirmação abaixo irá **desvincular todos** eles para que possam ser adicionados aos novos PGs ativos.</p>
+
+                <form method="POST" action="{{ url_for('grupos.cleanup_old_members') }}">
+                    <button type="submit" class="btn btn-danger btn-lg mb-4" onclick="return confirm('ATENÇÃO: Você tem certeza que deseja desvincular TODOS os {{ num_membros_presos }} membros listados de seus PGs inativos? Esta ação é irreversível.')">
+                        <i class="fas fa-unlink"></i> Confirmar Desvinculação em Massa
+                    </button>
+                </form>
+
+                <h5 class="mt-4">Membros Afetados:</h5>
+                <ul class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                    {% for membro in membros_info %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            {{ membro.nome }}
+                            <span class="badge bg-secondary">{{ membro.pg_antigo }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+
+            {% else %}
+                <p class="text-success">✅ Não foi encontrado nenhum membro com vínculo a Pequenos Grupos inativos. O banco de dados está limpo!</p>
+                <a href="{{ url_for('grupos.listar_grupos_unificada', tipo='pgs', status_pg='inativos') }}" class="btn btn-primary mt-3">Voltar para Listagem de PGs</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
