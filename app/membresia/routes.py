@@ -601,7 +601,13 @@ def unificar_processar():
         membros_secundarios = Membro.query.filter(Membro.id.in_(membros_ids_a_excluir)).all()
 
         membro_principal.nome_completo = dados_revisao.get('nome_completo')
-        membro_principal.data_nascimento = datetime.strptime(dados_revisao.get('data_nascimento'), '%Y-%m-%d').date() if dados_revisao.get('data_nascimento') else None
+        
+        data_nasc_str = dados_revisao.get('data_nascimento')
+        if data_nasc_str and data_nasc_str != 'None':
+            membro_principal.data_nascimento = datetime.strptime(data_nasc_str, '%Y-%m-%d').date()
+        else:
+            membro_principal.data_nascimento = None
+
         membro_principal.status = dados_revisao.get('status')
         membro_principal.campus = dados_revisao.get('campus')
         

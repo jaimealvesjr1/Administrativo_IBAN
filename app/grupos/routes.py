@@ -458,6 +458,9 @@ def editar_area(area_id):
     area = Area.query.get_or_404(area_id)
     form = AreaForm(obj=area)
 
+    supervisores_possiveis = Membro.query.filter(Membro.ativo == True).order_by(Membro.nome_completo).all()
+    form.supervisores.choices = [(m.id, m.nome_completo) for m in supervisores_possiveis]
+
     if form.validate_on_submit():
         area.nome = form.nome.data
         

@@ -34,7 +34,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     TIMEZONE = 'America/Sao_Paulo'
-    VERSAO_APP = '2.10.1 · Contábil'
+    VERSAO_APP = '2.10.2 · Contábil'
     ANO_ATUAL = datetime.now().year
 
     ID_OFERTA_ANONIMA = 90000
