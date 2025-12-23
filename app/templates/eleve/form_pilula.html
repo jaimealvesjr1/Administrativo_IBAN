@@ -1,0 +1,134 @@
+{% set show_navbar = true %}
+{% extends "base/layout.html" %}
+{% from 'base/components/forms.html' import field as render_field %} 
+
+{% block title %}{{ title }} · ELEVE{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold text-success">{{ title }}</h2>
+                <a href="{{ url_for('eleve.gerenciar_pilulas') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Voltar à Lista
+                </a>
+            </div>
+
+            <form method="POST">
+            {{ form.hidden_tag() }}
+
+                {# ALERTA GERAL DE ERROS #}
+                {% if form.errors %}
+                    <div class="alert alert-danger mb-4">
+                        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i> Erros de Validação Encontrados:</h5>
+                        {# MANTIDO: Lógica de erro para campos simples #}
+                        {% for field, errors in form.errors.items() %}
+                            {% if field not in ['csrf_token', 'quiz_p1', 'quiz_p2', 'quiz_p3'] %}
+                                <p class="mb-0"><strong>{{ field|capitalize }}:</strong> {{ errors|join(', ') }}</p>
+                            {% endif %}
+                        {% endfor %}
+                        <p class="mt-2 mb-0">Corrija os erros destacados (em vermelho) e tente novamente.</p>
+                    </div>
+                {% endif %}
+
+                <div class="accordion" id="pilulaAccordion">
+                    
+                    {# ITEM 1: DETALHES PRINCIPAIS #}
+                    <div class="accordion-item shadow-sm border-primary">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button fw-bold text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                <i class="bi bi-info-circle-fill me-2"></i> 1. Detalhes, Tema e Prazo (Obrigatório)
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#pilulaAccordion">
+                            <div class="accordion-body">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-9">{{ render_field(form.titulo) }}</div>
+                                    <div class="col-md-3">{{ render_field(form.data_publicacao) }}</div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">{{ render_field(form.subcategoria_rv) }}</div>
+                                    <div class="col-md-6">{{ render_field(form.link_video) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ITEM 2: QUIZ INTEGRADO #}
+                    <div class="accordion-item shadow-sm border-warning">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button fw-bold text-warning collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                <i class="bi bi-patch-question-fill me-2"></i> 2. Quiz Integrado (6 Pontos Base)
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#pilulaAccordion">
+                            <div class="accordion-body">
+                                <p class="text-muted small">Preencha de 1 a 3 perguntas. Cada pergunta preenchida exige 4 alternativas e a seleção da resposta correta.</p>
+
+                                {% for i in range(1, 4) %}
+                                    {% set p_field = form['quiz_p' ~ i] %}
+                                    {% set a_field = form['alt_a' ~ i] %}
+                                    {% set b_field = form['alt_b' ~ i] %}
+                                    {% set c_field = form['alt_c' ~ i] %}
+                                    {% set d_field = form['alt_d' ~ i] %}
+                                    {% set c_select = form['quiz_c' ~ i] %}
+
+                                    <div class="card bg-light p-3 mb-3">
+                                        <h6 class="fw-bold text-dark">Pergunta {{ i }}</h6>
+                                        
+                                        {{ render_field(p_field) }}
+                                        
+                                        {# Exibe erro customizado #}
+                                        {% if p_field.errors %}
+                                            <div class="alert alert-danger p-2 mt-2">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Erro: {{ p_field.errors|join('<br>')|safe }}
+                                            </div>
+                                        {% endif %}
+
+                                        <h6 class="mt-3 fw-bold text-secondary">Alternativas e Resposta Correta</h6>
+                                        <div class="row g-3">
+                                            <div class="col-md-6">{{ render_field(a_field) }}</div>
+                                            <div class="col-md-6">{{ render_field(b_field) }}</div>
+                                            <div class="col-md-6">{{ render_field(c_field) }}</div>
+                                            <div class="col-md-6">{{ render_field(d_field) }}</div>
+                                        </div>
+                                        <div class="mt-3">
+                                            {{ render_field(c_select) }}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {# ITEM 3: TAREFA / AÇÃO PRÁTICA #}
+                    <div class="accordion-item shadow-sm border-info">
+                        <h2 class="accordion-header" id="headingThree">
+                            <button class="accordion-button fw-bold text-info collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                <i class="bi bi-list-task me-2"></i> 3. Tarefa / Ação Prática (2 Pontos Base)
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#pilulaAccordion">
+                            <div class="accordion-body">
+                                <p class="text-muted small">Campo opcional. Descreva a ação prática esperada do discípulo.</p>
+                                {{ render_field(form.descricao_tarefa) }}
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                
+                {# BOTÕES FINAIS #}
+                <div class="d-flex justify-content-between p-3 bg-light rounded-4 shadow-sm mt-4">
+                    <a href="{{ url_for('eleve.gerenciar_pilulas') }}" class="btn btn-secondary btn-lg">
+                        <i class="bi bi-x-circle-fill me-1"></i> Cancelar
+                    </a>
+                    {{ form.submit(class='btn btn-success btn-lg fw-bold') }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

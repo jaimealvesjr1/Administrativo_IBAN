@@ -1,0 +1,56 @@
+{% set show_navbar = true %}
+{% extends "base/layout.html" %}
+
+{% block title %}{{ title }} · IBAN{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-primary">{{ title }} <small class="text-muted fs-5">| Classificados {{ ano }}</small></h2>
+        <a href="{{ url_for('eleve.painel') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar ao Painel
+        </a>
+    </div>
+
+    <div class="alert alert-success" role="alert">
+        Este ranking exibe todos os discípulos que conquistaram o Slot de Classificação (SC) na Jornada ELEVE {{ ano }} e estão ordenados pelos critérios de desempate (PJ > PCr Máximo > Nº Classificações > PCr Acumulado).
+    </div>
+
+    <div class="card shadow-lg p-4 rounded-4 border-primary">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th class="text-center">Posição</th>
+                    <th>Discípulo</th>
+                    <th class="text-center">PJ Total<br>(1º Critério)</th>
+                    <th class="text-center">PCr Máximo<br>(2º Critério)</th>
+                    <th class="text-center">Nº Classificações<br>(3º Critério)</th>
+                    <th class="text-center">PCr Acumulado<br>(Desempate Fino)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pontuacao in ranking_completo %}
+                <tr class="{% if loop.index <= 10 %}table-primary fw-bold{% endif %}">
+                    <td class="text-center fs-4">
+                        {% if loop.index == 1 %}
+                            <i class="bi bi-star-fill text-warning"></i>
+                        {% else %}
+                            {{ loop.index }}
+                        {% endif %}
+                    </td>
+                    <td>{{ pontuacao.membro.nome_completo }}</td>
+                    <td class="text-center fs-4 text-primary">{{ pontuacao.pj_total }}</td>
+                    <td class="text-center">{{ pontuacao.pcr_max }}</td>
+                    <td class="text-center">{{ pontuacao.num_classificacoes }}</td>
+                    <td class="text-center text-muted small">{{ pontuacao.pcr_acumulado }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted">Nenhum Slot de Classificação foi conquistado em {{ ano }} ainda.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

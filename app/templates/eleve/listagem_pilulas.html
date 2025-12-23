@@ -1,0 +1,77 @@
+{% set show_navbar = true %}
+{% extends "base/layout.html" %}
+
+{% block title %}{{ title }} · ELEVE{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-success">{{ title }} <small class="text-muted fs-5">| Total de Pílulas: {{ pilulas|length }}</small></h2>
+        <div>
+            <a href="{{ url_for('eleve.painel') }}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+            <a href="{{ url_for('eleve.cadastrar_pilula') }}" class="btn btn-primary shadow-sm">
+                <i class="bi bi-plus-circle-fill me-1"></i> Nova Pílula
+            </a>
+        </div>
+    </div>
+    
+    <div class="card shadow-lg p-3 rounded-4">
+        <div class="card-body">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Tema (RV)</th>
+                        <th class="text-center">Pts Base (PG)</th>
+                        <th>Data Publicação</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pilula in pilulas %}
+                    <tr>
+                        <td>{{ pilula.id }}</td>
+                        <td>
+                            <strong>{{ pilula.titulo }}</strong><br>
+                            <small class="text-muted">
+                                {% if pilula.link_video %}Vídeo (2 PG) |{% endif %}
+                                {% if pilula.questoes_quiz.count() > 0 %}Quiz (6 PG) |{% endif %}
+                                {% if pilula.descricao_tarefa %}Tarefa (2 PG){% endif %}
+                            </small>
+                        </td>
+                        <td><span class="badge bg-info text-dark">{{ pilula.subcategoria_rv }}</span></td>
+                        <td class="text-center fw-bold text-success">{{ pilula.pontos_base }}</td>
+                        <td>{{ pilula.data_publicacao }}</td>
+                        <td class="text-center text-nowrap">
+                            {# NOVO: Botão de Acessar Pílula #}
+                            <a href="{{ url_for('eleve.acessar_pilula', pilula_id=pilula.id) }}" class="btn btn-sm btn-outline-success me-1" title="Acessar Pílula (Visualização do Discípulo)">
+                                <i class="bi bi-box-arrow-in-right"></i>
+                            </a>
+
+                            {# EXISTENTE: Botão de Editar #}
+                            <a href="{{ url_for('eleve.editar_pilula', pilula_id=pilula.id) }}" class="btn btn-sm btn-outline-warning me-1" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+
+                            {# NOVO: Formulário para Exclusão (POST) #}
+                            <form method="POST" action="{{ url_for('eleve.excluir_pilula', pilula_id=pilula.id) }}" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir a Pílula {{ pilula.id }} ({{ pilula.titulo }})? Esta ação é irreversível e removerá todos os registros de quiz relacionados.');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">Nenhuma pílula cadastrada. Use o botão "Nova Pílula" acima.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% set show_navbar = true %}
+{% extends "base/layout.html" %}
+{% from 'base/components/buttons.html' import primary %}
+
+{% block title %}Painel ELEVE · IBAN{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-primary">Painel ELEVE <small class="text-muted fs-5">| Gestão da Jornada</small></h2>
+        <div>
+            {# Botão para gerenciar Pílulas (CRUD) #}
+            <a href="{{ url_for('eleve.gerenciar_pilulas') }}" class="btn btn-success me-2 shadow-sm">
+                <i class="bi bi-book-half me-1"></i> Gerenciar Pílulas
+            </a>
+            {# Link temporário para o Ranking Anual (P7 a ser implementado) #}
+            <a href="{{ url_for('eleve.minha_jornada') }}" class="btn btn-outline-primary shadow-sm">
+                <i class="bi bi-trophy-fill me-1"></i> Ver Ranking Anual
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-warning border-warning border-4 border-start" role="alert">
+        <h4 class="alert-heading fw-bold">Gestão Ativa do Sistema</h4>
+        <p class="mb-0">A pontuação e o ranking do ELEVE são automáticos, mas exigem a criação de Pílulas, o **registro de presenças diárias** e o processamento manual dos resultados mensais.</p>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-4 g-4 mb-4">
+        
+        {# NOVO CARD: Registro de Presença Diária (P2 do Cronograma) #}
+        <div class="col">
+            <div class="card bg-info text-white shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold"><i class="bi bi-calendar-check me-2"></i> Registrar Presenças</h5>
+                    <p class="card-text">Marcar Culto, PG e Serviço de Departamento dos discípulos.</p>
+                    <a href="{{ url_for('eleve.marcar_presenca_diaria') }}" class="btn btn-light btn-sm mt-2 text-info">
+                        Abrir Formulário
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {# CARD 2: Total de Pílulas Cadastradas #}
+        <div class="col">
+            <div class="card bg-success text-white shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold"><i class="bi bi-book-fill me-2"></i> Pílulas Cadastradas</h5>
+                    <p class="card-text">Total de Pílulas disponíveis no sistema:</p>
+                    {# USANDO DADOS REAIS #}
+                    <h1 class="card-text display-4">{{ total_pilulas }}</h1> 
+                </div>
+            </div>
+        </div>
+        
+        {# CARD 3: Classificados Anuais #}
+        <div class="col">
+            <div class="card bg-danger text-white shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold"><i class="bi bi-star-fill me-2"></i> Slots Anuais</h5>
+                    <p class="card-text">Total de Discípulos com Slot Conquistado (SC) em {{ ano }}:</p>
+                    {# USANDO DADOS REAIS #}
+                    <h1 class="card-text display-4">{{ total_classificados }}</h1> 
+                </div>
+            </div>
+        </div>
+
+        {# NOVO CARD 4: Mês Atual (Aberto) #}
+        <div class="col">
+            <div class="card bg-secondary text-white shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold"><i class="bi bi-calendar-event me-2"></i> Mês Competitivo</h5>
+                    <p class="card-text">Status atual do ciclo: <strong>{{ now().strftime('%B/%Y') }}</strong></p>
+                    <h1 class="card-text display-4">{{ now().day }}º Dia</h1> 
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-lg p-4 rounded-4 mt-4 border-secondary">
+        <h3 class="mb-4 text-center fw-bold">Processar Fim de Etapa Mensal</h3>
+        <p class="text-muted text-center mb-4">Esta rotina calcula os Pontos Finais de cada discípulo no Setor e, para o Top 20%, acumula **PJ** e atualiza o **PCr** para o ranking anual.</p>
+        <form method="GET" action="{{ url_for('eleve.ver_ranking_mensal', setor_id=1, mes=1, ano=ano) }}" class="row g-3 justify-content-center">
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Setor Competitivo</label>
+                <select name="setor_id" class="form-select">
+                    {% for setor in setores %}
+                        <option value="{{ setor.id }}">{{ setor.nome }}</option>
+                    {% else %}
+                        <option value="" disabled>Nenhum setor cadastrado</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Mês</label>
+                <input type="number" name="mes" value="{{ now().month }}" class="form-control" min="1" max="12">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Ano</label>
+                <input type="number" name="ano" value="{{ ano }}" class="form-control">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-warning w-100 fw-bold" {% if not setores %}disabled{% endif %}>
+                    <i class="bi bi-search me-1"></i> Visualizar Ranking
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

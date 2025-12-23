@@ -6,105 +6,199 @@
 {% block title %}{{ membro.nome_completo }} · IBAN{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><strong>{{ membro.nome_completo }}</strong></h2>
-        <div class="btn-group">
-            {% if current_user.is_authenticated and current_user.membro and current_user.membro.id == membro.id %}
-            <a href="{{ url_for('membresia.editar_proprio_perfil') }}" class="btn btn-primary">Editar Meu Perfil</a>
-            {% endif %}
-
-            {% if current_user.has_permission('admin') or current_user.has_permission('secretaria') %}
-            <a href="{{ url_for('membresia.editar_membro', id=membro.id) }}" class="btn btn-warning text-white">Editar Cadastro</a>
-            <a href="{{ url_for('membresia.listagem') }}" class="btn btn-outline-secondary">Voltar à Lista</a>
-            {% endif %}
-        </div>
-    </div>
+<div class="container-fluid mt-4">
     <div class="row">
-        <div class="col-md-4">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Cadastro</h5>
-                </div>
-                <div class="card-body text-center">
-                    <img src="{{ membro.get_foto_perfil_url() }}" alt="Foto de Perfil de {{ membro.nome_completo }}" class="img-thumbnail rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
-                    <p class="text-start"><strong>Nome Completo:</strong> {{ membro.nome_completo }}</p>
-                    <p class="text-start"><strong>Data de Nascimento:</strong> {{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento else 'Não informado' }}</p>
-                    <p class="text-start"><strong>Data de Recepção:</strong> {{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao else 'Não informado' }}</p>
-                    <p class="text-start"><strong>Campus:</strong> {{ membro.campus }}</p>
-                </div>
-            </div>
-            
-            {% set pgs_facilitados_ativos = membro.pgs_facilitados|selectattr('ativo')|list %}
-            {% set pgs_anfitriados_ativos = membro.pgs_anfitriados|selectattr('ativo')|list %}
-            {% set pgs_liderados_ativos = pgs_facilitados_ativos + pgs_anfitriados_ativos %}
-            {% if membro.pg_participante and membro.pg_participante.ativo %}
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">Atividade em PGs</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled mb-0">
-                        <li>
-                            <i class="bi bi-person-fill me-1"></i>
-                            <strong>Participante do PG:</strong> 
-                            <a href="{{ url_for('grupos.detalhes_pg', pg_id=membro.pg_participante.id) }}">{{ membro.pg_participante.nome }}</a>
-                            <br>
-                            <small class="text-muted">Setor {{ membro.pg_participante.setor.nome }}</small>
-                                <span class="badge bg-warning text-dark ms-2" style="font-size: 0.75rem;">
-                                {% if membro.status_treinamento_pg != 'nao_treinado' %}
-                                    {{ membro.status_treinamento_pg }}
-                                {% else %}
-                                    Nenhum
-                                {% endif %}
-                        </li>
+        <div class="col-lg-4 col-xl-3 mb-4">
+            <div class="card shadow-lg h-100 border-primary rounded-4">
+                <div class="card-body text-center p-4">
+                    {# Assume que get_foto_perfil_url() existe no seu modelo Membro #}
+                    <img src="{{ membro.get_foto_perfil_url() }}" 
+                         alt="Foto de Perfil" class="rounded-circle mb-3 border border-primary border-3" 
+                         style="width: 120px; height: 120px; object-fit: cover;">
+                    
+                    <h4 class="card-title fw-bold text-primary">{{ membro.nome_completo }}</h4>
+                    <p class="text-muted mb-4">{{ membro.status_exibicao }} | Setor: {{ setor_do_membro.nome if setor_do_membro else 'N/A' }}</p>
 
-                        {% for pg in pgs_liderados_ativos %}
-                        <li>
-                            <i class="bi bi-star-fill me-1"></i>
-                            <strong>
-                            {% if pg.facilitador.id == membro.id %}
-                                Facilitador do PG:
-                            {% elif pg.anfitriao.id == membro.id %}
-                                Anfitrião do PG:
-                            {% endif %}
-                            </strong>
-                            <a href="{{ url_for('grupos.detalhes_pg', pg_id=pg.id) }}">{{ pg.nome }}</a>
-                            <br>
-                            <small class="text-muted">Setor {{ pg.setor.nome }}</small>
-                        </li>
-                        {% endfor %}
-                        
-                    </ul>
-                </div>
-                
-                {% set pgs_multiplicados = membro.pgs_facilitados|rejectattr('ativo')|list + membro.pgs_anfitriados|rejectattr('ativo')|list %}
-                
-                {% if pgs_multiplicados %}
-                <div class="card-footer bg-light">
-                    <h6 class="mb-0 text-muted" style="font-size: 0.9rem;">
-                        <i class="bi bi-clock-history me-1"></i> Multiplicou PGs (Histórico: {{ pgs_multiplicados|length }})
-                    </h6>
-                </div>
-                {% endif %}
-            </div>
-            {% endif %}
-
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">Indicadores de PG</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled">
-                        <li><strong>Frequente no CTM:</strong> {{ 'Sim' if membro.participou_ctm else 'Não' }}</li>
-                        <li><strong>Já Participou do Encontro com Deus:</strong> {{ 'Sim' if membro.participou_encontro_deus else 'Não' }}</li>
-                        <li><strong>Dizimista(Últimos 30 dias):</strong> {{ 'Sim' if membro.contribuiu_dizimo_ultimos_30d else 'Não' }}</li>
-                    </ul>
+                    {# Status de Slot ELEVE (Intuitivo) #}
+                    {% if pontuacao_anual.slot_classificacao %}
+                        <div class="alert alert-success fw-bold p-2 mb-3">
+                            <i class="bi bi-award-fill me-1"></i> Slot Anual **CONQUISTADO!**
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning fw-bold p-2 mb-3">
+                            <i class="bi bi-star me-1"></i> Slot Anual Pendente
+                        </div>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('membresia.editar_proprio_perfil') }}" class="btn btn-outline-secondary w-100 mt-2">
+                        <i class="bi bi-gear-fill me-1"></i> Editar Meu Perfil
+                    </a>
                 </div>
             </div>
         </div>
-        <div class="col-md-8">
-            {{ render_jornada_timeline(jornada_eventos, current_user) }}
+
+        <div class="col-lg-8 col-xl-9 mb-4">
+            <div class="card shadow-lg p-3 rounded-4">
+                <ul class="nav nav-tabs nav-justified" id="perfilTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold" id="dados-tab" data-bs-toggle="tab" data-bs-target="#dados" type="button" role="tab" aria-controls="dados" aria-selected="true">
+                            <i class="bi bi-person-lines-fill me-1"></i> Dados Pessoais
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="eleve-tab" data-bs-toggle="tab" data-bs-target="#eleve" type="button" role="tab" aria-controls="eleve" aria-selected="false">
+                            <i class="bi bi-trophy-fill me-1 text-primary"></i> Minha Jornada ELEVE
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content pt-3" id="perfilTabContent">
+                    
+                    {# TAB 1: DADOS PESSOAIS (Conteúdo Existente) #}
+                    <div class="tab-pane fade show active" id="dados" role="tabpanel" aria-labelledby="dados-tab">
+                        <h5 class="fw-bold mb-3 text-secondary">Informações de Contato e Vínculo</h5>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item"><strong>Data de Nascimento:</strong> {{ membro.data_nascimento.strftime('%d/%m/%Y') if membro.data_nascimento else 'Não informado' }}</li>
+                            <li class="list-group-item"><strong>Data de Recepção:</strong> {{ membro.data_recepcao.strftime('%d/%m/%Y') if membro.data_recepcao else 'Não informado' }}</li>
+                            <li class="list-group-item"><strong>Email:</strong> {{ membro.user.email if membro.user else 'N/A' }}</li>
+                        </ul>
+                        <h5 class="fw-bold mb-3 text-info">Indicadores de PG</h5>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item"><strong>Frequente no CTM:</strong> {{ 'Sim' if membro.participou_ctm else 'Não' }}</li>
+                            <li class="list-group-item"><strong>Já Participou do Encontro com Deus:</strong> {{ 'Sim' if membro.participou_encontro_deus else 'Não' }}</li>
+                            <li class="list-group-item"><strong>Dizimista(Últimos 30 dias):</strong> {{ 'Sim' if membro.contribuiu_dizimo_ultimos_30d else 'Não' }}</li>
+                        </ul>
+                        {{ render_jornada_timeline(jornada_eventos, current_user) }}
+                    </div>
+
+                    {# TAB 2: JORNADA ELEVE (Conteúdo Unificado) #}
+                    <div class="tab-pane fade" id="eleve" role="tabpanel" aria-labelledby="eleve-tab">
+                        <div class="row g-4">
+                            
+                            {# BLOCO 1: PONTUAÇÃO ANUAL (Critérios de Desempate) #}
+                            <div class="col-lg-4">
+                                <div class="card shadow-sm p-4 h-100 border-success">
+                                    <h5 class="mb-3 fw-bold text-success"><i class="bi bi-star-fill me-2"></i> Acúmulo Anual ({{ ano }})</h5>
+                                    <p class="text-muted small mb-3">Métricas que definem sua posição no Ranking Geral (Campeão Anual).</p>
+                                    
+                                    <ul class="list-group list-group-flush mb-4">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <strong>PJ Total (1º Critério)</strong>
+                                            <span class="fs-4 text-primary fw-bold">{{ pontuacao_anual.pj_total }}</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <strong>PCr Máximo (2º Critério)</strong>
+                                            <span class="fs-4 text-success fw-bold">{{ pontuacao_anual.pcr_max }}</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <strong>Nº de Classificações</strong>
+                                            <span class="fs-5 text-secondary fw-bold">{{ pontuacao_anual.num_classificacoes }}</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center text-muted small">
+                                            PCr Acumulado
+                                            <span>{{ pontuacao_anual.pcr_acumulado }}</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            {# BLOCO 2: RODA DA VIDA (Progresso IP) #}
+                            <div class="col-lg-8">
+                                <div class="card shadow-sm p-4 h-100 border-info">
+                                    <h5 class="mb-3 fw-bold text-info"><i class="bi bi-pie-chart-fill me-2"></i> Progresso na Roda da Vida</h5>
+                                    <p class="text-muted small mb-3">A evolução é dada pelos 10 Pontos de Progresso (IP) atribuídos ao tema de cada Pílula Diária concluída.</p>
+                                    
+                                    {# Cálculo da Média por Habilidade Principal #}
+                                    {% set roda_data = {
+                                        'Pessoal': (indices_roda.get('Saúde', 0) + indices_roda.get('Família', 0) + indices_roda.get('Finanças', 0)) / 3,
+                                        'Espiritual': (indices_roda.get('Santidade', 0) + indices_roda.get('Tempo de Leitura', 0) + indices_roda.get('Tempo de Oração', 0)) / 3,
+                                        'Ministerial': (indices_roda.get('Culto', 0) + indices_roda.get('Liderança', 0) + indices_roda.get('Célula', 0)) / 3,
+                                        'Crescimento': (indices_roda.get('Carreira', 0) + indices_roda.get('Aperfeiçoamento', 0) + indices_roda.get('Sonho', 0)) / 3
+                                    } %}
+
+                                    <ul class="list-group list-group-flush mt-2">
+                                        {% for habilidade, media in roda_data.items() %}
+                                        <li class="list-group-item">
+                                            <strong class="text-dark">{{ habilidade }}</strong>
+                                            <div class="progress" style="height: 12px;">
+                                                <div class="progress-bar {% if media >= 80 %}bg-success{% elif media >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                    role="progressbar" style="width: {{ media|round(0)|int }}%" aria-valuenow="{{ media|round(0) }}" aria-valuemin="0" aria-valuemax="100">
+                                                    <small class="fw-bold">{{ media|round(1) }}%</small>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            {# BLOCO 3: RANKING MENSAL (SETOR) #}
+                            <div class="col-lg-6">
+                                <div class="card shadow-sm p-4 h-100 border-warning">
+                                    <h5 class="fw-bold text-warning mb-3"><i class="bi bi-bar-chart-line-fill me-2"></i> Ranking Mensal (Setor)</h5>
+                                    <p class="text-muted small">Sua posição entre os membros do Setor {{ setor_do_membro.nome if setor_do_membro else 'N/A' }}.</p>
+                                    <table class="table table-sm table-striped table-hover mt-3">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-center">#</th>
+                                                <th>Discípulo</th>
+                                                <th class="text-center">PG Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for pontuacao in ranking_mensal_setor %}
+                                            {# Destaca a linha do membro atual #}
+                                            <tr class="{% if pontuacao.membro_id == membro.id %}bg-warning bg-opacity-25 fw-bold{% endif %}">
+                                                <td class="text-center">{{ loop.index }}</td>
+                                                <td>{{ pontuacao.membro.nome_completo }}</td>
+                                                <td class="text-center fw-bold text-primary">{{ pontuacao.pontos_finais_pg }}</td>
+                                            </tr>
+                                            {% else %}
+                                            <tr><td colspan="3" class="text-center text-muted">Ranking não processado ou Setor vazio.</td></tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            {# BLOCO 4: RANKING ANUAL (GERAL) #}
+                            <div class="col-lg-6">
+                                <div class="card shadow-sm p-4 h-100 border-primary">
+                                    <h5 class="fw-bold text-primary mb-3"><i class="bi bi-graph-up-arrow me-2"></i> Ranking Geral Anual (Top 10)</h5>
+                                    <p class="text-muted small">Classificação de elite do sistema, ordenada por PJ (Pontos de Jornada).</p>
+                                    <table class="table table-sm table-striped table-hover mt-3">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-center">#</th>
+                                                <th>Discípulo</th>
+                                                <th class="text-center">PJ</th>
+                                                <th class="text-center">PCr-Max</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for pontuacao in ranking_top_geral %}
+                                            {# Destaca a linha do membro atual #}
+                                            <tr class="{% if pontuacao.membro_id == membro.id %}bg-primary bg-opacity-25 fw-bold{% endif %}">
+                                                <td class="text-center">{{ loop.index }}</td>
+                                                <td>{{ pontuacao.membro.nome_completo }}</td>
+                                                <td class="text-center fw-bold text-primary">{{ pontuacao.pj_total }}</td>
+                                                <td class="text-center">{{ pontuacao.pcr_max }}</td>
+                                            </tr>
+                                            {% else %}
+                                            <tr><td colspan="4" class="text-center text-muted">Nenhum classificado anual ainda.</td></tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                    <div class="text-end">
+                                        <a href="{{ url_for('eleve.ranking_anual_completo') }}" class="btn btn-sm btn-outline-primary">Ver Ranking Completo</a>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

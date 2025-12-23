@@ -19,6 +19,14 @@
 </div>
 
 <div class="row justify-content-center g-4">
+    {% if not concluida_hoje and pilula_do_dia %}
+    <div class="alert alert-warning text-center fw-bold p-3 mb-4 shadow-sm">
+        <i class="bi bi-mortarboard-fill me-2"></i> Sua Pílula Diária ({{ pilula_do_dia.titulo }}) está esperando por você!
+        <a href="{{ url_for('eleve.acessar_pilula', pilula_id=pilula_do_dia.id) }}" class="btn btn-warning fw-bold ms-3">
+            Acessar Pílula
+        </a>
+    </div>
+    {% endif %}
     {% if current_user.is_authenticated %}
         {% if current_user.membro %}
         <div class="col-6 col-md-4 col-lg-3">
@@ -53,7 +61,7 @@
             </a>
         </div>
         <div class="col-6 col-md-4 col-lg-3">
-            <a href="{{ url_for('ctm.index') }}" class="module-button d-flex flex-column align-items-center justify-content-center text-decoration-none">
+            <a href="{{ url_for('eleve.painel') }}" class="module-button d-flex flex-column align-items-center justify-content-center text-decoration-none">
                 <i class="bi bi-book-fill icon-large mb-2"></i>
                 <span>CTM</span>
             </a>

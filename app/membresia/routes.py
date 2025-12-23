@@ -8,6 +8,7 @@ from app.financeiro.models import Contribuicao
 from app.ctm.models import ConclusaoCTM, Presenca
 from app.auth.models import User
 from app.grupos.models import PequenoGrupo, Setor, Area
+from app.eleve.models import PontuacaoAnual, IndiceProgresso, RegistroMensal, RODA_DA_VIDA_SUBCATEGORIAS
 from config import Config
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, and_, or_
@@ -509,21 +510,68 @@ def listar_nao_membros():
     nao_membros = Membro.query.filter_by(status='Não-Membro', ativo=True).order_by(Membro.nome_completo).all()
     return render_template('membresia/lista_nao_membros.html', nao_membros=nao_membros, ano=ano, versao=versao)
 
-@membresia_bp.route('/<int:id>/perfil')
-@login_required
+@membresia_bp.route('/perfil/<int:id>', methods=['GET'])
+@login_required 
 def perfil(id):
-    membro = Membro.query.get_or_404(id)
-    jornada_eventos = membro.jornada_eventos_membro.order_by(JornadaEvento.data_evento.desc()).all()
+    """Visualiza o perfil de um membro e unifica as informações da Jornada ELEVE."""
     
-    historico_ctm = ConclusaoCTM.query.filter_by(membro_id=membro.id).all()
+    # 1. Dados Principais
+    membro = Membro.query.get_or_404(id)
+    ano_atual = datetime.now().year
+    
+    # 2. Setor (Acesso corrigido via PG)
+    setor_do_membro = membro.pg_participante.setor if membro.pg_participante else None 
+    
+    # --- Lógica ELEVE ---
+    
+    # 3. Pontuação Anual do Membro (PJ e PCr-Max)
+    pontuacao_anual = PontuacaoAnual.query.filter_by(
+        membro_id=membro.id, 
+        ano=ano_atual
+    ).first()
+    if not pontuacao_anual:
+        pontuacao_anual = PontuacaoAnual(pj_total=0, pcr_max=0, slot_classificacao=False, num_classificacoes=0, pcr_acumulado=0)
+    
+    # 4. Roda da Vida (IP - Índice de Progresso)
+    indices_progresso = IndiceProgresso.query.filter_by(
+        membro_id=membro.id, 
+        ano=ano_atual
+    ).all()
+    indices_roda = {ip.subcategoria_rv: ip.indice for ip in indices_progresso}
+    
+    # 5. Ranking Geral Anual (TOP 10 para exibição rápida)
+    ranking_top_geral = PontuacaoAnual.query.filter_by(ano=ano_atual).order_by(
+        PontuacaoAnual.pj_total.desc(),
+        PontuacaoAnual.pcr_max.desc(),
+        PontuacaoAnual.num_classificacoes.desc()
+    ).limit(10).all()
 
-    return render_template('membresia/perfil.html',
-                           membro=membro, 
-                           jornada_eventos=jornada_eventos,
-                           historico_ctm=historico_ctm,
-                           jornada_config=current_app.config.get('JORNADA', {}), 
-                           ano=ano, 
-                           versao=versao)
+    # 6. Ranking Mensal do Setor (Para o mês atual)
+    ranking_mensal_setor = []
+    if setor_do_membro:
+        ranking_mensal_setor = RegistroMensal.query.filter_by(
+            setor_id=setor_do_membro.id, 
+            mes=datetime.now().month, 
+            ano=ano_atual
+        ).order_by(RegistroMensal.pontos_finais_pg.desc()).all()
+
+    # --- FIM da Lógica ELEVE ---
+    
+    return render_template(
+        'membresia/perfil.html', 
+        membro=membro, 
+        setor_do_membro=setor_do_membro, 
+        
+        # Variáveis ELEVE
+        pontuacao_anual=pontuacao_anual,
+        indices_roda=indices_roda,
+        ranking_top_geral=ranking_top_geral,
+        ranking_mensal_setor=ranking_mensal_setor,
+        roda_categorias=RODA_DA_VIDA_SUBCATEGORIAS,
+        
+        ano=ano_atual,
+        now=datetime.now
+    )
 
 @membresia_bp.route('/membros/<int:membro_id>')
 @login_required

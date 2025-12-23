@@ -1,0 +1,116 @@
+{% set show_navbar = true %}
+{% extends "base/layout.html" %}
+{% from 'base/components/forms.html' import field as render_field %} 
+
+{% block title %}{{ title }} · ELEVE{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold text-primary">{{ title }} <small class="text-muted fs-5">| Pontuação Base</small></h2>
+                <a href="{{ url_for('eleve.painel') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Voltar ao Painel
+                </a>
+            </div>
+
+            <div class="alert alert-info border-info border-4 border-start" role="alert">
+                <p class="mb-0">Este formulário registra a participação do discípulo nas atividades, gerando Pontos Base (PG): Culto (5), PG (5), Serviço (3).</p>
+            </div>
+            
+            <div class="card shadow-lg p-4 rounded-4 border-primary">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    {# Campo Oculto para armazenar o ID do membro selecionado #}
+                    <input type="hidden" name="membro_id_selecionado" id="membro_id_selecionado" value="">
+                    
+                    <h5 class="text-primary mb-3"><i class="bi bi-person-circle me-1"></i> Identificação e Data</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-8">
+                            {# ATENÇÃO: Este campo será o alvo do Select2 #}
+                            {{ render_field(form.membro_nome) }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ render_field(form.data) }}
+                        </div>
+                    </div>
+
+                    <h5 class="text-success mb-3"><i class="bi bi-check-square-fill me-1"></i> Atividades (Pontos Base)</h5>
+                    <div class="card bg-light p-3">
+                        <div class="form-check form-switch mb-2">
+                            {{ render_field(form.culto, class="form-check-input") }}
+                            <label class="form-check-label fw-bold" for="{{ form.culto.id }}">
+                                {{ form.culto.label.text }}
+                            </label>
+                            <small class="text-muted d-block">Marque se o discípulo esteve presente no Culto principal.</small>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            {{ render_field(form.pg, class="form-check-input") }}
+                            <label class="form-check-label fw-bold" for="{{ form.pg.id }}">
+                                {{ form.pg.label.text }}
+                            </label>
+                            <small class="text-muted d-block">Marque se o discípulo esteve presente no Pequeno Grupo.</small>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ render_field(form.servico, class="form-check-input") }}
+                            <label class="form-check-label fw-bold" for="{{ form.servico.id }}">
+                                {{ form.servico.label.text }}
+                            </label>
+                            <small class="text-muted d-block">Marque se o discípulo cumpriu o Serviço no Departamento.</small>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 text-end">
+                        {{ form.submit(class='btn btn-primary btn-lg fw-bold') }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Inicializa o Select2 para o campo de busca de membros
+        $('#{{ form.membro_nome.id }}').select2({
+            theme: "bootstrap-5",
+            width: '100%',
+            placeholder: 'Digite o nome do discípulo...',
+            minimumInputLength: 3,
+            ajax: {
+                url: "{{ url_for('eleve.search_membros') }}",
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        q: params.term // Parâmetro de busca
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: data.results // Espera [{id: 1, text: "Nome"}]
+                    };
+                },
+                cache: true
+            }
+        });
+        
+        // Captura a seleção e armazena o ID no campo oculto
+        $('#{{ form.membro_nome.id }}').on('select2:select', function (e) {
+            var data = e.params.data;
+            $('#membro_id_selecionado').val(data.id);
+        });
+        
+        // Limpa o campo oculto se o campo de texto for limpo
+        $('#{{ form.membro_nome.id }}').on('select2:unselect', function (e) {
+            $('#membro_id_selecionado').val('');
+        });
+    });
+</script>
+{% endblock %}

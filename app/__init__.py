@@ -3,7 +3,7 @@ from .extensions import db, login_manager, migrate
 from unidecode import unidecode
 
 from .membresia import models as membresia_models
-from .ctm import models as ctm_models
+from .eleve import models as eleve_models
 from .financeiro import models as financeiro_models
 from .grupos import models as grupos_models
 from .jornada import models as jornada_models
@@ -14,7 +14,7 @@ from .auth.models import User
 from .auth.routes import auth_bp
 from .membresia.routes import membresia_bp
 from .financeiro.routes import financeiro_bp
-from .ctm.routes import ctm_bp
+from .eleve.routes import eleve_bp
 from .admin_users.routes import admin_users_bp
 from .grupos.routes import grupos_bp
 from .eventos.routes import eventos_bp
@@ -60,7 +60,7 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(membresia_bp)
     app.register_blueprint(financeiro_bp)
-    app.register_blueprint(ctm_bp)
+    app.register_blueprint(eleve_bp)
     app.register_blueprint(admin_users_bp)
     app.register_blueprint(grupos_bp)
     app.register_blueprint(eventos_bp)

@@ -1,0 +1,330 @@
+{% set show_navbar = false %}
+{% extends "base/layout.html" %}
+
+{% block title %}Pílula {{ pilula.id }} · {{ pilula.titulo }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-sm-10 col-md-8 col-lg-6">
+            <h2 class="fw-bold text-center text-primary mb-4">
+                {{ pilula.titulo }}
+            </h2>
+
+            {# Indicador de Progresso #}
+            <div class="progress mb-4" style="height: 18px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" id="progress-bar" role="progressbar" 
+                     style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+
+            <div class="card shadow-lg p-3 rounded-4">
+                <div class="card-body">
+                    {# Conteúdo Mutável (Etapas) #}
+                    <div id="pilula-content">
+                        {# Conteúdo será injetado via JavaScript #}
+                    </div>
+                    
+                    {# Botões de Navegação #}
+                    <div class="d-flex justify-content-between mt-4">
+                        <button class="btn btn-outline-secondary" id="btn-voltar" style="display: none;">
+                            <i class="bi bi-arrow-left"></i> Voltar
+                        </button>
+                        <button class="btn btn-primary" id="btn-avancar">
+                            Próxima Etapa <i class="bi bi-arrow-right"></i>
+                        </button>
+                        <button class="btn btn-success" id="btn-finalizar" style="display: none;">
+                            <i class="bi bi-check-circle-fill"></i> Concluir Pílula ({{ pilula.pontos_base }} PG)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    const pilulaData = {
+        id: {{ pilula.id }},
+        video_link: "{{ pilula.link_video | default('') }}",
+        tarefa: `{{ pilula.descricao_tarefa | default('') | tojson | safe }}`,
+        questoes: {{ questoes | tojson | safe }},
+        pontos_max: {{ pilula.pontos_base }}
+    };    
+    
+    let videoVisto = false; 
+    let timerGlobal = null; 
+    let etapaAtual = 0;
+    const etapas = [];
+    
+    // --- Funções de Controle do Vídeo ---
+
+    function iniciarTemporizador() {
+        // 1. Limpa temporizador anterior
+        if (timerGlobal) clearInterval(timerGlobal);
+
+        videoVisto = false;
+        const tempoMaximo = 10;
+        let tempoAtual = tempoMaximo;
+        
+        // CORREÇÃO CRÍTICA: Atraso de 100ms para garantir que o botão esteja no DOM
+        setTimeout(() => {
+            const btnAvancar = document.getElementById('btn-avancar');
+            const statusSpan = document.getElementById('video-status');
+            const tempoSpan = document.getElementById('tempo-restante');
+
+            if (!btnAvancar || !statusSpan || !tempoSpan) return;
+
+            // 2. Estado inicial: Visível, mas DESABILITADO
+            btnAvancar.disabled = true;
+
+            statusSpan.textContent = 'ASSISTINDO...';
+            statusSpan.classList.remove('bg-success');
+            statusSpan.classList.add('bg-danger');
+
+            timerGlobal = setInterval(() => {
+                tempoAtual--;
+                tempoSpan.textContent = tempoAtual;
+
+                if (tempoAtual <= 0) {
+                    clearInterval(timerGlobal);
+                    videoVisto = true;
+                    
+                    // 3. HABILITA O BOTÃO DE AVANÇAR
+                    btnAvancar.disabled = false;
+                    statusSpan.textContent = 'CONCLUÍDO!';
+                    statusSpan.classList.remove('bg-danger');
+                    statusSpan.classList.add('bg-success');
+                }
+            }, 1000);
+        }, 100); 
+    }
+    
+    // --- Funções de Renderização das Etapas ---
+
+    function renderizarQuiz(questoes) {
+        let quizHTML = `<h4 class="fw-bold text-center text-warning mb-3"><i class="bi bi-patch-question-fill me-2"></i> Responda ao Quiz - 6 Pontos</h4>
+                         <p class="text-muted text-center">Acerte no mínimo 2 das ${questoes.length} perguntas para ganhar a pontuação máxima do Quiz.</p>`;
+        quizHTML += `<form id="quiz-form" class="mt-4">`;
+        
+        questoes.forEach((questao, qIndex) => {
+            quizHTML += `<div class="mb-4 p-3 bg-white rounded border" data-question-id="${questao.id}">
+                            <p class="fw-bold text-dark">Q${qIndex + 1}: ${questao.texto}</p>`;
+            
+            questao.opcoes.forEach(opcao => {
+                quizHTML += `<div class="form-check">
+                                <input class="form-check-input" type="radio" 
+                                       name="questao_${questao.id}" 
+                                       id="opcao_${opcao.id}" 
+                                       value="${opcao.id}" required>
+                                <label class="form-check-label fw-normal" for="opcao_${opcao.id}">
+                                    <strong>${opcao.letra})</strong> ${opcao.texto}
+                                </label>
+                            </div>`;
+            });
+            quizHTML += `</div>`;
+        });
+        quizHTML += `</form>`;
+        return quizHTML;
+    }
+
+    function validarQuiz() {
+        const quizForm = document.getElementById('quiz-form');
+        const questoes = pilulaData.questoes;
+
+        let todasRespondidas = true;
+        
+        questoes.forEach(q => {
+            if (!quizForm.querySelector(`input[name="questao_${q.id}"]:checked`)) {
+                todasRespondidas = false;
+            }
+        });
+        
+        if (!todasRespondidas) {
+            alert('Por favor, responda a todas as perguntas do Quiz antes de avançar.');
+            return false;
+        }
+        return true;
+    }
+
+    // --- Montagem das Etapas ---
+
+    // 1. Etapa de Vídeo (2 PG) - Com estilo Story/Reel e estrutura corrigida
+    if (pilulaData.video_link) {
+        const videoId = pilulaData.video_link.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId[1]}?autoplay=0&rel=0&showinfo=0&iv_load_policy=3` : '';
+        
+        etapas.push({
+            nome: 'Vídeo',
+            html: `
+                <h4 class="fw-bold text-center text-danger mb-3"><i class="bi bi-play-circle-fill me-2"></i> Assista ao Vídeo - 2 Pontos</h4>
+                <p class="text-muted text-center">Para avançar, o vídeo deve ser assistido por <span id="tempo-restante">10</span>s. <span id="video-status" class="badge bg-danger">ASSISTINDO...</span></p>
+                ${embedUrl ? 
+                    `<div class="d-flex justify-content-center">
+                        <div style="max-width: 350px; width: 100%;">
+                            <div class="video-container" style="position: relative; padding-bottom: 177.777778%; height: 0; overflow: hidden; margin-top: 15px;">
+                                <iframe class="w-100 h-100 rounded" src="${embedUrl}" 
+                                        frameborder="0" allow="autoplay; picture-in-picture; fullscreen" 
+                                        allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe>
+                            </div>
+                        </div>
+                    </div>` 
+                    : '<div class="alert alert-danger">Link do vídeo inválido ou não fornecido.</div>'}
+            `,
+            pontos: 2,
+            validador: () => videoVisto, 
+            onLoad: iniciarTemporizador
+        });
+    }
+
+    // 2. Etapa de Quiz (6 PG)
+    if (pilulaData.questoes.length > 0) {
+        etapas.push({
+            nome: 'Quiz',
+            html: renderizarQuiz(pilulaData.questoes),
+            pontos: 6,
+            validador: validarQuiz
+        });
+    }
+
+    // 3. Etapa de Tarefa (2 PG)
+    if (pilulaData.tarefa) {
+        etapas.push({
+            nome: 'Tarefa',
+            html: `
+                <h4 class="fw-bold text-center text-info mb-3"><i class="bi bi-list-task me-2"></i> Tarefa/Ação Prática - 2 Pontos</h4>
+                <p class="text-muted text-center">Confirme a conclusão para liberar a pontuação da Tarefa.</p>
+                <div class="alert alert-info border-info border-3 border-start p-3">
+                    ${pilulaData.tarefa.replace(/\\n/g, '<br>')}
+                </div>
+                <div class="form-check mt-4">
+                    <input class="form-check-input" type="checkbox" id="tarefa-concluida" required>
+                    <label class="form-check-label fw-bold" for="tarefa-concluida">Confirmo que a Tarefa foi concluída.</label>
+                </div>
+            `,
+            pontos: 2,
+            validador: () => document.getElementById('tarefa-concluida').checked
+        });
+    }
+
+    // Etapa final de resumo/validação
+    etapas.push({
+        nome: 'Finalizar',
+        html: `
+            <h4 class="fw-bold text-center text-success mb-3"><i class="bi bi-check-all me-2"></i> Pílula Quase Concluída!</h4>
+            <p class="text-center">Confirme abaixo para registrar sua pontuação e progresso na Roda da Vida.</p>
+            <ul class="list-group mt-3">
+                <li class="list-group-item d-flex justify-content-between">
+                    <strong>Pontuação Máxima Desta Pílula:</strong>
+                    <span class="fw-bold text-success">{{ pilula.pontos_base }} pontos</span>
+                </li>
+            </ul>
+        `,
+        pontos: 0 
+    });
+
+
+    // --- Lógica de Navegação Principal ---
+
+    const contentDiv = document.getElementById('pilula-content');
+    const btnAvancar = document.getElementById('btn-avancar');
+    const btnVoltar = document.getElementById('btn-voltar');
+    const btnFinalizar = document.getElementById('btn-finalizar');
+    
+    function renderizarEtapa(index) {
+        const etapa = etapas[index];
+        contentDiv.innerHTML = etapa.html;
+        
+        btnVoltar.style.display = index > 0 ? 'inline-block' : 'none';
+        
+        btnAvancar.style.display = index < etapas.length - 1 ? 'inline-block' : 'none';
+        btnFinalizar.style.display = index === etapas.length - 1 ? 'inline-block' : 'none';
+        
+        const progresso = ((index + 1) / etapas.length) * 100;
+        document.getElementById('progress-bar').style.width = progresso + '%';
+        document.getElementById('progress-bar').setAttribute('aria-valuenow', progresso);
+        document.getElementById('progress-bar').textContent = `${etapa.nome} (${(index + 1)}/${etapas.length})`;
+
+        if (etapa.onLoad) {
+            etapa.onLoad();
+        } else {
+            btnAvancar.disabled = false; 
+        }
+    }
+
+    function validarEtapaAtual() {
+        const etapa = etapas[etapaAtual];
+        if (etapa.validador) {
+            return etapa.validador();
+        }
+        return true;
+    }
+
+    btnAvancar.addEventListener('click', () => {
+        if (validarEtapaAtual()) {
+            etapaAtual++;
+            if (etapaAtual < etapas.length) {
+                renderizarEtapa(etapaAtual);
+            }
+        }
+    });
+
+    btnVoltar.addEventListener('click', () => {
+        if (etapaAtual > 0) {
+            etapaAtual--;
+            renderizarEtapa(etapaAtual);
+        }
+    });
+
+    btnFinalizar.addEventListener('click', () => {
+        // Coleta respostas do Quiz para enviar ao backend
+        let quizRespostas = [];
+        const quizForm = document.getElementById('quiz-form');
+        
+        if (quizForm) {
+            pilulaData.questoes.forEach(questao => {
+                const respostaSelecionada = quizForm.querySelector(`input[name="questao_${questao.id}"]:checked`);
+                if (respostaSelecionada) {
+                     quizRespostas.push({
+                         questao_id: questao.id,
+                         opcao_selecionada_id: parseInt(respostaSelecionada.value)
+                     });
+                }
+            });
+        }
+        
+        if (validarEtapaAtual() && confirm('Tem certeza que deseja CONCLUIR esta Pílula? Sua pontuação será registrada!')) {
+            // Envia para o backend para cálculo final
+            fetch("{{ url_for('eleve.concluir_pilula', pilula_id=pilula.id) }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    quiz_respostas: quizRespostas,
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Pílula Concluída! Você ganhou ${data.pontos_ganhos} Pontos Base e ${data.ip_ganhos} IP para o tema.`);
+                    window.location.href = "{{ url_for('membresia.perfil', id=membro.id) }}";
+                } else {
+                    // O servidor enviou uma resposta JSON com erro
+                    alert('Falha ao concluir: ' + data.message);
+                }
+            })
+            .catch(error => {
+                // Erro de rede ou JSON inválido
+                console.error('Erro de Comunicação:', error);
+                alert('Erro na comunicação com o servidor. Verifique o console do servidor para o traceback Python.');
+            });
+        }
+    });
+
+    // Inicia a primeira etapa
+    renderizarEtapa(etapaAtual);
+</script>
+{% endblock %}
